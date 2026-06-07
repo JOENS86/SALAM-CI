@@ -1,7 +1,7 @@
-import Navbar from "../components/Navbar"
-import Hero from "../components/Hero"
-import FeatureCard from "../components/FeatureCard"
-import Footer from "../components/Footer"
+import Navbar from "../../components/Navbar"
+import Hero from "../../components/Hero"
+import FeatureCard from "../../components/FeatureCard"
+import Footer from "../../components/Footer"
 import { Link } from "react-router-dom"
 
 import {

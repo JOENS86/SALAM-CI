@@ -1,79 +1,99 @@
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { useState } from "react"
-import API from "../services/api"
+import API from "../../services/api"
 
-function Register() {
+function Login() {
 
   // =========================
-  // STATE DU FORMULAIRE
+  // NAVIGATION
   // =========================
-  // Ici on stocke toutes les données du formulaire
-  // dans un seul objet
+  const navigate = useNavigate()
+
+  // =========================
+  // STATE FORMULAIRE
+  // =========================
   const [formData, setFormData] = useState({
-    name: "",
     email: "",
-    password: "",
-    role: "student"
+    password: ""
   })
 
   // =========================
-  // GESTION DES CHAMPS INPUT
+  // GESTION INPUTS
   // =========================
-  // Cette fonction récupère automatiquement
-  // la valeur de chaque input
   const handleChange = (e) => {
 
     setFormData({
       ...formData,
-
-      // e.target.name = nom du champ
-      // e.target.value = valeur tapée
       [e.target.name]: e.target.value
     })
 
   }
 
   // =========================
-  // SOUMISSION FORMULAIRE
+  // LOGIN
   // =========================
   const handleSubmit = async (e) => {
 
-    // Empêche le rechargement de la page
     e.preventDefault()
 
     try {
 
-      // Envoi des données vers le backend
+      // Envoi backend
       const res = await API.post(
-        "/auth/register",
+        "/auth/login",
         formData
       )
 
       console.log(res.data)
 
-      // Message succès
-      alert("Compte créé avec succès")
+      // =========================
+      // SAUVEGARDE TOKEN
+      // =========================
+      localStorage.setItem(
+        "token",
+        res.data.token
+      )
 
-      // Réinitialisation formulaire
-      setFormData({
-        name: "",
-        email: "",
-        password: "",
-        role: "student"
-      })
+      // =========================
+      // SAUVEGARDE USER
+      // =========================
+      localStorage.setItem(
+        "user",
+        JSON.stringify(res.data.user)
+      )
+
+      alert("Connexion réussie")
+
+      // =========================
+      // REDIRECTION SELON ROLE
+      // =========================
+      const role = res.data.user.role
+
+      if (role === "admin") {
+
+        navigate("/admin-dashboard")
+
+      } else if (role === "teacher") {
+
+        navigate("/teacher-dashboard")
+
+      } else {
+
+        navigate("/student-dashboard")
+
+      }
 
     } catch (error) {
 
       console.log(error)
 
-      // Gestion erreur backend
       if (error.response?.data?.message) {
 
         alert(error.response.data.message)
 
       } else {
 
-        alert("Erreur inscription")
+        alert("Erreur connexion")
 
       }
 
@@ -83,12 +103,8 @@ function Register() {
 
   return (
 
-    // =========================
-    // CONTAINER PRINCIPAL
-    // =========================
     <div className="min-h-screen bg-[#eef2ff] flex items-center justify-center px-6">
 
-      {/* CARD FORMULAIRE */}
       <div className="bg-white w-full max-w-md p-8 rounded-2xl shadow-lg">
 
         {/* TITRE */}
@@ -97,7 +113,7 @@ function Register() {
         </h1>
 
         <p className="text-center text-gray-500 mt-3">
-          Créer un compte
+          Plateforme de formation en ligne
         </p>
 
         {/* FORMULAIRE */}
@@ -105,25 +121,6 @@ function Register() {
           onSubmit={handleSubmit}
           className="mt-10 space-y-6"
         >
-
-          {/* NOM */}
-          <div>
-
-            <label className="block mb-2 font-medium">
-              Nom complet
-            </label>
-
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              placeholder="Votre nom"
-              required
-              className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-purple-500"
-            />
-
-          </div>
 
           {/* EMAIL */}
           <div>
@@ -144,7 +141,7 @@ function Register() {
 
           </div>
 
-          {/* MOT DE PASSE */}
+          {/* PASSWORD */}
           <div>
 
             <label className="block mb-2 font-medium">
@@ -163,61 +160,26 @@ function Register() {
 
           </div>
 
-          {/* ROLE */}
-          <div>
-
-            <label className="block mb-2 font-medium">
-              Type de compte
-            </label>
-
-            <select
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-              className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-purple-500"
-            >
-
-              {/* IMPORTANT :
-                  Les values doivent correspondre
-                  EXACTEMENT aux roles MongoDB
-              */}
-
-              <option value="student">
-                Étudiant
-              </option>
-
-              <option value="teacher">
-                Enseignant
-              </option>
-
-              <option value="admin">
-                Administrateur
-              </option>
-
-            </select>
-
-          </div>
-
           {/* BOUTON */}
           <button
             type="submit"
             className="w-full bg-purple-600 hover:bg-purple-700 transition text-white py-3 rounded-xl font-semibold"
           >
-            S'inscrire
+            Se connecter
           </button>
 
         </form>
 
-        {/* LIEN LOGIN */}
+        {/* REGISTER */}
         <p className="text-center mt-6 text-gray-500">
 
-          Déjà un compte ?
+          Pas encore de compte ?
 
           <Link
-            to="/login"
+            to="/register"
             className="text-purple-600 font-semibold ml-2"
           >
-            Se connecter
+            S'inscrire
           </Link>
 
         </p>
@@ -228,4 +190,4 @@ function Register() {
   )
 }
 
-export default Register
+export default Login

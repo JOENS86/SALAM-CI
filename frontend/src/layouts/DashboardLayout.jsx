@@ -4,13 +4,12 @@ function DashboardLayout({ children }) {
 
   return (
 
-    <div className="flex bg-gradient-to-br from-[#f5f7fb] to-[#eef2ff] min-h-screen">
-
+<div className="flex h-screen bg-gradient-to-br from-[#f5f7fb] to-[#eef2ff]">
       {/* SIDEBAR */}
       <Sidebar />
 
       {/* CONTENU */}
-      <div className="flex-1 p-10">
+      <div className="flex-1 overflow-y-auto p-10">
 
         {children}
 
