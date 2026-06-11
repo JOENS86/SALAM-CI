@@ -1,13 +1,17 @@
 import AdminLayout from "../../layouts/AdminLayout"
 import { useNavigate } from "react-router-dom"
 import {
-  FaSearch,
-  FaUserPlus,
-  FaEdit,
-  FaTrash,
-  FaCheckCircle,
-  FaBan
-} from "react-icons/fa"
+    FaUsers,
+    FaUserShield,
+    FaChalkboardTeacher,
+    FaUserGraduate,
+    FaSearch,
+    FaUserPlus,
+    FaEdit,
+    FaTrash,
+    FaCheckCircle,
+    FaBan
+  } from "react-icons/fa"
 
 function Users() {
   const navigate = useNavigate()
@@ -17,7 +21,7 @@ function Users() {
     navigate("/admin-create-user")
   
   }
-  
+
   const users = [
 
     {
@@ -108,37 +112,115 @@ function Users() {
 
       </div>
 
-      {/* STATS */}
 
+      {/* STATS */}
       <div className="grid md:grid-cols-4 gap-6 mb-8">
 
-        <div className="bg-white p-6 rounded-3xl shadow-sm">
-          <p className="text-gray-500">Total</p>
-          <h2 className="text-4xl font-bold mt-2">6</h2>
-        </div>
+<div className="bg-white rounded-3xl p-6 shadow-sm hover:shadow-lg transition">
 
-        <div className="bg-white p-6 rounded-3xl shadow-sm">
-          <p className="text-gray-500">Administrateurs</p>
-          <h2 className="text-4xl font-bold mt-2 text-purple-600">
-            1
-          </h2>
-        </div>
+  <div className="flex justify-between items-center">
 
-        <div className="bg-white p-6 rounded-3xl shadow-sm">
-          <p className="text-gray-500">Enseignants</p>
-          <h2 className="text-4xl font-bold mt-2 text-blue-600">
-            2
-          </h2>
-        </div>
+    <div>
 
-        <div className="bg-white p-6 rounded-3xl shadow-sm">
-          <p className="text-gray-500">Étudiants</p>
-          <h2 className="text-4xl font-bold mt-2 text-green-600">
-            3
-          </h2>
-        </div>
+      <p className="text-gray-500">
+        Total
+      </p>
 
-      </div>
+      <h2 className="text-4xl font-bold mt-2">
+        6
+      </h2>
+
+    </div>
+
+    <div className="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center text-xl">
+
+      <FaUsers />
+
+    </div>
+
+  </div>
+
+</div>
+
+<div className="bg-white rounded-3xl p-6 shadow-sm hover:shadow-lg transition">
+
+  <div className="flex justify-between items-center">
+
+    <div>
+
+      <p className="text-gray-500">
+        Administrateurs
+      </p>
+
+      <h2 className="text-4xl font-bold mt-2 text-purple-600">
+        1
+      </h2>
+
+    </div>
+
+    <div className="w-14 h-14 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center text-xl">
+
+      <FaUserShield />
+
+    </div>
+
+  </div>
+
+</div>
+
+<div className="bg-white rounded-3xl p-6 shadow-sm hover:shadow-lg transition">
+
+  <div className="flex justify-between items-center">
+
+    <div>
+
+      <p className="text-gray-500">
+        Enseignants
+      </p>
+
+      <h2 className="text-4xl font-bold mt-2 text-blue-600">
+        2
+      </h2>
+
+    </div>
+
+    <div className="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center text-xl">
+
+      <FaChalkboardTeacher />
+
+    </div>
+
+  </div>
+
+</div>
+
+<div className="bg-white rounded-3xl p-6 shadow-sm hover:shadow-lg transition">
+
+  <div className="flex justify-between items-center">
+
+    <div>
+
+      <p className="text-gray-500">
+        Étudiants
+      </p>
+
+      <h2 className="text-4xl font-bold mt-2 text-green-600">
+        3
+      </h2>
+
+    </div>
+
+    <div className="w-14 h-14 bg-green-100 text-green-600 rounded-2xl flex items-center justify-center text-xl">
+
+      <FaUserGraduate />
+
+    </div>
+
+  </div>
+
+</div>
+
+</div>
 
       {/* FILTRES */}
 

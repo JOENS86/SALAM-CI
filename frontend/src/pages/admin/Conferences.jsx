@@ -1,12 +1,14 @@
 import AdminLayout from "../../layouts/AdminLayout"
 
 import {
-  FaSearch,
-  FaEye,
-  FaBan,
-  FaTrash,
-  FaVideo
-} from "react-icons/fa"
+    FaSearch,
+    FaEye,
+    FaBan,
+    FaTrash,
+    FaVideo,
+    FaCalendarAlt,
+    FaCheckCircle
+  } from "react-icons/fa"
 
 function Conferences() {
 
@@ -56,47 +58,89 @@ function Conferences() {
 
       </div>
 
-      {/* STATS */}
 
+      {/* STATS */}
       <div className="grid md:grid-cols-3 gap-6 mb-8">
 
-        <div className="bg-white p-6 rounded-3xl shadow-sm">
+<div className="bg-white rounded-3xl p-6 shadow-sm hover:shadow-lg transition">
 
-          <p className="text-gray-500">
-            Total conférences
-          </p>
+  <div className="flex justify-between items-center">
 
-          <h2 className="text-4xl font-bold mt-2">
-            24
-          </h2>
+    <div>
 
-        </div>
+      <p className="text-gray-500">
+        Total conférences
+      </p>
 
-        <div className="bg-white p-6 rounded-3xl shadow-sm">
+      <h2 className="text-4xl font-bold mt-2">
+        24
+      </h2>
 
-          <p className="text-gray-500">
-            Programmées
-          </p>
+    </div>
 
-          <h2 className="text-4xl font-bold mt-2 text-blue-600">
-            15
-          </h2>
+    <div className="w-14 h-14 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center text-xl">
 
-        </div>
+      <FaVideo />
 
-        <div className="bg-white p-6 rounded-3xl shadow-sm">
+    </div>
 
-          <p className="text-gray-500">
-            Terminées
-          </p>
+  </div>
 
-          <h2 className="text-4xl font-bold mt-2 text-green-600">
-            9
-          </h2>
+</div>
 
-        </div>
+<div className="bg-white rounded-3xl p-6 shadow-sm hover:shadow-lg transition">
 
-      </div>
+  <div className="flex justify-between items-center">
+
+    <div>
+
+      <p className="text-gray-500">
+        Programmées
+      </p>
+
+      <h2 className="text-4xl font-bold mt-2 text-blue-600">
+        15
+      </h2>
+
+    </div>
+
+    <div className="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center text-xl">
+
+      <FaCalendarAlt />
+
+    </div>
+
+  </div>
+
+</div>
+
+<div className="bg-white rounded-3xl p-6 shadow-sm hover:shadow-lg transition">
+
+  <div className="flex justify-between items-center">
+
+    <div>
+
+      <p className="text-gray-500">
+        Terminées
+      </p>
+
+      <h2 className="text-4xl font-bold mt-2 text-green-600">
+        9
+      </h2>
+
+    </div>
+
+    <div className="w-14 h-14 bg-green-100 text-green-600 rounded-2xl flex items-center justify-center text-xl">
+
+      <FaCheckCircle />
+
+    </div>
+
+  </div>
+
+</div>
+
+</div>
 
       {/* RECHERCHE */}
 

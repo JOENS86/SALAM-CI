@@ -1,5 +1,11 @@
 import { Link } from "react-router-dom"
+
 function Hero() {
+
+  const user = JSON.parse(
+    localStorage.getItem("user") || "null"
+  )
+
     return (
       <section className="pt-36 pb-20 text-center px-6">
   
@@ -17,22 +23,25 @@ function Hero() {
           vos compétences avec les meilleurs enseignants.
         </p>
   
-        <div className="flex justify-center gap-4 mt-10 flex-wrap">
+        {
+  !user && (
+<div className="flex justify-center gap-4 mt-10 flex-wrap">
+  <Link to="/register">
+    <button className="bg-purple-600 hover:bg-purple-700 transition text-white px-8 py-4 rounded-xl font-semibold shadow-lg">
+      Commencer gratuitement
+    </button>
+  </Link>
 
-<Link to="/register">
-  <button className="bg-purple-600 hover:bg-purple-700 transition text-white px-8 py-4 rounded-xl font-semibold shadow-lg">
-    Commencer gratuitement
-  </button>
-</Link>
-
-<Link to="/login">
-  <button className="bg-gray-200 hover:bg-gray-300 transition px-8 py-4 rounded-xl font-semibold">
-    Se connecter
-  </button>
-</Link>
-
+  <Link to="/login">
+    <button className="bg-gray-200 hover:bg-gray-300 transition px-8 py-4 rounded-xl font-semibold">
+      Se connecter
+    </button>
+  </Link>
 </div>
   
+          )
+        }
+
       </section>
     )
   }

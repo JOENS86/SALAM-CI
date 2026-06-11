@@ -8,11 +8,16 @@ import {
   FaDownload
 } from "react-icons/fa"
 
-import { Link, useLocation } from "react-router-dom"
+import {
+  Link,
+  useLocation,
+  useNavigate
+} from "react-router-dom"
 
 function Sidebar() {
 
   const location = useLocation()
+  const navigate = useNavigate()
 
   const logout = () => {
 
@@ -40,14 +45,16 @@ function Sidebar() {
     <div className="  w-[300px] h-screen flex-shrink-0 bg-gradient-to-b from-[#0b1736] via-[#081028]to-[#050b1f] shadow-2xl text-white p-8 flex flex-col">
      
       {/* LOGO */}
-      <div className="mb-12">
-        <h1 className="text-4xl font-extrabold tracking-wide">
-          SALAM <span className="text-purple-500">CI</span>
-        </h1>
-
-          <p className="text-gray-400 mt-2 text-sm">
-        Espace Étudiant
-          </p>
+      <div className="mb-12 cursor-pointer" onClick={() => navigate("/")} >
+        <div className="flex items-center gap-3">
+            <FaHome className="text-xl text-purple-400" />
+    <h1 className="text-4xl font-extrabold tracking-wide">
+      SALAM <span className="text-purple-500">CI</span>
+    </h1>
+        </div>
+    <p className="text-gray-400 mt-2 text-sm">
+    Espace Étudiant
+    </p>
       </div>
 
       {/* MENU */}

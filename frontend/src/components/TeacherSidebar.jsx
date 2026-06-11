@@ -8,12 +8,14 @@ import {
   
   import {
     Link,
-    useLocation
+    useLocation,
+    useNavigate
   } from "react-router-dom"
   
   function TeacherSidebar() {
   
     const location = useLocation()
+    const navigate = useNavigate()
   
     const logout = () => {
   
@@ -46,27 +48,34 @@ import {
   
         {/* PROFIL */}
   
-        <div className="flex items-center gap-4 mb-10">
-  
-          <div className="w-14 h-14 rounded-full bg-purple-600 flex items-center justify-center font-bold text-xl">
-  
-            {user?.name?.charAt(0)}
-  
-          </div>
-  
-          <div>
-  
-            <h3 className="font-bold">
-              {user?.name}
-            </h3>
-  
-            <p className="text-gray-400 text-sm">
-              Enseignant
-            </p>
-  
-          </div>
-  
-        </div>
+        <div className="mb-10">
+
+<div className="flex items-center justify-between">
+
+  <div className="w-14 h-14 rounded-full bg-purple-600 flex items-center justify-center font-bold text-xl">
+    {user?.name?.charAt(0)}
+  </div>
+
+  <FaHome
+    className="text-2xl text-purple-400 cursor-pointer hover:text-purple-300"
+    onClick={() => navigate("/")}
+  />
+
+</div>
+
+<div className="mt-4">
+
+  <h3 className="font-bold text-lg">
+    {user?.name}
+  </h3>
+
+  <p className="text-gray-400 text-sm">
+    Enseignant
+  </p>
+
+</div>
+
+</div>
   
         {/* MENU */}
   

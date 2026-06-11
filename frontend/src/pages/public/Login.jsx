@@ -1,21 +1,43 @@
 import { Link, useNavigate } from "react-router-dom"
 import { useState } from "react"
 import API from "../../services/api"
+import { FaArrowLeft } from "react-icons/fa"
+import { useLocation } from "react-router-dom"
+import {
+  FaEye,
+  FaEyeSlash,
+  FaUsers
+} from "react-icons/fa"
+
 
 function Login() {
+
 
   // =========================
   // NAVIGATION
   // =========================
   const navigate = useNavigate()
 
+  const location = useLocation()
+
+  const params =
+  new URLSearchParams(location.search)
+  const isCommunity =
+  params.get("community") === "true"
+
+const hideRegister =
+  params.get("conference") === "true" ||
+  isCommunity
   // =========================
   // STATE FORMULAIRE
   // =========================
   const [formData, setFormData] = useState({
-    email: "",
+    email: localStorage.getItem("registeredEmail") || "",
     password: ""
   })
+
+  const [showPassword, setShowPassword] =
+  useState(false)
 
   // =========================
   // GESTION INPUTS
@@ -58,12 +80,37 @@ function Login() {
       // SAUVEGARDE USER
       // =========================
       localStorage.setItem(
-        "user",
-        JSON.stringify(res.data.user)
+          "user",
+      JSON.stringify(res.data.user)
+      )
+
+      // SUPPRIMER EMAIL TEMPORAIRE
+      localStorage.removeItem(
+           "registeredEmail"
       )
 
       alert("Connexion réussie")
 
+      if (params.get("conference") === "true") {
+
+        navigate("/conference-room", {
+          replace: true
+        })
+      
+        return
+      
+      }
+      
+      if (params.get("community") === "true") {
+      
+        navigate("/community", {
+          replace: true
+        })
+      
+        return
+      
+      }
+      
       // =========================
       // REDIRECTION SELON ROLE
       // =========================
@@ -71,15 +118,21 @@ function Login() {
 
       if (role === "admin") {
 
-        navigate("/admin-dashboard")
+        navigate("/admin-dashboard", {
+          replace: true
+        })
 
       } else if (role === "teacher") {
 
-        navigate("/teacher-dashboard")
+        navigate("/teacher-dashboard", {
+          replace: true
+        })
 
       } else {
 
-        navigate("/student-dashboard")
+        navigate("/student-dashboard", {
+          replace: true
+        })
 
       }
 
@@ -103,18 +156,86 @@ function Login() {
 
   return (
 
-    <div className="min-h-screen bg-[#eef2ff] flex items-center justify-center px-6">
+    <div className="min-h-screen bg-[#eef2ff] flex items-center justify-center px-6 relative">
+      
+      <button onClick={() => navigate("/")} className="
+          absolute
+          top-8
+          left-8
+          bg-gradient-to-r
+          from-purple-600
+          to-indigo-600
+          text-white
+          px-5
+          py-3
+          rounded-2xl
+          flex
+          items-center
+          gap-3
+          shadow-lg
+          hover:scale-105
+          transition-all
+        "
+      >
+        <FaArrowLeft />
+        Accueil
+      </button>
+
+      {
+  isCommunity && (
+
+    <div className="text-center mb-10">
+
+      <div
+        className="
+        w-24
+        h-24
+        mx-auto
+        rounded-full
+        bg-purple-100
+        flex
+        items-center
+        justify-center
+        mb-6
+        "
+      >
+        <FaUsers className="text-4xl text-purple-600" />
+      </div>
+
+      <h1 className="text-4xl font-bold">
+        Accès réservé aux membres
+      </h1>
+
+      <p className="text-gray-500 mt-4 max-w-md">
+        Connectez-vous pour accéder à la Communauté Active
+        SALAM CI et rejoindre les échanges entre
+        étudiants et enseignants.
+      </p>
+
+    </div>
+
+  )
+}
 
       <div className="bg-white w-full max-w-md p-8 rounded-2xl shadow-lg">
 
         {/* TITRE */}
-        <h1 className="text-5xl font-bold text-center">
-          SALAM <span className="text-purple-600">CI</span>
-        </h1>
+        {
+  !isCommunity && (
 
-        <p className="text-center text-gray-500 mt-3">
-          Plateforme de formation en ligne
-        </p>
+    <>
+      <h1 className="text-5xl font-bold text-center">
+        SALAM <span className="text-purple-600">CI</span>
+      </h1>
+
+      <p className="text-center text-gray-500 mt-3">
+        Plateforme de formation en ligne
+      </p>
+    </>
+
+  )
+}
+
 
         {/* FORMULAIRE */}
         <form
@@ -148,15 +269,48 @@ function Login() {
               Mot de passe
             </label>
 
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="********"
-              required
-              className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-purple-500"
-            />
+<div className="relative">
+
+  <input
+    type={showPassword ? "text" : "password"}
+    name="password"
+    value={formData.password}
+    onChange={handleChange}
+    placeholder="********"
+    required
+    className="
+      w-full
+      border
+      border-gray-300
+      rounded-xl
+      px-4
+      py-3
+      pr-12
+      outline-none
+      focus:border-purple-500
+    "
+  />
+
+  <button
+    type="button"
+    onClick={() =>
+      setShowPassword(!showPassword)
+    }
+    className="
+      absolute
+      right-4
+      top-1/2
+      -translate-y-1/2
+      text-gray-500
+    "
+  >
+    {showPassword
+      ? <FaEyeSlash />
+      : <FaEye />
+    }
+  </button>
+
+</div>
 
           </div>
 
@@ -171,18 +325,22 @@ function Login() {
         </form>
 
         {/* REGISTER */}
-        <p className="text-center mt-6 text-gray-500">
+{
+  !hideRegister && (
+    <p className="text-center mt-6 text-gray-500">
 
-          Pas encore de compte ?
+      Pas encore de compte ?
 
-          <Link
-            to="/register"
-            className="text-purple-600 font-semibold ml-2"
-          >
-            S'inscrire
-          </Link>
+      <Link
+        to="/register"
+        className="text-purple-600 font-semibold ml-2"
+      >
+        S'inscrire
+      </Link>
 
-        </p>
+    </p>
+  )
+}
 
       </div>
 

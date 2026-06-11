@@ -1,8 +1,14 @@
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { useState } from "react"
 import API from "../../services/api"
+import { FaArrowLeft } from "react-icons/fa"
 
 function Register() {
+
+  // =========================
+  // NAVIGATION
+  // =========================
+  const navigate = useNavigate()
 
   // =========================
   // STATE DU FORMULAIRE
@@ -52,7 +58,14 @@ function Register() {
       console.log(res.data)
 
       // Message succès
+      localStorage.setItem(
+        "registeredEmail",
+        formData.email
+      )
+      
       alert("Compte créé avec succès")
+      
+      navigate("/login")
 
       // Réinitialisation formulaire
       setFormData({
@@ -86,7 +99,30 @@ function Register() {
     // =========================
     // CONTAINER PRINCIPAL
     // =========================
-    <div className="min-h-screen bg-[#eef2ff] flex items-center justify-center px-6">
+    <div className="min-h-screen bg-[#eef2ff] flex items-center justify-center px-6" relative >
+      
+      <button onClick={() => navigate("/")} className="
+          absolute
+          top-8
+          left-8
+          bg-gradient-to-r
+          from-purple-600
+          to-indigo-600
+          text-white
+          px-5
+          py-3
+          rounded-2xl
+          flex
+          items-center
+          gap-3
+          shadow-lg
+          hover:scale-105
+          transition-all
+        "
+      >
+        <FaArrowLeft />
+        Accueil
+      </button>
 
       {/* CARD FORMULAIRE */}
       <div className="bg-white w-full max-w-md p-8 rounded-2xl shadow-lg">

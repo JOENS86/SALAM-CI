@@ -1,4 +1,5 @@
 import {
+    FaHome,
     FaTachometerAlt,
     FaUsers,
     FaBook,
@@ -14,12 +15,14 @@ import {
   
   import {
     Link,
-    useLocation
+    useLocation,
+    useNavigate
   } from "react-router-dom"
   
   function AdminSidebar() {
   
     const location = useLocation()
+    const navigate = useNavigate()
   
     const logout = () => {
   
@@ -44,30 +47,43 @@ import {
   
     return (
   
-      <div
-        className="
-        w-[280px]
-        h-screen
-        bg-gradient-to-b
-        from-[#2E3192]
-        to-[#1B1464]
-        text-white
-        flex
-        flex-col
-        "
-      >
+<div
+  className="
+      w-[280px]
+      h-screen
+      flex-shrink-0
+      bg-gradient-to-b
+      from-[#312e81]
+      via-[#3730a3]
+      to-[#4338ca]
+      shadow-2xl
+      text-white
+      flex
+      flex-col
+    "
+>
+        
   
-        <div className="p-8 border-b border-white/10">
-  
-          <h1 className="text-4xl font-bold">
-            SALAM CI
-          </h1>
-  
-          <p className="text-gray-300 mt-2">
-            Espace Administrateur
-          </p>
-  
-        </div>
+<div
+  className="p-8 border-b border-white/10 cursor-pointer"
+  onClick={() => navigate("/")}
+>
+
+  <div className="flex items-center gap-3">
+
+    <FaHome className="text-xl" />
+
+    <h1 className="text-4xl font-bold">
+      SALAM CI
+    </h1>
+
+  </div>
+
+  <p className="text-gray-300 mt-2">
+    Espace Administrateur
+  </p>
+
+</div>
   
         <div className="flex-1 p-4 space-y-2 overflow-y-auto">
   
