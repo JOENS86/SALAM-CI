@@ -73,9 +73,11 @@ mongoose.connect(
   {
     serverSelectionTimeoutMS: 5000,
 
-    ssl: true,
+   /* 
+      ssl: true,
+      tlsAllowInvalidCertificates: true
+   */
 
-    tlsAllowInvalidCertificates: true
   }
 
 )

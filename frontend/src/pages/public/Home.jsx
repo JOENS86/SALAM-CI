@@ -19,6 +19,10 @@ function Home() {
     localStorage.getItem("user")
   )
 
+  const handleCourses = () => {
+    navigate("/courses")
+  }
+
   const handleConference = () => {
 
     const user =
@@ -39,6 +43,10 @@ function Home() {
     } else {  
       navigate("/login?community=true") 
     } 
+  }
+
+  const handleCertificates = () => {
+    navigate("/certificates")
   }
 
   const handleDashboard = () => {
@@ -72,13 +80,15 @@ function Home() {
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
 
-          <FeatureCard
-            icon={<FaBookOpen className="text-purple-600" />}
-            title="Cours variés"
-            description="Accédez à une large bibliothèque de cours dans différents domaines."
-          />
+          <div onClick={handleCourses} className="cursor-pointer h-full">
+              <FeatureCard
+                icon={<FaBookOpen className="text-purple-600" />}
+                title="Cours variés"
+                description="Accédez à une large bibliothèque de cours dans différents domaines."
+              />
+          </div>
 
-          <div onClick={handleConference} className="cursor-pointer" >
+          <div onClick={handleConference} className="cursor-pointer h-full" >
               <FeatureCard
                 icon={<FaVideo className="text-green-500" />}
                 title="Conférences en direct"
@@ -86,7 +96,7 @@ function Home() {
               />
           </div>
         
-          <div onClick={handleCommunity} className="cursor-pointer" >
+          <div onClick={handleCommunity} className="cursor-pointer h-full" >
               <FeatureCard
                 icon={<FaUsers className="text-pink-500" />}
                 title="Communauté active"
@@ -95,11 +105,13 @@ function Home() {
 
           </div>
 
-          <FeatureCard
-            icon={<FaAward className="text-orange-500" />}
-            title="Certificats"
-            description="Obtenez des certificats reconnus pour valider vos compétences."
-          />
+          <div onClick={handleCertificates} className="cursor-pointer h-full" >
+              <FeatureCard
+                icon={<FaAward className="text-orange-500" />}
+                title="Certificats"
+                description="Obtenez des certificats reconnus pour valider vos compétences."
+              />
+          </div>
 
         </div>
 

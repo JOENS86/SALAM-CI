@@ -25,8 +25,13 @@ import StudentDashboard from "./pages/student/Dashboard"
 import Courses from "./pages/student/Courses"
 import Conferences from "./pages/student/Conferences"
 import Certificates from "./pages/student/Certificates"
+// CERTIFICATES PUBLIC
+import CertificatesCatalog from "./pages/certificates/CertificatesCatalog"
+import MyCertificates from "./pages/certificates/MyCertificates"
 import Downloads from "./pages/student/Downloads"
 import Profile from "./pages/student/Profile"
+import CoursesCatalog from "./pages/courses/CoursesCatalog"
+import CertificateDetails from "./pages/certificates/CertificateDetails"
 
 // TEACHER
 import DashboardTeacher from "./pages/teacher/Dashboard"
@@ -316,6 +321,26 @@ function App() {
       <Profile />
     </ProtectedRoute>
   }
+/>
+
+<Route
+  path="/courses"
+  element={<CoursesCatalog />}
+/>
+
+<Route
+  path="/certificates"
+  element={<CertificatesCatalog />}
+/>
+
+<Route
+  path="/my-certificates"
+  element={<MyCertificates />}
+/>
+
+<Route
+  path="/certificate-details/:id"
+  element={<CertificateDetails />}
 />
 
     </Routes>

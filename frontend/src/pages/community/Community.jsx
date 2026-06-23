@@ -1,3 +1,5 @@
+import { FaHome } from "react-icons/fa"
+import { useNavigate } from "react-router-dom"
 import {
     FaSearch,
     FaBell,
@@ -9,6 +11,8 @@ import {
   } from "react-icons/fa"
   
   function Community() {
+
+    const navigate = useNavigate()
   
     const user =
       JSON.parse(localStorage.getItem("user"))
@@ -60,8 +64,14 @@ import {
           <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
   
             <div className="flex items-center gap-3">
+                
+                {/* HOME */}
+
+              <button onClick={() => navigate("/")} className="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center hover:bg-purple-700 transition">
+                <FaHome />
+              </button>
   
-              <div className="w-10 h-10 bg-green-600 rounded-xl flex items-center justify-center text-white">
+              <div className="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center text-white">
                 <FaUsers />
               </div>
   
