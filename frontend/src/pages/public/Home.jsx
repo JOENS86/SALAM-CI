@@ -19,8 +19,17 @@ function Home() {
     localStorage.getItem("user")
   )
 
+
+  {/* Accéder au box etant ecnnecté oui ou non */}
+
   const handleCourses = () => {
-    navigate("/courses")
+    const user =
+      localStorage.getItem("user")
+    if (user) {
+      navigate("/courses")
+    } else {
+      navigate("/login?courses=true")
+    }
   }
 
   const handleConference = () => {
@@ -46,9 +55,17 @@ function Home() {
   }
 
   const handleCertificates = () => {
-    navigate("/certificates")
+    const user = 
+        localStorage.getItem("user")
+    if (user) {
+      navigate("/certificates")
+    } else {  
+      navigate("/login?certificates=true") 
+    }
   }
 
+  
+  //Accéder au tableau de bord en fonction de l'utilisateur
   const handleDashboard = () => {
 
     if (!user) return
