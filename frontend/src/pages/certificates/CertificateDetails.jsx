@@ -3,444 +3,263 @@
 // =========================
 
 import {
-    FaArrowLeft,
-    FaDownload,
-    FaPrint,
-    FaCheckCircle
-  } from "react-icons/fa"
-  
-  import { useNavigate } from "react-router-dom"
-  
+  FaArrowLeft,
+  FaDownload,
+  FaPrint,
+  FaCheckCircle
+} from "react-icons/fa"
+
+import {
+  useNavigate
+} from "react-router-dom"
+
+import {
+  useRef
+} from "react"
+
+import {
+  useReactToPrint
+} from "react-to-print"
+
+// =========================
+// CERTIFICAT
+// =========================
+
+import CertificatePrint from "./CertificatePrint"
+// =========================
+// COMPONENT
+// =========================
+
+function CertificateDetails() {
+
   // =========================
-  // COMPONENT
+  // NAVIGATION
   // =========================
-  
-  function CertificateDetails() {
-  
-    const navigate = useNavigate()
-  
-    return (
-  
-      <div className="min-h-screen bg-[#f5f7fb]">
-  
-        {/* ========================= */}
-        {/* BARRE SUPERIEURE */}
-        {/* ========================= */}
-  
-        <div
-          className="
-          bg-white
-          border-b
-          px-8
-          py-4
-          flex
-          justify-between
-          items-center
-          "
-        >
-  
-          {/* RETOUR */}
-  
-          <button
-            onClick={() => navigate("/my-certificates")}
-            className="
-            flex
-            items-center
-            gap-2
-            text-purple-600
-            font-semibold
-            hover:text-purple-800
-            "
-          >
-            <FaArrowLeft />
-  
-            Retour aux certificats
-  
-          </button>
-  
-          {/* ACTIONS */}
-  
-          <div className="flex gap-3">
-  
-            <button
-              className="
-              border
-              border-purple-300
-              px-5
-              py-2
-              rounded-xl
-              flex
-              items-center
-              gap-2
-              hover:bg-purple-50
-              "
-            >
-              <FaPrint />
-  
-              Imprimer
-  
-            </button>
-  
-            <button
-              className="
-              bg-gradient-to-r
-              from-purple-600
-              to-purple-500
-              text-white
-              px-5
-              py-2
-              rounded-xl
-              flex
-              items-center
-              gap-2
-              "
-            >
-              <FaDownload />
-  
-              Télécharger PDF
-  
-            </button>
-  
-          </div>
-  
-        </div>
-  
+
+  const navigate = useNavigate()
+
+// =========================
+// REFERENCE DU CERTIFICAT
+// =========================
+
+const certificateRef = useRef(null)
+
+// =========================
+// IMPRESSION
+// =========================
+
+const handlePrint = useReactToPrint({
+
+  contentRef: certificateRef,
+
+  documentTitle: "Certificat SALAM CI",
+
+  pageStyle: `
+    @page{
+      size:A4 portrait;
+      margin:0;
+    }
+
+    body{
+      margin:0;
+      padding:0;
+      background:white;
+    }
+
+    @media print{
+
+      body{
+        -webkit-print-color-adjust:exact;
+        print-color-adjust:exact;
+      }
+
+    }
+  `
+
+})
+
+  return (
+
+    <div className="min-h-screen bg-[#f5f7fb]">
+
+      {/* ========================= */}
+      {/* HEADER */}
+      {/* ========================= */}
+
+      <div
+        className="
+        bg-white
+        border-b
+        sticky
+        top-0
+        z-50
+        "
+      >
+
+{/* ========================= */}
+{/* BARRE SUPERIEURE */}
+{/* ========================= */}
+
+<div
+  className="
+  bg-white
+  border-b
+  px-8
+  py-4
+  flex
+  justify-between
+  items-center
+  print:hidden
+  "
+>
+
+  {/* RETOUR */}
+
+  <button
+    onClick={() => navigate("/my-certificates")}
+    className="
+    flex
+    items-center
+    gap-2
+    text-purple-600
+    font-semibold
+    hover:text-purple-800
+    "
+  >
+    <FaArrowLeft />
+    Retour aux certificats
+  </button>
+
+  {/* ACTIONS */}
+
+  <div className="flex gap-3">
+
+    <button
+      onClick={handlePrint}
+      className="
+      border
+      border-purple-300
+      px-5
+      py-2
+      rounded-xl
+      flex
+      items-center
+      gap-2
+      hover:bg-purple-50
+      "
+    >
+      <FaPrint />
+      Imprimer
+    </button>
+
+    <button
+      className="
+      bg-gradient-to-r
+      from-purple-600
+      to-purple-500
+      text-white
+      px-5
+      py-2
+      rounded-xl
+      flex
+      items-center
+      gap-2
+      "
+    >
+      <FaDownload />
+      Télécharger PDF
+    </button>
+
+  </div>
+
+</div>
+
+      </div>
+
+      {/* ========================= */}
+      {/* CONTENU */}
+      {/* ========================= */}
+
+      <div className="max-w-7xl mx-auto px-8 py-14">
+
         {/* ========================= */}
         {/* CERTIFICAT */}
         {/* ========================= */}
-  
-        <div className="max-w-4xl mx-auto py-12 px-6">
-  
-          <div
-            className="
-            bg-white
-            rounded-3xl
-            shadow-xl
-            border-t-8
-            border-purple-600
-            p-10
-            "
-          >
-  
-            {/* LOGO */}
-  
-            <div className="text-center">
-  
-              <h2
-                className="
-                text-4xl
-                font-bold
-                text-purple-700
-                "
-              >
-                SALAM CI
-              </h2>
-  
-              <p className="text-gray-500 mt-2">
-  
-                Plateforme d'apprentissage numérique
-  
-              </p>
-  
-            </div>
-  
-            {/* TITRE */}
-  
-            <div className="text-center mt-10">
-  
-              <p
-                className="
-                uppercase
-                tracking-[8px]
-                text-gray-400
-                "
-              >
-                Certifie que
-              </p>
-  
-            </div>
-  
-            {/* NOM ETUDIANT */}
-  
-            <h1
-              className="
-              text-center
-              text-5xl
-              font-bold
-              text-[#0b1736]
-              mt-8
-              "
-            >
-              Koukougnon Tagbo Axel Emmanuel
-            </h1>
-  
-            {/* TEXTE */}
-  
-            <p
-              className="
-              text-center
-              text-gray-600
-              mt-8
-              "
-            >
-              a suivi avec succès et satisfait
-              aux exigences requises pour la formation
-            </p>
-  
-            {/* FORMATION */}
-  
-            <h3
-              className="
-              text-center
-              text-3xl
-              font-bold
-              text-purple-600
-              mt-6
-              "
-            >
-              Développement Web Full Stack React & Node.js
-            </h3>
-  
-            <p
-              className="
-              text-center
-              text-gray-500
-              mt-4
-              "
-            >
-              dispensée sur la plateforme SALAM CI
-            </p>
-  
-            {/* INFOS */}
-  
-            <div
-              className="
-              grid
-              md:grid-cols-3
-              gap-8
-              mt-14
-              border-t
-              border-b
-              py-8
-              "
-            >
-  
-              <div>
-  
-                <p className="text-gray-400 text-sm">
-  
-                  FORMATEUR
-  
-                </p>
-  
-                <h4
-                  className="
-                  font-bold
-                  text-[#0b1736]
-                  mt-2
-                  "
-                >
-                  M. Kouassi
-                </h4>
-  
-              </div>
-  
-              <div>
-  
-                <p className="text-gray-400 text-sm">
-  
-                  DATE D'ÉMISSION
-  
-                </p>
-  
-                <h4
-                  className="
-                  font-bold
-                  text-[#0b1736]
-                  mt-2
-                  "
-                >
-                  23 Juin 2026
-                </h4>
-  
-              </div>
-  
-              <div>
-  
-                <p className="text-gray-400 text-sm">
-  
-                  N° CERTIFICAT
-  
-                </p>
-  
-                <h4
-                  className="
-                  font-bold
-                  text-[#0b1736]
-                  mt-2
-                  "
-                >
-                  SALAM-2026-CRT-001
-                </h4>
-  
-              </div>
-  
-            </div>
-  
-            {/* SIGNATURES */}
-  
-            <div
-              className="
-              grid
-              md:grid-cols-3
-              gap-10
-              mt-12
-              text-center
-              "
-            >
-  
-              {/* FORMATEUR */}
-  
-              <div>
-  
-                <h3
-                  className="
-                  text-2xl
-                  italic
-                  text-[#0b1736]
-                  "
-                >
-                  M. Kouassi
-                </h3>
-  
-                <div
-                  className="
-                  border-t
-                  border-purple-300
-                  mt-3
-                  pt-2
-                  "
-                >
-                  Formateur
-                </div>
-  
-              </div>
-  
-              {/* QR CODE */}
-  
-              <div>
-  
-                <div
-                  className="
-                  w-24
-                  h-24
-                  bg-purple-100
-                  mx-auto
-                  rounded-lg
-                  flex
-                  items-center
-                  justify-center
-                  font-bold
-                  text-purple-600
-                  "
-                >
-                  QR
-                </div>
-  
-                <p
-                  className="
-                  text-xs
-                  text-gray-500
-                  mt-3
-                  "
-                >
-                  Scanner pour vérifier
-                </p>
-  
-              </div>
-  
-              {/* DIRECTION */}
-  
-              <div>
-  
-                <h3
-                  className="
-                  text-2xl
-                  italic
-                  text-[#0b1736]
-                  "
-                >
-                  Direction SALAM CI
-                </h3>
-  
-                <div
-                  className="
-                  border-t
-                  border-purple-300
-                  mt-3
-                  pt-2
-                  "
-                >
-                  Direction pédagogique
-                </div>
-  
-              </div>
-  
-            </div>
-  
-          </div>
-  
-          {/* ========================= */}
-          {/* VALIDATION */}
-          {/* ========================= */}
-  
-          <div
-            className="
-            mt-8
-            bg-green-50
-            border
-            border-green-200
-            rounded-2xl
-            p-6
-            "
-          >
-  
-            <div
-              className="
-              flex
-              items-center
-              gap-3
-              text-green-700
-              font-bold
-              "
-            >
-  
-              <FaCheckCircle />
-  
-              Certificat authentique et valide
-  
-            </div>
-  
-            <p className="mt-3 text-gray-600">
-  
-              Lien de vérification :
-  
-              <span className="ml-2 text-purple-600">
-  
-                https://salam-ci.com/verify/SALAM-2026-CRT-001
-  
-              </span>
-  
-            </p>
-  
-          </div>
-  
+
+        <div ref={certificateRef}>
+          <CertificatePrint />
         </div>
-  
+        
+        {/* ========================= */}
+        {/* VALIDATION */}
+        {/* ========================= */}
+
+        <div
+
+          className="
+          mt-10
+          bg-green-50
+          border
+          border-green-200
+          rounded-3xl
+          p-8
+          "
+
+        >
+
+          <div
+
+            className="
+            flex
+            items-center
+            gap-3
+            text-green-700
+            font-bold
+            text-lg
+            "
+
+          >
+
+            <FaCheckCircle />
+
+            Certificat authentique et valide
+
+          </div>
+
+          <p className="mt-4 text-gray-600 leading-8">
+
+            Ce certificat est signé numériquement
+            par la plateforme <strong>SALAM CI</strong>.
+
+            <br />
+
+            Il peut être vérifié grâce à son
+            numéro unique ou via le QR Code
+            présent sur le certificat.
+
+          </p>
+
+          <div
+            className="
+            mt-5
+            text-purple-600
+            font-semibold
+            break-all
+            "
+          >
+
+            https://salam-ci.com/verify/SALAM-2026-CRT-001
+
+          </div>
+
+        </div>
+
       </div>
-  
-    )
-  
-  }
-  
-  export default CertificateDetails
+
+    </div>
+
+  )
+
+}
+
+export default CertificateDetails

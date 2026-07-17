@@ -1,5 +1,18 @@
 import AdminLayout from "../../layouts/AdminLayout"
 import { useNavigate } from "react-router-dom"
+// =========================
+// API AXIOS
+// =========================
+import API from "../../services/api"
+// =========================
+// TOASTS
+// =========================
+import {
+
+  successToast,
+  errorToast
+
+} from "../../utils/toast"
 import {
     FaUsers,
     FaUserShield,
@@ -12,6 +25,23 @@ import {
     FaCheckCircle,
     FaBan
   } from "react-icons/fa"
+// =========================
+// HOOKS REACT
+// =========================
+import { useState, useEffect } from "react"
+// =========================
+// MODAL SUPPRESSION
+// =========================
+import DeleteUserModal from "../../components/DeleteUserModal"
+// =========================
+// MODAL ACTION INTERDITE
+// =========================
+import ForbiddenActionModal from "../../components/ForbiddenActionModal"
+// =========================
+// MODAL ACTIVER / DÉSACTIVER
+// =========================
+import StatusUserModal from "../../components/StatusUserModal"
+
 
 function Users() {
   const navigate = useNavigate()
@@ -22,49 +52,356 @@ function Users() {
   
   }
 
-  const users = [
+const [users, setUsers] = useState([])
 
-    {
-      name: "Jean Kouassi",
-      email: "jean.kouassi@example.com",
-      role: "Étudiant",
-      status: "Actif",
-      date: "15 Jan 2026"
-    },
+// =========================
+// PAGINATION
+// =========================
+const [page, setPage] = useState(1)
+const [limit, setLimit] = useState(10)
+const [totalPages, setTotalPages] = useState(1)
+const [totalUsers, setTotalUsers] = useState(0)
 
-    {
-      name: "Dr. Koné",
-      email: "kone@example.com",
-      role: "Enseignant",
-      status: "Actif",
-      date: "10 Déc 2025"
-    },
+// =========================
+// MODAL SUPPRESSION
+// =========================
+const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+const [selectedUser, setSelectedUser] = useState(null)
 
-    {
-      name: "Aïcha Traoré",
-      email: "aicha@example.com",
-      role: "Étudiant",
-      status: "Actif",
-      date: "20 Jan 2026"
-    },
+// =========================
+// MODAL ACTION INTERDITE
+// =========================
+const [forbiddenOpen, setForbiddenOpen] = useState(false)
+const [forbiddenTitle, setForbiddenTitle] = useState("")
+const [forbiddenMessage, setForbiddenMessage] = useState("")
 
-    {
-      name: "Prof. Diallo",
-      email: "diallo@example.com",
-      role: "Enseignant",
-      status: "Actif",
-      date: "5 Nov 2025"
-    },
+// =========================
+// MODAL ACTIVER / DÉSACTIVER
+// =========================
+const [statusModalOpen, setStatusModalOpen] = useState(false)
+const [selectedStatusUser, setSelectedStatusUser] = useState(null)
+const [activateUser, setActivateUser] = useState(false)
 
-    {
-      name: "Admin Principal",
-      email: "admin@salamci.com",
-      role: "Administrateur",
-      status: "Actif",
-      date: "1 Déc 2025"
-    }
+// =========================
+// UTILISATEUR CONNECTÉ
+// =========================
+const currentUser = JSON.parse(
+  localStorage.getItem("user")
+)
 
-  ]
+// =========================
+// STATISTIQUES
+// =========================
+const [stats, setStats] = useState({
+
+  total: 0,
+
+  admins: 0,
+
+  teachers: 0,
+
+  students: 0
+
+})
+// =========================
+// RECHERCHE
+// =========================
+const [search, setSearch] = useState("")
+// =========================
+// FILTRE PAR RÔLE
+// =========================
+const [roleFilter, setRoleFilter] = useState("Tous les rôles")
+
+// =========================
+// RÉCUPÉRER LES UTILISATEURS
+// =========================
+const getUsers = async () => {
+
+  try {
+
+    // =========================
+    // APPEL API
+    // =========================
+    const res = await API.get(
+
+      `/users?page=${page}&limit=${limit}`
+
+    )
+
+    // =========================
+    // UTILISATEURS
+    // =========================
+    setUsers(
+
+      res.data.users
+
+    )
+
+    // =========================
+    // PAGINATION
+    // =========================
+    setTotalPages(
+
+      res.data.totalPages
+
+    )
+
+    setTotalUsers(
+
+      res.data.totalUsers
+
+    )
+
+  }
+
+  catch (error) {
+
+    console.log(error)
+
+  }
+
+}
+
+// =========================
+// RÉCUPÉRER LES STATISTIQUES
+// =========================
+const getStats = async () => {
+
+  try {
+
+      const res = await API.get("/users/stats")
+
+      setStats(res.data)
+
+  }
+
+  catch (error) {
+
+      console.log(error)
+
+  }
+
+}
+
+// =========================
+// CHARGEMENT AU DÉMARRAGE
+// =========================
+useEffect(() => {
+
+  getUsers()
+
+  getStats()
+
+}, [page, limit])
+
+
+// =========================
+// MODIFIER UTILISATEUR
+// =========================
+const editUser = (user) => {
+  // =========================
+  // L'ADMIN CLIQUE SUR LUI-MÊME
+  // =========================
+  if (user._id === currentUser._id) {
+      setForbiddenTitle(
+          "Modification impossible"
+      )
+      setForbiddenMessage(
+          "Vous ne pouvez pas modifier votre propre compte depuis la gestion des utilisateurs.\n\nUtilisez plutôt la rubrique « Mon Profil »."
+      )
+      setForbiddenOpen(true)
+      return
+  }
+
+  // =========================
+  // AUTRE UTILISATEUR
+  // =========================
+  navigate(
+
+      `/admin-edit-user/${user._id}`
+  )
+}
+
+// =========================
+// OUVERTURE MODAL
+// =========================
+const openDeleteModal = (user) => {
+
+  setSelectedUser(user)
+
+  setIsDeleteOpen(true)
+
+}
+
+// =========================
+// OUVERTURE MODAL STATUT
+// =========================
+const openStatusModal = (
+
+  user,
+
+  activate
+
+) => {
+
+  // =========================
+  // L'ADMIN CLIQUE SUR LUI-MÊME
+  // =========================
+  if (user._id === currentUser._id) {
+      setForbiddenTitle(
+          "Action impossible"
+      )
+      setForbiddenMessage(
+          "Vous ne pouvez pas modifier votre propre statut."
+      )
+      setForbiddenOpen(true)
+      return
+  }
+  setSelectedStatusUser(user)
+  setActivateUser(activate)
+  setStatusModalOpen(true)
+}
+
+// =========================
+// SUPPRIMER UTILISATEUR
+// =========================
+const deleteUser = async () => {
+
+  try {
+
+      const res = await API.delete(
+
+          `/users/${selectedUser._id}`
+
+      )
+
+      successToast(
+
+          "Suppression réussie",
+
+          res.data.message
+
+      )
+
+      setIsDeleteOpen(false)
+
+      setSelectedUser(null)
+
+      getUsers()
+
+      getStats()
+
+  }
+
+  catch (error) {
+
+      errorToast(
+
+          "Erreur",
+
+          error.response?.data?.message ||
+
+          "Impossible de supprimer cet utilisateur."
+
+      )
+
+  }
+
+}
+
+// =========================
+// ACTIVER / DÉSACTIVER
+// =========================
+const changeStatus = async () => {
+
+  try {
+
+      const res = await API.patch(
+
+          `/users/${selectedStatusUser._id}/status`
+
+      )
+
+      successToast(
+
+          "Succès",
+
+          res.data.message
+
+      )
+
+      setStatusModalOpen(false)
+
+      setSelectedStatusUser(null)
+
+      getUsers()
+
+      getStats()
+
+  }
+
+  catch (error) {
+
+      errorToast(
+
+          "Erreur",
+
+          error.response?.data?.message ||
+
+          "Impossible de modifier le statut."
+
+      )
+
+  }
+
+}
+
+// =========================
+// FILTRAGE RECHERCHE
+// =========================
+const filteredUsers = users.filter((user) => {
+  // -------------------------
+  // Recherche
+  // -------------------------
+  const matchSearch =
+
+      user.name
+          .toLowerCase()
+          .includes(search.toLowerCase())
+
+      ||
+
+      user.email
+          .toLowerCase()
+          .includes(search.toLowerCase())
+
+  // -------------------------
+  // Filtre rôle
+  // -------------------------
+  let matchRole = true
+
+  if (roleFilter === "Administrateur") {
+
+      matchRole = user.role === "admin"
+
+  }
+
+  else if (roleFilter === "Enseignant") {
+
+      matchRole = user.role === "teacher"
+
+  }
+
+  else if (roleFilter === "Étudiant") {
+
+      matchRole = user.role === "student"
+
+  }
+
+  return matchSearch && matchRole
+
+})
+
 
   return (
 
@@ -127,7 +464,7 @@ function Users() {
       </p>
 
       <h2 className="text-4xl font-bold mt-2">
-        6
+      {stats.total}
       </h2>
 
     </div>
@@ -153,7 +490,7 @@ function Users() {
       </p>
 
       <h2 className="text-4xl font-bold mt-2 text-purple-600">
-        1
+      {stats.admins}
       </h2>
 
     </div>
@@ -179,7 +516,7 @@ function Users() {
       </p>
 
       <h2 className="text-4xl font-bold mt-2 text-blue-600">
-        2
+      {stats.teachers}
       </h2>
 
     </div>
@@ -205,7 +542,7 @@ function Users() {
       </p>
 
       <h2 className="text-4xl font-bold mt-2 text-green-600">
-        3
+      {stats.students}
       </h2>
 
     </div>
@@ -238,35 +575,37 @@ function Users() {
             "
           />
 
-          <input
-            type="text"
-            placeholder="Rechercher un utilisateur..."
-            className="
-            w-full
-            bg-white
-            rounded-2xl
-            pl-12
-            p-4
-            shadow-sm
-            "
-          />
+<input
+    type="text"
+    placeholder="Rechercher un utilisateur..."
+    value={search}
+    onChange={(e) => setSearch(e.target.value)}
+    className="
+        w-full
+        bg-white
+        rounded-2xl
+        pl-12
+        p-4
+        shadow-sm
+    "
+/>
 
         </div>
 
         <select
+          value={roleFilter}
+          onChange={(e) => setRoleFilter(e.target.value)}
           className="
-          bg-white
-          rounded-2xl
-          px-5
-          shadow-sm
-          "
+            bg-white
+            rounded-2xl
+            px-5
+            shadow-sm"
         >
 
-          <option>Tous les rôles</option>
-          <option>Administrateur</option>
-          <option>Enseignant</option>
-          <option>Étudiant</option>
-
+            <option>Tous les rôles</option>
+            <option>Administrateur</option>
+            <option>Enseignant</option>
+            <option>Étudiant</option>
         </select>
 
       </div>
@@ -307,7 +646,7 @@ function Users() {
 
           <tbody>
 
-            {users.map((user, index) => (
+            {filteredUsers.map((user, index) => (
 
               <tr
                 key={index}
@@ -348,45 +687,167 @@ function Users() {
                 </td>
 
                 <td>
-
-                  <span
-                    className="
-                    bg-green-100
-                    text-green-600
-                    px-3
-                    py-1
-                    rounded-full
-                    text-sm
-                    "
+                  <div className={`w-5 h-5 rounded-full mx-auto
+                    ${
+                      user.isOnline
+                   ? "bg-green-500"
+                   : "bg-red-500"
+                    }
+                    `}
                   >
-                    {user.status}
-                  </span>
-
-                </td>
+                  </div>
+               </td>
 
                 <td>
-                  {user.date}
+        {new Date(user.createdAt).toLocaleDateString("fr-FR")}
                 </td>
 
                 <td>
 
                   <div className="flex gap-4 text-lg">
 
-                    <button className="text-blue-600">
+                  <button
+                    onClick={() => editUser(user)}
+                    disabled={user._id === currentUser._id}
+                    title={
+                      user._id === currentUser._id
+                        ? "Modifiez votre compte depuis Mon Profil."
+                        : "Modifier cet utilisateur"
+                    }
+                    className={`
+                      transition
+                          ${
+                              user._id === currentUser._id
+                                ? "text-gray-300 cursor-not-allowed"
+                                : "text-blue-600 hover:text-blue-800"
+                            }
+                  ` }
+                  >
                       <FaEdit />
-                    </button>
+                  </button>
 
-                    <button className="text-green-600">
-                      <FaCheckCircle />
-                    </button>
+{/* =========================
+    ACTIVER
+========================= */}
 
-                    <button className="text-orange-500">
-                      <FaBan />
-                    </button>
+<button
 
-                    <button className="text-red-600">
-                      <FaTrash />
-                    </button>
+    disabled={
+
+        user.isActive ||
+
+        user._id === currentUser._id
+
+    }
+
+    title={
+
+        user._id === currentUser._id
+
+        ?
+
+        "Impossible de modifier votre statut."
+
+        :
+
+        "Activer"
+
+    }
+
+    onClick={() =>
+
+        openStatusModal(
+
+            user,
+
+            true
+
+        )
+
+    }
+
+    className={`
+        transition
+
+        ${
+
+            user.isActive ||
+
+            user._id === currentUser._id
+
+            ?
+
+            "text-gray-300 cursor-not-allowed"
+
+            :
+
+            "text-green-600 hover:text-green-800"
+
+        }
+    `}
+>
+
+    <FaCheckCircle />
+
+</button>
+
+{/* =========================
+    DÉSACTIVER
+========================= */}
+
+<button
+    disabled={
+        !user.isActive ||
+        user._id === currentUser._id
+    }
+    title={
+        user._id === currentUser._id
+        ?
+        "Impossible de modifier votre statut."
+        :
+        "Désactiver"
+    }
+    onClick={() =>
+        openStatusModal(
+            user,
+            false
+        )
+    }
+    className={`
+        transition
+        ${
+            !user.isActive ||
+            user._id === currentUser._id
+            ?
+            "text-gray-300 cursor-not-allowed"
+            :
+            "text-orange-600 hover:text-orange-700"
+        }
+    `}
+>
+    <FaBan />
+
+</button>
+
+                    <button
+                      onClick={() => openDeleteModal(user)}
+                      disabled={user._id === currentUser._id}
+                      title={
+                        user._id === currentUser._id
+                        ? "Impossible de supprimer votre propre compte."
+                        : "Supprimer cet utilisateur"
+                      }
+                      className={`
+                          transition
+                          ${
+                              user._id === currentUser._id
+                              ? "text-gray-300 cursor-not-allowed"
+                              : "text-red-600 hover:text-red-800"
+                          }
+                      `}
+                    >
+                        <FaTrash />
+                      </button>
 
                   </div>
 
@@ -402,10 +863,184 @@ function Users() {
 
       </div>
 
+      <p className="text-gray-500 mt-6">
+          Affichage de
+            <span className="font-bold">
+              {" "}
+                {(page - 1) * limit + 1}
+            </span>&nbsp;
+          à&nbsp;
+            <span className="font-bold">
+              {" "}
+                {
+                  Math.min(
+                    page * limit,
+                    totalUsers
+                          )
+                }
+            </span>&nbsp;
+          sur
+            <span className="font-bold">
+              {" "}
+              {totalUsers}
+            </span>&nbsp;
+          utilisateurs.
+      </p>
+
+
+        {/* =========================
+                 PAGINATION
+        ========================= */}
+
+<div className="flex justify-between items-center mt-8">
+    <div className="flex items-center gap-3">
+        <span className="text-gray-500">
+            Afficher
+        </span>
+
+        <select
+            value={limit}
+            onChange={(e) => {
+                setLimit(
+                    Number(e.target.value)
+                )
+                setPage(1)
+            }}
+            className="border rounded-xl px-3 py-2" >
+
+            <option value={5}>5</option>
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={40}>40</option>
+            <option value={80}>80</option>
+        </select>
+
+        <span className="text-gray-500">
+            utilisateurs
+        </span>
+    </div>
+
+    <div className="flex items-center gap-2">
+      <button
+        disabled={page === 1}
+        onClick={() =>
+            setPage(page - 1)
+        }
+
+        className={`px-4 py-2 rounded-xl transition
+            ${
+                page === 1
+                ?
+                "bg-gray-200 text-gray-400 cursor-not-allowed"
+                :
+                "bg-purple-600 text-white hover:bg-purple-700"
+            }
+                `}
+      >
+        Précédent
+      </button>
+
+    {
+Array.from(
+    {
+        length: totalPages
+    }
+).map((_, index) => (
+
+<button
+    key={index}
+    onClick={() =>
+        setPage(index + 1)
+    }
+
+    className={`
+        w-10
+        h-10
+        rounded-xl
+
+        ${
+            page === index + 1
+
+            ?
+
+            "bg-purple-600 text-white"
+
+            :
+
+            "bg-gray-200 hover:bg-gray-300"
+
+        }
+    `}
+>
+
+    {index + 1}
+
+</button>
+
+))
+
+}
+
+<button
+
+    disabled={page === totalPages}
+
+    onClick={() =>
+
+        setPage(page + 1)
+
+    }
+
+    className={`px-4 py-2 rounded-xl transition
+        ${
+            page === totalPages
+            ?
+            "bg-gray-200 text-gray-400 cursor-not-allowed"
+            :
+            "bg-purple-600 text-white hover:bg-purple-700"
+        }
+    `}
+>
+    Suivant
+</button>
+</div>
+</div>
+
+            <DeleteUserModal  
+        isOpen={isDeleteOpen}
+        user={selectedUser}
+        isCurrentUser={
+              selectedUser?._id === currentUser?._id
+        }
+        onClose={() => {
+              setIsDeleteOpen(false)
+              setSelectedUser(null)
+        }}
+        onConfirm={deleteUser}
+            />
+
+          <StatusUserModal
+            isOpen={statusModalOpen}
+            user={selectedStatusUser}
+            activate={activateUser}
+            onClose={() => {
+               setStatusModalOpen(false)
+               setSelectedStatusUser(null)
+            }}
+            onConfirm={changeStatus}
+          />
+
+          <ForbiddenActionModal
+            isOpen={forbiddenOpen}
+            title={forbiddenTitle}
+            message={forbiddenMessage}
+            onClose={() => {
+                setForbiddenOpen(false)
+            }}
+          />
+
     </AdminLayout>
-
   )
-
 }
 
 export default Users

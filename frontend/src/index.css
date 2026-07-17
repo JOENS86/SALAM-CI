@@ -9,3 +9,20 @@ body{
   font-family:sans-serif;
   background:#f5f7fb;
 }
+
+/* ========================= */
+/* IMPRESSION CERTIFICAT */
+/* ========================= */
+
+@media print {
+
+  body {
+    background: white !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+}

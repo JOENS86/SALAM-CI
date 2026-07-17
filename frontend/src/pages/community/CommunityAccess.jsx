@@ -1,7 +1,11 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import {
+  Navigate,
+  useNavigate
+} from "react-router-dom";
 import { FaLock, FaSignInAlt } from "react-icons/fa"
 import API from "../../services/api"
+import { toast } from "react-toastify";
 
 function CommunityAccess() {
 
@@ -52,7 +56,7 @@ function CommunityAccess() {
 
     } catch (error) {
 
-      alert(
+      toast.error(
         error.response?.data?.message ||
         "Erreur de connexion"
       )

@@ -1,18 +1,68 @@
 import { Navigate } from "react-router-dom"
 
+// =========================
+// PROTECTED ROUTE
+// Vérifie si l'utilisateur est connecté
+// =========================
 function ProtectedRoute({ children }) {
 
-  // Vérifie token
+  // =========================
+  // RÉCUPÉRATION DES DONNÉES
+  // =========================
   const token = localStorage.getItem("token")
 
-  // Si pas connecté
-  if (!token) {
+  const user = JSON.parse(
+    localStorage.getItem("user")
+  )
 
-    return <Navigate to="/login" />
+  // =========================
+  // PAS CONNECTÉ
+  // =========================
+  if (!token || !user) {
+
+    return <Navigate to="/login" replace />
 
   }
 
-  // Sinon accès autorisé
+  // =========================
+  // ADMIN
+  // =========================
+  if (
+    window.location.pathname.startsWith("/admin") &&
+    user.role !== "admin"
+  ) {
+
+    return <Navigate to="/login" replace />
+
+  }
+
+  // =========================
+  // ENSEIGNANT
+  // =========================
+  if (
+    window.location.pathname.startsWith("/teacher") &&
+    user.role !== "teacher"
+  ) {
+
+    return <Navigate to="/login" replace />
+
+  }
+
+  // =========================
+  // ÉTUDIANT
+  // =========================
+  if (
+    window.location.pathname.startsWith("/student") &&
+    user.role !== "student"
+  ) {
+
+    return <Navigate to="/login" replace />
+
+  }
+
+  // =========================
+  // AUTORISÉ
+  // =========================
   return children
 
 }

@@ -140,6 +140,16 @@ function App() {
       />
 
       <Route
+        path="/admin-edit-user/:id"
+        element={
+          <ProtectedRoute>
+              <CreateUser />
+          </ProtectedRoute>
+        }
+
+      />
+
+      <Route
         path="/admin-courses"
         element={
           <ProtectedRoute>

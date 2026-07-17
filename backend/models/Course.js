@@ -1,46 +1,188 @@
 import mongoose from "mongoose"
 
-const courseSchema = new mongoose.Schema({
+// =========================
+// COURSE SCHEMA
+// =========================
+const courseSchema = new mongoose.Schema(
 
-  title: {
-    type: String,
-    required: true
+  {
+
+    // =========================
+    // TITRE DU COURS
+    // =========================
+    title: {
+
+      type: String,
+
+      required: true,
+
+      trim: true
+
+    },
+
+    // =========================
+    // DESCRIPTION
+    // =========================
+    description: {
+
+      type: String,
+
+      required: true
+
+    },
+
+    // =========================
+    // CATÉGORIE
+    // =========================
+    category: {
+
+      type: String,
+
+      required: true
+
+    },
+
+    // =========================
+    // IMAGE DE COUVERTURE
+    // =========================
+    thumbnail: {
+
+      type: String,
+
+      default: ""
+
+    },
+
+    // =========================
+    // DOCUMENT PDF
+    // =========================
+    pdf: {
+
+      type: String,
+
+      default: ""
+
+    },
+
+    // =========================
+    // VIDÉO
+    // =========================
+    video: {
+
+      type: String,
+
+      default: ""
+
+    },
+
+    // =========================
+    // ENSEIGNANT
+    // =========================
+    teacher: {
+
+      type: mongoose.Schema.Types.ObjectId,
+
+      ref: "User",
+
+      required: true
+
+    },
+
+    // =========================
+    // STATUT DU COURS
+    // =========================
+    status: {
+
+      type: String,
+
+      enum: [
+
+        "En attente",
+
+        "Publié",
+
+        "Suspendu"
+
+      ],
+
+      default: "En attente"
+
+    },
+
+    // =========================
+    // COURS ACTIF
+    // =========================
+    isActive: {
+
+      type: Boolean,
+
+      default: true
+
+    },
+
+    // =========================
+    // NOMBRE D'ÉTUDIANTS
+    // =========================
+    studentsCount: {
+
+      type: Number,
+
+      default: 0
+
+    },
+
+    // =========================
+    // NOMBRE DE VUES
+    // =========================
+    views: {
+
+      type: Number,
+
+      default: 0
+
+    },
+
+    // =========================
+    // NOMBRE DE TÉLÉCHARGEMENTS
+    // =========================
+    downloads: {
+
+      type: Number,
+
+      default: 0
+
+    },
+
+    // =========================
+    // DATE DE PUBLICATION
+    // =========================
+    publishedAt: {
+
+      type: Date,
+
+      default: null
+
+    }
+
   },
 
-  description: {
-    type: String,
-    required: true
-  },
+  {
 
-  category: {
-    type: String,
-    required: true
-  },
+    timestamps: true
 
-  thumbnail: {
-    type: String
-  },
-
-  pdf: {
-    type: String
-  },
-
-  video: {
-    type: String
-  },
-
-  teacher: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User"
   }
 
-}, {
-  timestamps: true
-})
+)
 
+// =========================
+// MODEL
+// =========================
 const Course = mongoose.model(
+
   "Course",
+
   courseSchema
+
 )
 
 export default Course

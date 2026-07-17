@@ -6,6 +6,7 @@ import {
   FaTrash,
   FaFolder
 } from "react-icons/fa"
+import { toast } from "react-toastify";
 
 function Categories() {
 
@@ -60,7 +61,7 @@ function Categories() {
 
         <button
           onClick={() =>
-            alert(
+            infoToast(
               "Ajout de catégorie bientôt disponible 🚀"
             )
           }

@@ -7,8 +7,10 @@ import dotenv from "dotenv"
 // IMPORT ROUTES
 // =========================
 import authRoutes from "./routes/authRoutes.js"
+//import dashboardRoutes from "./routes/dashboardRoutes.js";
 import userRoutes from "./routes/userRoutes.js"
 import courseRoutes from "./routes/courseRoutes.js"
+import conferenceRoutes from "./routes/conferenceRoutes.js"
 
 // =========================
 // CONFIGURATION .ENV
@@ -48,11 +50,18 @@ app.use(
 // AUTH
 app.use("/api/auth", authRoutes)
 
+// Tableau de bord
+//app.use("/api/dashboard", dashboardRoutes);
+
 // USERS
 app.use("/api/users", userRoutes)
 
 // COURSES
 app.use("/api/courses", courseRoutes)
+
+// Conférences
+app.use("/api/conferences", conferenceRoutes)
+
 
 // =========================
 // ROUTE TEST API

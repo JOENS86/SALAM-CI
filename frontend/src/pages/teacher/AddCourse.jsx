@@ -2,6 +2,7 @@ import { useState } from "react"
 import API from "../../services/api"
 import { useNavigate } from "react-router-dom"
 import { FaArrowLeft } from "react-icons/fa"
+import { toast } from "react-toastify";
 
 function AddCourse() {
 
@@ -68,13 +69,13 @@ function AddCourse() {
 
       console.log(res.data)
 
-      alert("Cours créé avec succès")
+      successToast("Cours créé avec succès")
 
     } catch (error) {
 
       console.log(error)
 
-      alert("Erreur création cours")
+      toast.error("Erreur création cours")
 
     }
 

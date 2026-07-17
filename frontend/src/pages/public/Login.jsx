@@ -6,8 +6,12 @@ import { useLocation } from "react-router-dom"
 import {
   FaEye,
   FaEyeSlash,
-  FaUsers
+  FaUsers,
+  FaBookOpen,
+  FaAward,
+  FaVideo
 } from "react-icons/fa"
+import { successToast, errorToast } from "../../utils/toast";
 
 
 function Login() {
@@ -22,12 +26,73 @@ function Login() {
 
   const params =
   new URLSearchParams(location.search)
-  const isCommunity =
+
+const isCommunity =
   params.get("community") === "true"
 
-const hideRegister =
-  params.get("conference") === "true" ||
-  isCommunity
+const isCourses =
+  params.get("courses") === "true"
+
+const isCertificates =
+  params.get("certificates") === "true"
+
+const isConference =
+  params.get("conference") === "true"
+
+  const hideRegister =
+  isCommunity ||
+  isCourses ||
+  isCertificates ||
+  isConference
+
+  let accessIcon = null
+let accessTitle = ""
+let accessDescription = ""
+
+if (isCommunity) {
+
+  accessIcon = <FaUsers className="text-4xl text-purple-600" />
+
+  accessTitle = "Accès réservé aux membres"
+
+  accessDescription =
+    "Connectez-vous pour accéder à la Communauté Active SALAM CI et rejoindre les échanges entre étudiants et enseignants."
+
+}
+
+else if (isCourses) {
+
+  accessIcon = <FaBookOpen className="text-4xl text-purple-600" />
+
+  accessTitle = "Accès aux formations"
+
+  accessDescription =
+    "Connectez-vous pour accéder à toutes les formations SALAM CI et poursuivre votre apprentissage."
+
+}
+
+else if (isCertificates) {
+
+  accessIcon = <FaAward className="text-4xl text-purple-600" />
+
+  accessTitle = "Accédez à vos certificats"
+
+  accessDescription =
+    "Connectez-vous pour consulter, télécharger et partager tous vos certificats obtenus sur SALAM CI."
+
+}
+
+else if (isConference) {
+
+  accessIcon = <FaVideo className="text-4xl text-purple-600" />
+
+  accessTitle = "Accès aux conférences"
+
+  accessDescription =
+    "Connectez-vous pour rejoindre les conférences en direct organisées sur SALAM CI."
+
+}
+
   // =========================
   // STATE FORMULAIRE
   // =========================
@@ -89,8 +154,10 @@ const hideRegister =
            "registeredEmail"
       )
 
-      alert("Connexion réussie")
-
+      successToast(
+        "Connexion réussie",
+        "Bienvenue sur SALAM CI."
+      )
       
       if (params.get("courses") === "true") {
         navigate("/courses", {
@@ -152,11 +219,14 @@ const hideRegister =
 
       if (error.response?.data?.message) {
 
-        alert(error.response.data.message)
+        errorToast(error.response.data.message)
 
       } else {
 
-        alert("Erreur connexion")
+        errorToast(
+          "Connexion refusée",
+          "Email ou mot de passe incorrect."   
+        )
 
       }
 
@@ -200,50 +270,56 @@ const hideRegister =
           items-center
           justify-center
           gap-24
-          ${isCommunity ? "max-w-6xl" : "max-w-md"}
+          ${ isCommunity || isCourses || isCertificates || isConference ? "max-w-6xl" : "max-w-md" }
         `}
       >
   
-        {isCommunity && (
-  
-          <div className="text-center max-w-md">
-  
-            <div
-              className="
-              w-24
-              h-24
-              mx-auto
-              rounded-full
-              bg-purple-100
-              flex
-              items-center
-              justify-center
-              mb-6
-              "
-            >
-              <FaUsers className="text-4xl text-purple-600" />
-            </div>
-  
-            <h1 className="text-4xl font-bold">
-              Accès réservé aux membres
-            </h1>
-  
-            <p className="text-gray-500 mt-4 leading-8">
-              Connectez-vous pour accéder à la Communauté Active
-              SALAM CI et rejoindre les échanges entre
-              étudiants et enseignants.
-            </p>
-  
-          </div>
-  
-        )}
+  {(isCommunity ||
+  isCourses ||
+  isCertificates ||
+  isConference) && (
+
+  <div className="text-center max-w-md">
+
+    <div
+      className="
+      w-24
+      h-24
+      mx-auto
+      rounded-full
+      bg-purple-100
+      flex
+      items-center
+      justify-center
+      mb-6
+      "
+    >
+
+      {accessIcon}
+
+    </div>
+
+    <h1 className="text-4xl font-bold">
+
+      {accessTitle}
+
+    </h1>
+
+    <p className="text-gray-500 mt-4 leading-8">
+
+      {accessDescription}
+
+    </p>
+
+  </div>
+
+)}
   
         <div className="bg-white w-full max-w-md p-8 rounded-2xl shadow-lg">
   
           {/* TITRE */}
   
-          {!isCommunity && (
-  
+          {!( isCommunity || isCourses || isCertificates || isConference ) && ( 
             <>
               <h1 className="text-5xl font-bold text-center">
                 SALAM <span className="text-purple-600">CI</span>

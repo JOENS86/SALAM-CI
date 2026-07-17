@@ -2,6 +2,14 @@ import { Link, useNavigate } from "react-router-dom"
 import { useState } from "react"
 import API from "../../services/api"
 import { FaArrowLeft } from "react-icons/fa"
+// =========================
+// TOAST PERSONNALISÉ SALAM CI
+// =========================
+
+import {
+  successToast,
+  errorToast
+} from "../../utils/toast";
 
 function Register() {
 
@@ -63,7 +71,10 @@ function Register() {
         formData.email
       )
       
-      alert("Compte créé avec succès")
+      successToast(
+        "Compte créé",
+        "Bienvenue sur SALAM CI 🎉"
+      )
       
       navigate("/login")
 
@@ -82,11 +93,16 @@ function Register() {
       // Gestion erreur backend
       if (error.response?.data?.message) {
 
-        alert(error.response.data.message)
-
+        errorToast(
+          "Inscription impossible",
+          error.response.data.message
+        )
       } else {
 
-        alert("Erreur inscription")
+        errorToast(
+          "Erreur",   
+          "Une erreur est survenue lors de l'inscription."
+        )
 
       }
 

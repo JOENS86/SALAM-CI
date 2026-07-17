@@ -1,5 +1,6 @@
 import AdminLayout from "../../layouts/AdminLayout"
-
+import { useEffect, useState } from "react"
+import API from "../../services/api"
 import {
     FaSearch,
     FaEye,
@@ -12,33 +13,50 @@ import {
 
 function Conferences() {
 
-  const conferences = [
+// =========================
+// DONNEES
+// =========================
+const [conferences, setConferences] = useState([])
 
-    {
-      title: "Machine Learning Avancé",
-      teacher: "Dr. Koné",
-      date: "15 Juin 2026",
-      participants: 120,
-      status: "Programmée"
-    },
+// =========================
+// STATISTIQUES
+// =========================
+const [stats, setStats] = useState({})
 
-    {
-      title: "React Best Practices",
-      teacher: "Prof. Diallo",
-      date: "18 Juin 2026",
-      participants: 85,
-      status: "Programmée"
-    },
+// =========================
+// RECHERCHE
+// =========================
+const [search, setSearch] = useState("")
 
-    {
-      title: "Introduction IA",
-      teacher: "Dr. Bamba",
-      date: "01 Juin 2026",
-      participants: 210,
-      status: "Terminée"
-    }
+// =========================
+// FILTRE
+// =========================
+const [statusFilter, setStatusFilter] = useState("Tous")
 
-  ]
+// =========================
+// PAGINATION
+// =========================
+const [page, setPage] = useState(1)
+const [limit] = useState(10)
+const [totalPages, setTotalPages] = useState(1)
+const [totalConferences, setTotalConferences] = useState(0)
+
+// =========================
+// LOADER
+// =========================
+const [loading, setLoading] = useState(true)
+
+// =========================
+// DETAILS
+// =========================
+const [selectedConference, setSelectedConference] = useState(null)
+const [showModal, setShowModal] = useState(false)
+
+// =========================
+// SUPPRESSION
+// =========================
+const [conferenceToDelete, setConferenceToDelete] = useState(null)
+const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   return (
 

@@ -6,6 +6,7 @@ import {
   FaBell,
   FaPaperPlane
 } from "react-icons/fa"
+import { toast } from "react-toastify";
 
 function Notifications() {
 
@@ -32,7 +33,7 @@ function Notifications() {
 
     e.preventDefault()
 
-    alert(
+    infoToast(
       "Envoi de notification bientôt disponible 🚀"
     )
 

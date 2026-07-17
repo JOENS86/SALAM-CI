@@ -1,4 +1,16 @@
 import AdminLayout from "../../layouts/AdminLayout"
+import { useNavigate } from "react-router-dom"
+import {
+    useEffect,
+    useState
+} from "react"
+
+import API from "../../services/api"
+
+import {
+    successToast,
+    errorToast
+} from "../../utils/toast"
 
 import {
   FaSearch,
@@ -10,33 +22,300 @@ import {
 
 function Courses() {
 
-  const courses = [
+  const navigate = useNavigate()
+  // =========================
+  // COURS
+  // =========================
+  const [courses, setCourses] = useState([])
 
-    {
-      title: "Développement React",
-      teacher: "Dr. Koné",
-      category: "Frontend",
-      students: 120,
-      status: "Publié"
-    },
+// =========================
+// CHARGEMENT
+// =========================
+const [loading, setLoading] = useState(true)
 
-    {
-      title: "Node.js Avancé",
-      teacher: "Prof. Diallo",
-      category: "Backend",
-      students: 85,
-      status: "En attente"
-    },
+  // =========================
+  // STATISTIQUES
+  // =========================
+  const [stats, setStats] = useState({
+    total: 0,
+    published: 0,
+    pending: 0,
+    suspended: 0
+  })
 
-    {
-      title: "MongoDB Essentials",
-      teacher: "Dr. Bamba",
-      category: "Base de données",
-      students: 63,
-      status: "Publié"
+  // =========================
+  // RECHERCHE
+  // =========================
+  const [search, setSearch] = useState("")
+
+  // =========================
+  // FILTRE
+  // =========================
+  const [statusFilter, setStatusFilter] = useState(
+    "Tous"
+  )
+
+  // =========================
+  // PAGINATION
+  // =========================
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(10)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalCourses, setTotalCourses] = useState(0)
+
+// =========================
+// MODAL
+// =========================
+const [showModal, setShowModal] = useState(false)
+const [selectedCourse, setSelectedCourse] = useState(null)
+
+// =========================
+// MODAL SUPPRESSION
+// =========================
+const [showDeleteModal, setShowDeleteModal] = useState(false)
+const [courseToDelete, setCourseToDelete] = useState(null)
+
+// =========================
+// RÉCUPÉRER LES COURS
+// =========================
+const getCourses = async () => {
+
+    try {
+
+        setLoading(true)
+
+        const res = await API.get(
+            `/courses?page=${page}&limit=${limit}`
+        )
+
+        setCourses(res.data.courses)
+
+        setTotalPages(res.data.totalPages)
+
+        setTotalCourses(res.data.totalCourses)
+
+        setLoading(false)
+
     }
 
-  ]
+    catch (error) {
+
+        console.log(error)
+
+        setLoading(false)
+
+    }
+}
+
+
+// =========================
+// STATISTIQUES
+// =========================
+const getStats = async () => {
+
+  try {
+
+      const res = await API.get(
+          "/courses/stats"
+      )
+
+      console.log(res.data)
+      
+      setStats(
+          res.data
+      )
+  }
+
+  catch (error) {
+      console.log(error)
+  }
+}
+
+useEffect(() => {
+
+  getCourses()
+  getStats()
+}, [
+  page,
+  limit
+])
+
+// =========================
+// FILTRAGE DES COURS
+// =========================
+const filteredCourses = courses.filter((course) => {
+
+  // =========================
+  // RECHERCHE
+  // =========================
+  const matchSearch =
+
+      course.title
+          .toLowerCase()
+          .includes(search.toLowerCase())
+
+      ||
+
+      course.category
+          .toLowerCase()
+          .includes(search.toLowerCase())
+
+      ||
+
+      course.teacher?.name
+          ?.toLowerCase()
+          .includes(search.toLowerCase())
+
+  // =========================
+  // FILTRE STATUT
+  // =========================
+  let matchStatus = true
+
+  if (statusFilter !== "Tous") {
+
+      matchStatus =
+
+          course.status === statusFilter
+
+  }
+
+  return matchSearch && matchStatus
+
+})
+
+
+// =========================
+// OUVRIR LE MODAL
+// =========================
+const handleViewCourse = async (id) => {
+
+    try {
+
+        const res = await API.get(`/courses/${id}`)
+
+        setSelectedCourse(res.data)
+
+        setShowModal(true)
+
+    }
+
+    catch (error) {
+
+        console.log(error)
+
+        errorToast("Impossible de charger le cours.")
+
+    }
+
+}
+
+
+// =========================
+// PUBLIER UN COURS
+// =========================
+const publishCourse = async (id) => {
+
+    try {
+
+        await API.patch(
+            `/courses/${id}/publish`
+        )
+
+        successToast(
+            "Cours publié avec succès."
+        )
+
+        getCourses()
+
+        getStats()
+
+    }
+
+    catch (error) {
+
+        errorToast(
+            error.response?.data?.message ||
+            "Impossible de publier."
+        )
+    }
+}
+
+
+// =========================
+// SUSPENDRE UN COURS
+// =========================
+const suspendCourse = async (id) => {
+
+    try {
+
+        await API.patch(
+            `/courses/${id}/suspend`
+        )
+
+        successToast(
+            "Cours suspendu avec succès."
+        )
+
+        getCourses()
+
+        getStats()
+
+    }
+
+    catch (error) {
+
+        errorToast(
+
+            error.response?.data?.message ||
+
+            "Impossible de suspendre."
+
+        )
+
+    }
+
+}
+
+
+// =========================
+// SUPPRIMER UN COURS
+// =========================
+const deleteCourse = async (id) => {
+
+    try {
+
+        await API.delete(`/courses/${id}`)
+
+        successToast(
+            "Cours supprimé avec succès."
+        )
+
+        // Fermer les modals
+        setShowDeleteModal(false)
+        setCourseToDelete(null)
+        setShowModal(false)
+        setSelectedCourse(null)
+
+        // Recharger les données
+        getCourses()
+        getStats()
+
+    }
+
+    catch (error) {
+
+        errorToast(
+
+            error.response?.data?.message ||
+
+            "Impossible de supprimer."
+
+        )
+
+    }
+
+}
+
 
   return (
 
@@ -56,26 +335,139 @@ function Courses() {
 
       </div>
 
-      {/* RECHERCHE */}
+{/* =========================
+    STATISTIQUES
+========================= */}
+<div className="grid md:grid-cols-4 gap-6 mb-8">
 
-      <div className="bg-white p-4 rounded-2xl shadow-sm mb-8 flex items-center gap-4">
+    {/* TOTAL */}
 
-        <FaSearch className="text-gray-400" />
+    <div className="bg-white rounded-3xl shadow-sm p-6">
+        <p className="text-gray-500">
+            Total des cours
+        </p>
 
-        <input
-          type="text"
-          placeholder="Rechercher un cours..."
-          className="flex-1 outline-none"
+        <h2 className="text-4xl font-bold mt-2">
+            {stats.total}
+        </h2>
+
+    </div>
+
+    {/* PUBLIÉS */}
+
+    <div className="bg-white rounded-3xl shadow-sm p-6">
+        <p className="text-gray-500">
+            Publiés
+        </p>
+
+        <h2 className="text-4xl font-bold text-green-600 mt-2">
+            {stats.published}
+        </h2>
+
+    </div>
+
+    {/* EN ATTENTE */}
+
+    <div className="bg-white rounded-3xl shadow-sm p-6">
+        <p className="text-gray-500">
+            En attente
+        </p>
+
+        <h2 className="text-4xl font-bold text-orange-500 mt-2">
+            {stats.pending}
+        </h2>
+
+    </div>
+
+
+    {/* SUSPENDUS */}
+
+    <div className="bg-white rounded-3xl shadow-sm p-6">
+        <p className="text-gray-500">
+            Suspendus
+        </p>
+
+        <h2 className="text-4xl font-bold text-red-600 mt-2">
+            {stats.suspended}
+        </h2>
+
+    </div>
+</div>
+
+
+{/* =========================
+    RECHERCHE + FILTRE
+========================= */}
+
+<div className="flex gap-4 mb-8">
+    <div className="flex-1 relative">
+        <FaSearch
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
         />
 
-      </div>
+        <input
+            type="text"
+            value={search}
+            onChange={(e) =>
+                setSearch(e.target.value)
+            }
+            placeholder="Rechercher un cours..."
+            className=" w-full bg-white rounded-2xl pl-12 py-4 shadow-sm outline-none " />
+
+    </div>
+
+    <select
+        value={statusFilter}
+        onChange={(e) =>
+            setStatusFilter(
+                e.target.value
+            )
+        }
+
+        className="bg-white rounded-2xl px-5 shadow-sm" >
+
+        <option>
+            Tous
+        </option>
+
+        <option>
+            Publié
+        </option>
+
+        <option>
+            En attente
+        </option>
+
+        <option>
+            Suspendu
+        </option>
+    </select>
+
+</div>
+
 
       {/* TABLEAU */}
 
       <div className="bg-white rounded-3xl shadow-sm overflow-hidden">
 
-        <table className="w-full">
+{
+loading ? (
 
+<div className="py-24 flex flex-col items-center">
+
+<div className="w-14 h-14 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+
+<p className="mt-6 text-gray-500 text-lg">
+
+Chargement des cours...
+
+</p>
+
+</div>
+
+) : (
+
+<table className="w-full">
           <thead className="bg-gray-50">
 
             <tr>
@@ -103,91 +495,457 @@ function Courses() {
               <th className="text-left">
                 Actions
               </th>
-
             </tr>
-
           </thead>
 
-          <tbody>
+    <tbody>
 
-            {courses.map((course, index) => (
+{
+filteredCourses.length > 0 ? (
 
-              <tr
-                key={index}
-                className="border-t"
-              >
+filteredCourses.map((course) => (
 
-                <td className="p-5 font-semibold">
-                  {course.title}
-                </td>
+<tr
+    key={course._id}
+    className="border-t hover:bg-gray-50 transition"
+>
 
-                <td>
-                  {course.teacher}
-                </td>
+    {/* =========================
+        COURS
+    ========================= */}
+    <td className="p-5">
+        <div className="flex items-center gap-4">
 
-                <td>
-                  {course.category}
-                </td>
+            <img
+                src={
+                    course.thumbnail ||
+                    "/images/course.png"
+                }
+                alt="thumbnail"
+                className="w-16 h-16 rounded-xl object-cover"
+            />
 
-                <td>
-                  {course.students}
-                </td>
+            <div>
 
-                <td>
+                <h3 className="font-semibold">
+                    {course.title}
+                </h3>
 
-                  <span
-                    className={`
-                    px-3
-                    py-1
-                    rounded-full
-                    text-sm
-                    ${
-                      course.status === "Publié"
-                        ? "bg-green-100 text-green-600"
-                        : "bg-orange-100 text-orange-600"
-                    }
-                    `}
-                  >
+                <p className="text-gray-500 text-sm">
+                    {course.description?.slice(0,60)}...
+                </p>
 
-                    {course.status}
+            </div>
 
-                  </span>
+        </div>
+    </td>
 
-                </td>
+    <td>
+        {course.teacher?.name}
+    </td>
 
-                <td>
+    <td>
 
-                  <div className="flex gap-4 text-lg">
+        <span className="bg-blue-100 text-blue-600 px-3 py-1 rounded-full">
 
-                    <button className="text-blue-600">
-                      <FaEye />
-                    </button>
+            {course.category}
 
-                    <button className="text-green-600">
-                      <FaCheckCircle />
-                    </button>
+        </span>
 
-                    <button className="text-orange-500">
-                      <FaBan />
-                    </button>
+    </td>
 
-                    <button className="text-red-600">
-                      <FaTrash />
-                    </button>
+    <td>
 
-                  </div>
+        {course.studentsCount}
 
-                </td>
+    </td>
 
-              </tr>
+    <td>
 
-            ))}
+        <span
+            className={`px-3 py-1 rounded-full text-sm
 
-          </tbody>
+            ${
+                course.status === "Publié"
 
-        </table>
+                ? "bg-green-100 text-green-600"
+
+                : course.status === "Suspendu"
+
+                ? "bg-red-100 text-red-600"
+
+                : "bg-orange-100 text-orange-600"
+
+            }`}
+        >
+
+            {course.status}
+
+        </span>
+
+    </td>
+
+    <td>
+
+        <div className="flex gap-4 text-lg">
+
+            <button
+                onClick={() => handleViewCourse(course._id)}
+                className="text-blue-600 hover:scale-110"
+            >
+                <FaEye/>
+            </button>
+
+            {
+                course.status !== "Publié" &&
+
+                <button
+                    onClick={() => publishCourse(course._id)}
+                    className="text-green-600 hover:scale-110"
+                >
+                    <FaCheckCircle/>
+                </button>
+            }
+
+            {
+                course.status === "Publié" &&
+
+                <button
+                    onClick={() => suspendCourse(course._id)}
+                    className="text-orange-500 hover:scale-110"
+                >
+                    <FaBan/>
+                </button>
+            }
+
+            <button
+                onClick={() => {
+
+                    setCourseToDelete(course)
+
+                    setShowDeleteModal(true)
+
+                }}
+                className="text-red-600 hover:scale-110"
+            >
+                <FaTrash/>
+            </button>
+
+        </div>
+
+    </td>
+
+</tr>
+
+))
+
+) : (
+
+<tr>
+
+<td
+    colSpan="6"
+    className="py-16 text-center"
+>
+
+<div className="flex flex-col items-center">
+
+<div className="text-6xl mb-4">
+📚
+</div>
+
+<h2 className="text-2xl font-bold">
+
+Aucun cours trouvé
+
+</h2>
+
+<p className="text-gray-500 mt-2">
+
+Aucun cours ne correspond à votre recherche.
+
+</p>
+
+</div>
+
+</td>
+
+</tr>
+
+)
+
+}
+
+</tbody>
+
+</table>
+
+   )
+}
+
+</div>
+
+      {/* =========================
+              PAGINATION
+      ========================= */}
+
+      <div className="flex justify-between items-center mt-8">
+        <p className="text-gray-500">
+            Total :
+              <span className="font-semibold ml-1">
+        {totalCourses}
+              </span>
+        </p>
+
+      <div className="flex items-center gap-3">
+        <button
+          disabled={page === 1}
+          onClick={() => setPage(page - 1)}
+          className={`
+            px-5 py-2 rounded-xl font-medium
+            ${
+                page === 1
+                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                : "bg-indigo-600 text-white hover:bg-indigo-700"
+            }
+         `}
+        >
+        Précédent
+    </button>
+
+    <span className="font-semibold">
+        Page {page} / {totalPages}
+    </span>
+
+       <button
+          disabled={page === totalPages}
+          onClick={() => setPage(page + 1)}
+          className={`
+            px-5 py-2 rounded-xl font-medium
+            ${
+                page === totalPages
+                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                : "bg-indigo-600 text-white hover:bg-indigo-700"
+            }
+       `}
+        >
+        Suivant
+       </button>
 
       </div>
+      </div>
+
+      {
+        showModal && selectedCourse && (    
+          <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50">
+            <div className="bg-white rounded-3xl w-[750px] w-[900px] rounded-3xl bg-white overflow-hidden p-8">
+                <div className="flex justify-between items-center mb-8">
+                    
+                    <h2 className="text-3xl font-bold">
+                        Détails du cours
+                    </h2>
+        
+                    <button
+                        onClick={() => setShowModal(false)}
+                        className="text-red-600 font-bold text-xl" >
+                        ✕
+                    </button>
+        
+                </div>
+        
+                <img
+                  src={
+                    selectedCourse.thumbnail
+                  ? selectedCourse.thumbnail
+                  : "/images/course-default.jpg"
+                  }
+                  alt={selectedCourse.title}
+                  className="w-full h-72 object-cover rounded-2xl"
+                />
+        
+                <div className="mt-8 space-y-4">
+                    <div>
+                        <p className="text-gray-500">
+                            Titre
+                        </p>
+        
+                        <h2 className="text-2xl font-bold">
+                            {selectedCourse.title}
+                        </h2>
+                    </div>
+        
+                    <div>
+                        <p className="text-gray-500">
+                            Description
+                        </p>
+        
+                        <p>
+                            {selectedCourse.description}
+                        </p>
+                    </div>
+        
+                    <div className="grid grid-cols-2 gap-6">
+        
+                        <div>
+                            <p className="text-gray-500">
+                                Enseignant
+                            </p>
+        
+                            <h3>
+                                {selectedCourse.teacher?.name}
+                            </h3>
+                        </div>
+        
+                        <div>
+                            <p className="text-gray-500">
+                                Catégorie
+                            </p>
+        
+                            <h3>
+                                {selectedCourse.category}
+                            </h3>
+                        </div>
+        
+                        <div>
+                            <p className="text-gray-500">
+                                Étudiants
+                            </p>
+        
+                            <h3>
+                                {selectedCourse.studentsCount}
+                            </h3>
+        
+                        </div>
+        
+                        <div>
+                            <p className="text-gray-500">
+                                Vues
+                            </p>
+        
+                            <h3>
+                                {selectedCourse.views}
+                            </h3>
+                        </div>
+        
+                        <div>
+                            <p className="text-gray-500">
+                                Téléchargements
+                            </p>
+        
+                            <h3>
+                                {selectedCourse.downloads}
+                            </h3>
+                        </div>
+        
+                        <div>
+                            <p className="text-gray-500">
+                                Statut
+                            </p>
+        
+                            <span
+                                className={`px-4 py-2 rounded-full text-white
+                                ${
+                                    selectedCourse.status === "Publié"
+                                    ? "bg-green-600"
+                                    : selectedCourse.status === "Suspendu"
+                                    ? "bg-red-600"
+                                    : "bg-orange-500"
+                                }
+                                        `}
+                            >
+                                {selectedCourse.status}
+                            </span>
+                        </div>
+        
+                    </div>
+                </div>
+        
+                <div className="flex justify-end mt-10">
+                    <button
+                        onClick={() => setShowModal(false)}
+                        className="bg-indigo-600 text-white px-6 py-3 rounded-xl" >
+                          Fermer
+                    </button>
+                </div>
+        
+            </div>  
+        </div>
+        
+        )
+    }
+
+
+{/* =========================
+    MODAL SUPPRESSION
+========================= */}
+
+{
+showDeleteModal && courseToDelete && (
+<div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50">
+    <div className="bg-white rounded-3xl w-[520px] shadow-2xl p-8 animate-fadeIn">
+
+        {/* HEADER */}
+
+        <div className="flex justify-center mb-6">
+            <div className="w-20 h-20 rounded-full bg-red-100 flex items-center justify-center">
+                <FaTrash className="text-red-600 text-3xl"/>
+            </div>
+        </div>
+
+        {/* TITRE */}
+
+        <h2 className="text-3xl font-bold text-center">
+            Supprimer le cours ?
+        </h2>
+
+        {/* TEXTE */}
+
+        <p className="text-gray-500 text-center mt-5 leading-8">
+            Vous êtes sur le point de supprimer définitivement ce cours.
+            <br/>
+            Cette action est irréversible.
+        </p>
+
+        {/* NOM */}
+
+        <div className="bg-gray-100 rounded-2xl mt-8 p-5">
+            <h3 className="font-bold text-xl">
+                {courseToDelete.title}
+            </h3>
+
+            <p className="text-gray-500 mt-2">
+                {courseToDelete.teacher?.name}
+            </p>
+        </div>
+
+        {/* BOUTONS */}
+
+        <div className="flex justify-end gap-4 mt-10">
+            <button
+                onClick={() => {
+                    setShowDeleteModal(false)
+                    setCourseToDelete(null)
+                }}
+                className="px-6 py-3 rounded-xl bg-gray-200 hover:bg-gray-300 transition"
+            >
+                Annuler
+            </button>
+
+            <button
+                onClick={() =>
+                    deleteCourse(courseToDelete._id)
+                }
+                className="px-6 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white transition"
+            >
+                Supprimer
+            </button>
+        
+        </div>
+    </div>
+</div>
+
+)
+}
 
     </AdminLayout>
 

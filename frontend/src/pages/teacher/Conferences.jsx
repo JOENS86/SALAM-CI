@@ -1,5 +1,6 @@
 import TeacherLayout from "../../layouts/TeacherLayout"
 import { FaPlus } from "react-icons/fa"
+import { toast } from "react-toastify";
 
 function Conferences() {
 
@@ -50,8 +51,9 @@ function Conferences() {
         </div>
 
         <button onClick={() =>
-          alert("Module de création de conférence en cours de développement 🚀")
-            } className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-4 rounded-2xl flex items-center gap-3"
+          infoToast("Module de création de conférence en cours de développement 🚀")
+            } 
+            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-4 rounded-2xl flex items-center gap-3"
           >
              <FaPlus />
             Créer une conférence

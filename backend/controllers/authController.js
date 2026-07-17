@@ -9,6 +9,9 @@ export const register = async (req, res) => {
 
   try {
 
+    // =========================
+    // RÉCUPÉRATION DES DONNÉES
+    // =========================
     const {
       name,
       email,
@@ -16,7 +19,9 @@ export const register = async (req, res) => {
       role
     } = req.body
 
-    // Vérifie si utilisateur existe déjà
+    // =========================
+    // VÉRIFICATION EMAIL
+    // =========================
     const existingUser = await User.findOne({ email })
 
     if (existingUser) {
@@ -27,39 +32,61 @@ export const register = async (req, res) => {
 
     }
 
-    // Hash password
+    // =========================
+    // HASH DU MOT DE PASSE
+    // =========================
     const hashedPassword = await bcrypt.hash(password, 10)
 
-    // Création utilisateur
+    // =========================
+    // CRÉATION UTILISATEUR
+    // =========================
     const user = await User.create({
+
       name,
       email,
       password: hashedPassword,
       role
+
     })
 
-    // Création token JWT
-    const token = jwt.sign(
-      {
-        id: user._id,
-        role: user.role
-      },
-      process.env.JWT_SECRET,
-      {
-        expiresIn: "7d"
-      }
-    )
+// =========================
+// CRÉATION TOKEN JWT
+// =========================
+const token = jwt.sign(
 
-    // Réponse
+  {
+    id: user._id,
+    role: user.role,
+    // Version actuelle de la session
+    sessionVersion: user.sessionVersion
+  },
+  process.env.JWT_SECRET,
+  {
+    expiresIn: "7d"
+  }
+)
+
+
+    // =========================
+    // RÉPONSE
+    // =========================
     res.status(201).json({
+
       token,
       user
+
     })
 
-  } catch (error) {
+  }
+
+  catch (error) {
+
+    console.log(error)
 
     res.status(500).json({
+
       message: error.message
+
     })
 
   }
@@ -73,58 +100,123 @@ export const login = async (req, res) => {
 
   try {
 
+    console.log("================================")
+    console.log("LOGIN DEMANDÉ")
+    console.log("================================")
+
+    // =========================
+    // DONNÉES DU FORMULAIRE
+    // =========================
     const {
       email,
       password
     } = req.body
 
-    // Recherche utilisateur
+    console.log("Email reçu :", email)
+
+    // =========================
+    // RECHERCHE UTILISATEUR
+    // =========================
     const user = await User.findOne({ email })
 
     if (!user) {
 
+      console.log("Utilisateur introuvable")
+
       return res.status(404).json({
+
         message: "Utilisateur introuvable"
+
       })
 
     }
 
-    // Vérification mot de passe
+    console.log("Utilisateur trouvé :", user.email)
+
+    // =========================
+    // VÉRIFICATION MOT DE PASSE
+    // =========================
     const isMatch = await bcrypt.compare(
+
       password,
       user.password
+
     )
 
     if (!isMatch) {
 
+      console.log("Mot de passe incorrect")
+
       return res.status(400).json({
+
         message: "Mot de passe incorrect"
+
       })
 
     }
 
-    // JWT
-    const token = jwt.sign(
-      {
-        id: user._id,
-        role: user.role
-      },
-      process.env.JWT_SECRET,
-      {
-        expiresIn: "7d"
-      }
-    )
+    console.log("Mot de passe correct")
 
-    // Réponse
+    // =========================
+    // MISE À JOUR DU STATUT
+    // =========================
+    user.isOnline = true
+
+    console.log("Avant save :", user.isOnline)
+
+    await user.save()
+
+    console.log("Après save :", user.isOnline)
+
+    // =========================
+    // VÉRIFICATION MONGODB
+    // =========================
+    const verification = await User.findById(user._id)
+
+    console.log("Document MongoDB :")
+    console.log(verification)
+
+
+// =========================
+// CRÉATION TOKEN JWT
+// =========================
+const token = jwt.sign(
+
+  {
+    id: user._id,
+    role: user.role,
+    // Version de session actuelle
+    sessionVersion: user.sessionVersion
+  },
+  process.env.JWT_SECRET,
+  {
+    expiresIn: "7d"
+
+  }
+)
+
+
+    // =========================
+    // RÉPONSE
+    // =========================
     res.status(200).json({
+
       token,
       user
+
     })
 
-  } catch (error) {
+  }
+
+  catch (error) {
+
+    console.log("ERREUR LOGIN")
+    console.log(error)
 
     res.status(500).json({
+
       message: error.message
+
     })
 
   }
