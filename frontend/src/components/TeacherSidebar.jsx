@@ -1,10 +1,11 @@
 import {
-    FaHome,
-    FaBook,
-    FaVideo,
-    FaUser,
-    FaSignOutAlt
-  } from "react-icons/fa"
+  FaHome,
+  FaBook,
+  FaVideo,
+  FaUser,
+  FaUserGraduate,
+  FaSignOutAlt
+} from "react-icons/fa"
   
   import {
     Link,
@@ -95,6 +96,14 @@ import {
           >
             <FaBook />
             Mes cours
+          </Link>
+
+          <Link
+            to="/teacher-students"
+            className={menuClass("/teacher-students")}
+          >
+            <FaUserGraduate />
+            Mes étudiants
           </Link>
   
           <Link

@@ -6,10 +6,13 @@ import {
 
   createCourse,
   getCourses,
+  getTeacherCourses,
   getCourseStats,
+  getCoursesByCategory,
   getCourseById,
   publishCourse,
   suspendCourse,
+  updateCourse,
   deleteCourse
 
 } from "../controllers/courseController.js"
@@ -34,6 +37,14 @@ router.post(
 )
 
 // ======================================
+// COURS D'UN ENSEIGNANT
+// ======================================
+router.get(
+  "/teacher/:teacherId",
+  getTeacherCourses
+)
+
+// ======================================
 // STATISTIQUES
 // ======================================
 router.get(
@@ -44,6 +55,11 @@ router.get(
 // ======================================
 // RÉCUPÉRER UN COURS
 // ======================================
+router.get(
+  "/category/:category",
+  getCoursesByCategory
+)
+
 router.get(
   "/:id",
   getCourseById
@@ -64,6 +80,21 @@ router.patch(
   "/:id/suspend",
   suspendCourse
 )
+
+
+// ======================================
+// MISE A JOUR
+// ======================================
+router.put(
+  "/:id",
+  upload.fields([
+    { name: "thumbnail" },
+    { name: "pdf" },
+    { name: "video" }
+  ]),
+  updateCourse
+)
+
 
 // ======================================
 // SUPPRIMER

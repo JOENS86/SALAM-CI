@@ -5,7 +5,8 @@ import {
   FaUser,
   FaSignOutAlt,
   FaAward,
-  FaDownload
+  FaDownload,
+  FaThLarge
 } from "react-icons/fa"
 
 import {
@@ -67,6 +68,14 @@ function Sidebar() {
         >
           <FaHome className="text-lg" />
           <span>Dashboard</span>
+        </Link>
+
+        <Link
+          to="/catalog"
+          className={menuClass("/catalog")}
+        >
+          <FaThLarge className="text-lg" />
+          <span>Catalogue</span>
         </Link>
 
         <Link

@@ -11,6 +11,7 @@ import authRoutes from "./routes/authRoutes.js"
 import userRoutes from "./routes/userRoutes.js"
 import courseRoutes from "./routes/courseRoutes.js"
 import conferenceRoutes from "./routes/conferenceRoutes.js"
+import categoryRoutes from "./routes/categoryRoutes.js"
 
 // =========================
 // CONFIGURATION .ENV
@@ -61,6 +62,9 @@ app.use("/api/courses", courseRoutes)
 
 // Conférences
 app.use("/api/conferences", conferenceRoutes)
+
+// Catégories
+app.use("/api/categories", categoryRoutes)
 
 
 // =========================

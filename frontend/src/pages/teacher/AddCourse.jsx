@@ -1,85 +1,192 @@
-import { useState } from "react"
-import API from "../../services/api"
-import { useNavigate } from "react-router-dom"
-import { FaArrowLeft } from "react-icons/fa"
+import { useEffect, useState } from "react";
+import API from "../../services/api";
+import { useNavigate } from "react-router-dom";
+import { FaArrowLeft } from "react-icons/fa";
 import { toast } from "react-toastify";
 
 function AddCourse() {
 
-  const user = JSON.parse(
-    localStorage.getItem("user")
-  )
+    // ==========================================
+    // UTILISATEUR CONNECTÉ
+    // ==========================================
 
-  const navigate = useNavigate()
-   
-  // =========================
-  // STATE
-  // =========================
-  const [formData, setFormData] = useState({
+    const user = JSON.parse(
+        localStorage.getItem("user")
+    );
 
-    title: "",
-    description: "",
-    category: ""
+    const navigate = useNavigate();
 
-  })
+    // ==========================================
+    // ETATS DU FORMULAIRE
+    // ==========================================
 
-  const [thumbnail, setThumbnail] = useState(null)
-  const [pdf, setPdf] = useState(null)
-  const [video, setVideo] = useState(null)
+    const [formData, setFormData] = useState({
 
-  // =========================
-  // INPUTS
-  // =========================
-  const handleChange = (e) => {
+        title: "",
+        description: "",
+        category: ""
 
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    })
+    });
 
-  }
+    // ==========================================
+    // MINIATURE DU COURS
+    // ==========================================
 
-  // =========================
-  // SUBMIT
-  // =========================
-  const handleSubmit = async (e) => {
+    const [thumbnail, setThumbnail] = useState(null);
 
-    e.preventDefault()
+    // ==========================================
+    // APERÇU DE LA MINIATURE
+    // ==========================================
 
-    try {
+    const [preview, setPreview] = useState("");
 
-      // formdata upload
-      const data = new FormData()
+    // ==========================================
+    // LOADING
+    // ==========================================
 
-      data.append("title", formData.title)
-      data.append("description", formData.description)
-      data.append("category", formData.category)
+    const [loading, setLoading] = useState(false);
 
-      data.append("teacher", user._id)
+    // ==========================================
+    // LISTE DES CATÉGORIES
+    // ==========================================
 
-      data.append("thumbnail", thumbnail)
-      data.append("pdf", pdf)
-      data.append("video", video)
+    const [categories, setCategories] = useState([]);
 
-      // api
-      const res = await API.post(
-        "/courses/create",
-        data
-      )
+    // ==========================================
+    // CHAMP TEXTE
+    // ==========================================
 
-      console.log(res.data)
+    const handleChange = (e) => {
 
-      successToast("Cours créé avec succès")
+        setFormData({
 
-    } catch (error) {
+            ...formData,
 
-      console.log(error)
+            [e.target.name]: e.target.value
 
-      toast.error("Erreur création cours")
+        });
+
+    };
+
+    // ==========================================
+    // IMAGE
+    // ==========================================
+
+    const handleThumbnail = (e) => {
+
+        const file = e.target.files[0];
+
+        if (!file) return;
+
+        setThumbnail(file);
+
+        setPreview(URL.createObjectURL(file));
+
+    };
+
+    // ==========================================
+    // ENREGISTRER LE COURS
+    // ==========================================
+
+    const handleSubmit = async (e) => {
+
+        e.preventDefault();
+
+        try {
+
+            setLoading(true);
+
+            const data = new FormData();
+
+            data.append("title", formData.title);
+
+            data.append("description", formData.description);
+
+            data.append("category", formData.category);
+
+            data.append("teacher", user._id);
+
+            if (thumbnail) {
+
+                data.append("thumbnail", thumbnail);
+
+            }
+
+            const res = await API.post(
+
+                "/courses/create",
+
+                data
+
+            );
+
+            toast.success(
+
+                res.data.message ||
+
+                "Cours créé avec succès."
+
+            );
+
+            // Plus tard on remplacera cette ligne
+            // par la page de gestion du contenu
+
+            navigate("/teacher-courses");
+
+        }
+
+        catch (error) {
+
+            console.log(error);
+
+            toast.error(
+
+                error.response?.data?.message ||
+
+                "Erreur lors de la création du cours."
+
+            );
+
+        }
+
+        finally {
+
+            setLoading(false);
+
+        }
 
     }
 
-  }
+// ==========================================
+// CHARGER LES CATÉGORIES
+// ==========================================
+
+const loadCategories = async () => {
+
+    try {
+
+        const res = await API.get("/categories/list");
+
+        setCategories(res.data);
+
+    }
+
+    catch (error) {
+
+        console.log(error);
+
+        toast.error("Impossible de charger les catégories.");
+
+    }
+
+};
+
+useEffect(() => {
+
+    loadCategories();
+
+}, []);
+
 
   return (
 
@@ -99,14 +206,51 @@ function AddCourse() {
 
 
     <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-3xl p-8 text-white shadow-xl">
-      <h1 className="text-5xl font-bold">
-        Ajouter un cours
-      </h1>
+        <h1 className="text-5xl font-bold">
+          Ajouter un cours
+        </h1>
 
         <p className="mt-3 text-purple-100">
-           Créez et publiez un nouveau cours pour vos étudiants
+            Créez un nouveau cours. Vous pourrez ensuite ajouter les chapitres, les vidéos, les documents PDF et les quiz depuis l'espace de gestion du contenu.        
         </p>
     </div>
+
+{/* ==========================================
+    INFORMATION
+========================================== */}
+
+<div
+    className="
+        mt-8
+        bg-blue-50
+        border-l-4
+        border-blue-500
+        rounded-2xl
+        p-6
+    "
+>
+
+    <h3 className="text-lg font-bold text-blue-700">
+
+        💡 Comment fonctionne la création d'un cours ?
+
+    </h3>
+
+    <p className="text-gray-700 mt-3 leading-7">
+
+        Cette étape permet uniquement de créer les informations
+        générales de votre cours.
+
+        <br /><br />
+
+        Une fois le cours créé, vous pourrez accéder à
+        <strong> l'espace de gestion du contenu </strong>
+        afin d'ajouter vos chapitres, vidéos, documents PDF,
+        quiz et exercices.
+
+    </p>
+
+</div>
 
     <form
   onSubmit={handleSubmit}
@@ -123,115 +267,150 @@ function AddCourse() {
 
     <div className="space-y-5">
 
-      <input
-        type="text"
-        name="title"
-        placeholder="Titre du cours"
-        onChange={handleChange}
-        className="w-full border border-gray-300 rounded-2xl p-4 focus:outline-none focus:border-purple-500"
-      />
+        <input
+          type="text"
+          name="title"
+          value={formData.title}
+          placeholder="Titre du cours"
+          onChange={handleChange}
+          className="w-full border border-gray-300 rounded-2xl p-4 focus:outline-none focus:border-purple-500"
+        />
 
       <textarea
         name="description"
+        value={formData.description}
         placeholder="Description du cours"
         onChange={handleChange}
         className="w-full border border-gray-300 rounded-2xl p-4 h-40 focus:outline-none focus:border-purple-500"
       />
 
-      <input
-        type="text"
-        name="category"
-        placeholder="Catégorie"
-        onChange={handleChange}
-        className="w-full border border-gray-300 rounded-2xl p-4 focus:outline-none focus:border-purple-500"
-      />
+{/* =========================
+    CATÉGORIE
+========================= */}
+
+<select
+    name="category"
+    value={formData.category}
+    onChange={handleChange}
+    className="
+        w-full
+        border
+        border-gray-300
+        rounded-2xl
+        p-4
+        focus:outline-none
+        focus:ring-2
+        focus:ring-purple-500
+    "
+>
+    <option value="">
+        Sélectionner une catégorie
+    </option>
+
+    {categories.map((category) => (
+        <option
+            key={category._id}
+            value={category.name}
+        >
+            {category.name}
+        </option>
+    ))}
+</select>
 
     </div>
 
   </div>
 
-  {/* FICHIERS */}
+
+{/* ======================================
+    MINIATURE DU COURS
+====================================== */}
 
   <div className="bg-white rounded-3xl shadow-md p-8">
+      <h2 className="text-2xl font-bold mb-6">
+          Miniature du cours
+      </h2>
 
-    <h2 className="text-2xl font-bold mb-6">
-      Ressources du cours
-    </h2>
+      <div className="
+            border-2
+            border-dashed
+            border-purple-300
+            rounded-2xl
+            p-8
+            text-center "
+      >
 
-    <div className="grid md:grid-cols-3 gap-6">
+          <p className="font-semibold text-lg">
+            Choisissez une image représentative du cours
+          </p>
 
-      <div className="border-2 border-dashed border-purple-300 rounded-2xl p-6 text-center">
+          <p className="text-gray-500 mt-2 mb-6">
+            Cette image sera affichée dans le catalogue
+            et dans les résultats de recherche.
+          </p>
 
-        <p className="font-semibold">
-          Image du cours
-        </p>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleThumbnail}
+          />
 
-        <input
-          type="file"
-          className="mt-4"
-          onChange={(e) =>
-            setThumbnail(e.target.files[0])
-          }
-        />
+{
+    preview && (
 
-      </div>
+        <div className="mt-8">
 
-      <div className="border-2 border-dashed border-blue-300 rounded-2xl p-6 text-center">
+            <img
+                src={preview}
+                alt="Miniature du cours"
+                className="
+                    w-full
+                    h-72
+                    object-cover
+                    rounded-2xl
+                    shadow-lg
+                "
+            />
 
-        <p className="font-semibold">
-          Document PDF
-        </p>
+        </div>
 
-        <input
-          type="file"
-          className="mt-4"
-          onChange={(e) =>
-            setPdf(e.target.files[0])
-          }
-        />
-
-      </div>
-
-      <div className="border-2 border-dashed border-green-300 rounded-2xl p-6 text-center">
-
-        <p className="font-semibold">
-          Vidéo du cours
-        </p>
-
-        <input
-          type="file"
-          className="mt-4"
-          onChange={(e) =>
-            setVideo(e.target.files[0])
-          }
-        />
-
-      </div>
+    )
+}
 
     </div>
-
-  </div>
+</div>
 
   {/* BOUTON */}
 
   <div className="flex justify-end">
 
-    <button
-      className="
-      bg-gradient-to-r
-      from-purple-600
-      to-indigo-600
-      text-white
-      px-10
-      py-4
-      rounded-2xl
-      shadow-lg
-      hover:scale-105
-      transition
-      "
-    >
-      Créer le cours
-    </button>
+  <button
+    type="submit"
+    disabled={loading}
+    className="
+        bg-gradient-to-r
+        from-purple-600
+        to-indigo-600
+        text-white
+        px-10
+        py-4
+        rounded-2xl
+        shadow-lg
+        transition
+        hover:scale-105
+        disabled:opacity-60
+        disabled:cursor-not-allowed
+        disabled:hover:scale-100
+    "
+>
+
+    {
+        loading
+            ? "Création du cours..."
+            : "Créer le cours"
+    }
+
+</button>
 
   </div>
 </form>

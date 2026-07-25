@@ -143,6 +143,11 @@ export const getCourses = async (req, res) => {
         "name email"
       )
 
+      .populate(
+        "category",
+        "name"
+      )
+
       // Plus récent en premier
       .sort({
         createdAt: -1
@@ -184,6 +189,38 @@ export const getCourses = async (req, res) => {
 
 }
 
+
+// ======================================
+// COURS D'UN ENSEIGNANT
+// GET /api/courses/teacher/:teacherId
+// ======================================
+export const getTeacherCourses = async (req, res) => {
+
+  try {
+
+      console.log("========== ROUTE TEACHER ==========");
+      console.log("Teacher reçu :", req.params.teacherId);
+
+      const courses = await Course.find({
+          teacher: req.params.teacherId
+      });
+
+      console.log("Nombre de cours :", courses.length);
+      console.log(courses);
+
+      res.json(courses);
+
+  } catch (error) {
+
+      console.log(error);
+
+      res.status(500).json({
+          message: error.message
+      });
+
+  }
+
+}
 
 // ======================================
 // RÉCUPÉRER LES STATISTIQUES
@@ -252,6 +289,30 @@ export const getCourseStats = async (req, res) => {
 
   }
 
+}
+
+
+// =========================
+// COURS D'UNE CATEGORIE
+// =========================
+
+export const getCoursesByCategory = async (req, res) => {
+
+  console.log("Reçu :", JSON.stringify(req.params.category))
+
+  const allCourses = await Course.find()
+
+  allCourses.forEach(course => {
+      console.log("Mongo :", JSON.stringify(course.category))
+  })
+
+  const courses = await Course.find({
+      category: req.params.category
+  })
+
+  console.log("Trouvés :", courses.length)
+
+  res.json(courses)
 }
 
 
@@ -434,6 +495,100 @@ export const suspendCourse = async (req, res) => {
   }
 
 }
+
+
+// ======================================
+// MODIFIER UN COURS
+// PUT /api/courses/:id
+// ======================================
+export const updateCourse = async (req, res) => {
+
+  try {
+
+    const { id } = req.params
+
+    const {
+
+      title,
+
+      description,
+
+      category,
+
+      teacher
+
+    } = req.body
+
+    const course = await Course.findById(id)
+
+    if (!course) {
+
+      return res.status(404).json({
+
+        message: "Cours introuvable."
+
+      })
+
+    }
+
+    // =========================
+    // MISE À JOUR DES CHAMPS
+    // =========================
+
+    course.title = title
+
+    course.description = description
+
+    course.category = category
+
+    course.teacher = teacher
+
+    // =========================
+    // FICHIERS (si envoyés)
+    // =========================
+
+    if (req.files?.thumbnail?.[0]) {
+
+      course.thumbnail = req.files.thumbnail[0].path
+
+    }
+
+    if (req.files?.pdf?.[0]) {
+
+      course.pdf = req.files.pdf[0].path
+
+    }
+
+    if (req.files?.video?.[0]) {
+
+      course.video = req.files.video[0].path
+
+    }
+
+    await course.save()
+
+    res.status(200).json({
+
+      message: "Cours modifié avec succès.",
+
+      course
+
+    })
+
+  }
+
+  catch (error) {
+
+    res.status(500).json({
+
+      message: error.message
+
+    })
+
+  }
+
+}
+
 
 // ======================================
 // SUPPRIMER UN COURS

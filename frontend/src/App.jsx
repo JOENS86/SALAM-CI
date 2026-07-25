@@ -22,6 +22,7 @@ import CommunityAccess from "./pages/community/CommunityAccess"
 
 // STUDENT
 import StudentDashboard from "./pages/student/Dashboard"
+import Catalog from "./pages/student/Catalog";
 import Courses from "./pages/student/Courses"
 import Conferences from "./pages/student/Conferences"
 import Certificates from "./pages/student/Certificates"
@@ -36,6 +37,8 @@ import CertificateDetails from "./pages/certificates/CertificateDetails"
 // TEACHER
 import DashboardTeacher from "./pages/teacher/Dashboard"
 import CoursesTeacher from "./pages/teacher/Courses"
+import CourseContent from "./pages/teacher/CourseContent"
+import TeacherStudents from "./pages/teacher/TeacherStudents";
 import ConferencesTeacher from "./pages/teacher/Conferences"
 import ProfileTeacher from "./pages/teacher/Profile"
 import AddCourse from "./pages/teacher/AddCourse"
@@ -48,6 +51,8 @@ import CreateUser from "./pages/admin/CreateUser"
 import CoursesAdmin from "./pages/admin/Courses"
 import ConferencesAdmin from "./pages/admin/Conferences"
 import CategoriesAdmin from "./pages/admin/Categories"
+import CategoryDetails from "./pages/admin/CategoryDetails"
+import CourseDetails from "./pages/admin/CourseDetails"
 import FilesAdmin from "./pages/admin/Files"
 import NotificationsAdmin from "./pages/admin/Notifications"
 import StatisticsAdmin from "./pages/admin/Statistics"
@@ -177,6 +182,20 @@ function App() {
       />
 
       <Route
+        path="/admin/categories/:id"
+        element={
+          <ProtectedRoute>
+            <CategoryDetails />
+          </ProtectedRoute>
+        }
+     />
+
+      <Route
+        path="/admin/courses/:id"
+        element={<CourseDetails />}
+      />
+
+      <Route
         path="/admin-files"
         element={
           <ProtectedRoute>
@@ -242,6 +261,20 @@ function App() {
       />
 
       <Route
+        path="/teacher-course-content/:id"
+        element={<CourseContent />}
+      />
+
+      <Route
+        path="/teacher-students"
+        element={
+          <ProtectedRoute>
+            <TeacherStudents />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/teacher-conferences"
         element={
           <ProtectedRoute>
@@ -286,6 +319,15 @@ function App() {
       <StudentDashboard />
     </ProtectedRoute>
   }
+/>
+
+<Route
+    path="/catalog"
+    element={
+        <ProtectedRoute>
+            <Catalog />
+        </ProtectedRoute>
+    }
 />
 
 <Route

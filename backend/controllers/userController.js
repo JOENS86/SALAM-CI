@@ -84,6 +84,47 @@ export const getUsers = async (req, res) => {
 
 }
 
+
+// ======================================
+// RÉCUPÉRER LES ENSEIGNANTS
+// GET /api/users/teachers
+// ======================================
+export const getTeachers = async (req, res) => {
+
+  try {
+
+    const teachers = await User.find({
+
+      role: "teacher",
+
+      isActive: true
+
+    })
+
+      .select("_id name")
+
+      .sort({
+
+        name: 1
+
+      })
+
+    res.status(200).json(teachers)
+
+  }
+
+  catch (error) {
+
+    res.status(500).json({
+
+      message: error.message
+
+    })
+
+  }
+
+}
+
 // ======================================
 // RÉCUPÉRER LES STATISTIQUES
 // GET /api/users/stats

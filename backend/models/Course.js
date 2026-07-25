@@ -35,7 +35,7 @@ const courseSchema = new mongoose.Schema(
     // CATÉGORIE
     // =========================
     category: {
-
+      
       type: String,
 
       required: true

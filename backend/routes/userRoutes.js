@@ -5,6 +5,7 @@ import authMiddleware from "../middleware/authMiddleware.js"
 import {
 
   getUsers,
+  getTeachers,
   getUserStats,
   getUserById,
   updateUser,
@@ -54,6 +55,16 @@ router.get(
 )
 
 // ======================================
+// ENSEIGNANTS
+// GET /api/users/teachers
+// ======================================
+router.get(
+  "/teachers",
+  authMiddleware,
+  getTeachers
+)
+
+// ======================================
 // TOUS LES UTILISATEURS
 // GET /api/users
 // ======================================
@@ -64,7 +75,6 @@ router.get(
   authMiddleware,
 
   getUsers
-
 )
 
 // ======================================
