@@ -12,6 +12,12 @@ import userRoutes from "./routes/userRoutes.js"
 import courseRoutes from "./routes/courseRoutes.js"
 import conferenceRoutes from "./routes/conferenceRoutes.js"
 import categoryRoutes from "./routes/categoryRoutes.js"
+//Côté enseignant
+import chapterRoutes from "./routes/chapterRoutes.js";
+import videoRoutes from "./routes/videoRoutes.js";
+import pdfRoutes from "./routes/pdfRoutes.js";
+import quizRoutes from "./routes/quizRoutes.js";
+import exerciseRoutes from "./routes/exerciseRoutes.js";
 
 // =========================
 // CONFIGURATION .ENV
@@ -66,6 +72,29 @@ app.use("/api/conferences", conferenceRoutes)
 // Catégories
 app.use("/api/categories", categoryRoutes)
 
+//Chapitres
+app.use("/api/chapters", chapterRoutes);
+
+app.use("/api/videos",videoRoutes);
+
+// =========================
+// PDF
+// =========================
+app.use(
+
+  "/api/pdfs",
+
+  pdfRoutes
+
+);
+
+// =========================
+// Quiz
+// =========================
+app.use("/api/quizzes", quizRoutes);
+
+// Exercise
+app.use("/api/exercises", exerciseRoutes);
 
 // =========================
 // ROUTE TEST API

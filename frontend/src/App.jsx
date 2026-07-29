@@ -38,6 +38,7 @@ import CertificateDetails from "./pages/certificates/CertificateDetails"
 import DashboardTeacher from "./pages/teacher/Dashboard"
 import CoursesTeacher from "./pages/teacher/Courses"
 import CourseContent from "./pages/teacher/CourseContent"
+import ChapterContent from "./pages/teacher/ChapterContent";
 import TeacherStudents from "./pages/teacher/TeacherStudents";
 import ConferencesTeacher from "./pages/teacher/Conferences"
 import ProfileTeacher from "./pages/teacher/Profile"
@@ -263,6 +264,11 @@ function App() {
       <Route
         path="/teacher-course-content/:id"
         element={<CourseContent />}
+      />
+
+      <Route
+        path="/teacher-chapter-content/:chapterId"
+        element={<ChapterContent />}
       />
 
       <Route

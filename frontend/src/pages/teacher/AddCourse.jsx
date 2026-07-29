@@ -137,7 +137,11 @@ function AddCourse() {
 
         catch (error) {
 
-            console.log(error);
+            console.log("Erreur complète :", error);
+
+            console.log("Réponse backend :", error.response);
+        
+            console.log("Données :", error.response?.data);
 
             toast.error(
 

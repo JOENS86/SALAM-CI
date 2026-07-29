@@ -1,10 +1,69 @@
 import TeacherLayout from "../../layouts/TeacherLayout";
 import { FaArrowLeft, FaBookOpen, FaPlus } from "react-icons/fa";
 import { Link, useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import API from "../../services/api";
+import AddChapterModal from "../../components/teacherContent/AddChapterModal";
+import ChapterCard from "../../components/teacherContent/ChapterCard";
 
 function CourseContent() {
 
     const { id } = useParams();
+
+    // ============================================================
+    // ETAT D'OUVERTURE DE LA MODAL
+    // ============================================================
+    const [showAddModal, setShowAddModal] = useState(false);
+
+    // ============================================================
+    // LISTE DES CHAPITRES
+    // ============================================================
+    const [chapters, setChapters] = useState([]);
+
+    // ============================================================
+    // CHARGEMENT
+    // ============================================================
+    const [loading, setLoading] = useState(true);
+
+    // ============================================================
+    // RECUPERATION DES CHAPITRES
+    // ============================================================
+const loadChapters = async () => {
+
+    try {
+
+        const { data } = await API.get(
+
+            `/chapters/course/${id}`
+
+        );
+
+        setChapters(data);
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+    }
+
+    finally {
+
+        setLoading(false);
+
+    }
+
+};
+
+// ============================================================
+// CHARGEMENT INITIAL
+// ============================================================
+useEffect(() => {
+
+    loadChapters();
+
+}, [id]);
 
     return (
 
@@ -68,78 +127,205 @@ function CourseContent() {
 
                 </div>
 
-                {/* Etat vide */}
+{/* ============================================================
+    BARRE D'ACTIONS
+============================================================ */}
 
-                <div
-                    className="
-                        mt-10
-                        bg-white
-                        rounded-3xl
-                        shadow-md
-                        p-16
-                        text-center
-                    "
-                >
+<div
+    className="
+        mt-10
+        flex
+        items-center
+        justify-between
+    "
+>
 
-                    <FaBookOpen
-                        className="
-                            text-7xl
-                            text-purple-600
-                            mx-auto
-                        "
-                    />
+    <div>
 
-                    <h2 className="text-3xl font-bold mt-8">
+        <h2 className="text-3xl font-bold">
 
-                        Aucun chapitre
+            Chapitres du cours
 
-                    </h2>
+        </h2>
 
-                    <p
-                        className="
-                            text-gray-500
-                            mt-4
-                            max-w-2xl
-                            mx-auto
-                            leading-8
-                        "
-                    >
+        <p className="text-gray-500 mt-2">
 
-                        Votre cours est créé avec succès.
+            Organisez votre formation en plusieurs chapitres.
 
-                        <br /><br />
+        </p>
 
-                        Commencez maintenant par créer
-                        votre premier chapitre.
+    </div>
 
-                    </p>
+    <button
 
-                    <button
-                        className="
-                            mt-10
-                            bg-purple-600
-                            hover:bg-purple-700
-                            text-white
-                            px-8
-                            py-4
-                            rounded-2xl
-                            flex
-                            items-center
-                            gap-3
-                            mx-auto
-                            transition
-                        "
-                    >
+        onClick={() => setShowAddModal(true)}
 
-                        <FaPlus />
+        className="
+            bg-purple-600
+            hover:bg-purple-700
+            text-white
+            px-6
+            py-3
+            rounded-2xl
+            flex
+            items-center
+            gap-3
+            transition
+        "
 
-                        Ajouter un chapitre
+    >
 
-                    </button>
+        <FaPlus />
 
-                </div>
+        Ajouter un chapitre
+
+    </button>
+
+</div>
+
+
+{/* ============================================================
+    AFFICHAGE DES CHAPITRES
+============================================================ */}
+
+{
+
+loading ?
+
+(
+
+    <div
+        className="
+            mt-10
+            bg-white
+            rounded-3xl
+            shadow-md
+            p-16
+            text-center
+        "
+    >
+
+        <h2 className="text-2xl font-bold">
+
+            Chargement...
+
+        </h2>
+
+    </div>
+
+)
+
+:
+
+chapters.length === 0 ?
+
+(
+
+    <div
+        className="
+            mt-10
+            bg-white
+            rounded-3xl
+            shadow-md
+            p-16
+            text-center
+        "
+    >
+
+        <FaBookOpen
+            className="
+                text-7xl
+                text-purple-600
+                mx-auto
+            "
+        />
+
+        <h2 className="text-3xl font-bold mt-8">
+
+            Aucun chapitre
+
+        </h2>
+
+        <p
+            className="
+                text-gray-500
+                mt-4
+                max-w-2xl
+                mx-auto
+                leading-8
+            "
+        >
+
+            Votre cours est créé avec succès.
+
+            <br /><br />
+
+            Commencez maintenant par créer
+            votre premier chapitre.
+
+        </p>
+
+        <p
+    className="
+        mt-10
+        text-lg
+        text-purple-600
+        font-semibold
+    "
+>
+
+    Cliquez sur "Ajouter un chapitre"
+    pour commencer.
+
+</p>
+
+    </div>
+
+)
+
+:
+
+(
+
+    <div
+        className="
+            mt-10
+            grid
+            grid-cols-1
+            lg:grid-cols-2
+            gap-6
+        "
+    >
+
+        {
+
+        chapters.map((chapter) => (
+           <ChapterCard
+              key={chapter._id}
+              chapter={chapter}
+           />
+        ))
+
+        }
+
+    </div>
+
+)
+
+}
 
             </div>
+
+{/* ============================================================
+    MODAL AJOUT CHAPITRE
+============================================================ */}
+
+<AddChapterModal
+    isOpen={showAddModal}
+    onClose={() => setShowAddModal(false)}
+    courseId={id}
+    onChapterCreated={loadChapters}
+/>
 
         </TeacherLayout>
 
