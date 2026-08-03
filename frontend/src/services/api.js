@@ -1,124 +1,245 @@
-import axios from "axios"
-
-// =========================
-// ÉVITE LES MULTIPLES POPUPS
-// =========================
-let roleChangedHandled = false
+import axios from "axios";
 
 import {
 
-  errorToast
+    errorToast
 
-} from "../utils/toast"
+} from "../utils/toast";
 
-// =========================
-// CRÉATION INSTANCE AXIOS
-// =========================
+// =====================================================
+// EVITE LES MULTIPLES POPUPS
+// =====================================================
+
+let roleChangedHandled = false;
+
+// =====================================================
+// INSTANCE AXIOS
+// =====================================================
+
 const API = axios.create({
 
-  baseURL: "http://localhost:5000/api"
+    baseURL:
 
-})
+        import.meta.env.VITE_API_URL ||
 
-// =========================
-// AJOUT AUTOMATIQUE DU TOKEN
-// =========================
-API.interceptors.request.use(
+        "http://localhost:5000/api",
 
-  (config) => {
+    timeout: 10000,
 
-    // =========================
-    // RÉCUPÉRATION TOKEN
-    // =========================
-    const token = localStorage.getItem("token")
+    headers: {
 
-    // =========================
-    // AJOUT HEADER AUTHORIZATION
-    // =========================
-    if (token) {
-
-      config.headers.Authorization =
-
-        `Bearer ${token}`
+        "Content-Type": "application/json"
 
     }
 
-    return config
+});
 
-  },
+// =====================================================
+// INTERCEPTEUR DES REQUETES
+// =====================================================
 
-  (error) => Promise.reject(error)
+API.interceptors.request.use(
 
-)
+    (config) => {
 
-// =========================
-// INTERCEPTOR DES RÉPONSES
-// =========================
+        const token = localStorage.getItem(
+
+            "token"
+
+        );
+
+        if (token) {
+
+            config.headers.Authorization =
+
+                `Bearer ${token}`;
+
+        }
+
+        return config;
+
+    },
+
+    (error) => Promise.reject(error)
+
+);
+
+// =====================================================
+// INTERCEPTEUR DES REPONSES
+// =====================================================
+
 API.interceptors.response.use(
 
-  // =========================
-  // SI TOUT VA BIEN
-  // =========================
-  (response) => response,
+    (response) => response,
 
-  // =========================
-  // SI UNE ERREUR ARRIVE
-  // =========================
-  (error) => {
+    (error) => {
 
-// =========================
-// RÔLE MODIFIÉ
-// =========================
-if (
+        // ==========================================
+        // SERVEUR INJOIGNABLE
+        // ==========================================
 
-  error.response?.status === 401
+        if (!error.response) {
 
-  &&
+            errorToast(
 
-  error.response?.data?.code === "ROLE_CHANGED"
+                "Serveur indisponible",
 
-  &&
+                "Impossible de contacter le serveur."
 
-  !roleChangedHandled
+            );
 
-) {
+            return Promise.reject(error);
 
-  // Empêche les autres requêtes
-  roleChangedHandled = true
+        }
 
-  // =========================
-  // MESSAGE
-  // =========================
-  errorToast(
+        // ==========================================
+        // SESSION EXPIREE
+        // ==========================================
 
-    "Session expirée",
+        if (
 
-    "Votre rôle a été modifié. Veuillez vous reconnecter."
+            error.response.status === 401 &&
 
-  )
+            error.response.data?.code ===
 
-  // =========================
-  // SUPPRESSION SESSION
-  // =========================
-  localStorage.removeItem("token")
-  localStorage.removeItem("user")
-  localStorage.removeItem("registeredEmail")
+                "ROLE_CHANGED" &&
 
-  // =========================
-  // REDIRECTION
-  // =========================
-  setTimeout(() => {
+            !roleChangedHandled
 
-    window.location.replace("/login")
+        ) {
 
-  }, 2800)
+            roleChangedHandled = true;
 
-}
+            errorToast(
 
-    return Promise.reject(error)
+                "Session expirée",
 
-  }
+                "Votre rôle a été modifié. Veuillez vous reconnecter."
 
-)
+            );
 
-export default API
+            localStorage.removeItem(
+
+                "token"
+
+            );
+
+            localStorage.removeItem(
+
+                "user"
+
+            );
+
+            localStorage.removeItem(
+
+                "registeredEmail"
+
+            );
+
+            setTimeout(() => {
+
+                window.location.replace(
+
+                    "/login"
+
+                );
+
+            }, 2500);
+
+        }
+
+        // ==========================================
+        // TOKEN EXPIRE
+        // ==========================================
+
+        else if (
+
+            error.response.status === 401
+
+        ) {
+
+            errorToast(
+
+                "Authentification",
+
+                error.response.data?.message ||
+
+                "Veuillez vous reconnecter."
+
+            );
+
+        }
+
+        // ==========================================
+        // ACCES REFUSE
+        // ==========================================
+
+        else if (
+
+            error.response.status === 403
+
+        ) {
+
+            errorToast(
+
+                "Accès refusé",
+
+                error.response.data?.message ||
+
+                "Vous n'avez pas les autorisations nécessaires."
+
+            );
+
+        }
+
+        // ==========================================
+        // RESSOURCE INTROUVABLE
+        // ==========================================
+
+        else if (
+
+            error.response.status === 404
+
+        ) {
+
+            errorToast(
+
+                "Introuvable",
+
+                error.response.data?.message ||
+
+                "La ressource demandée est introuvable."
+
+            );
+
+        }
+
+        // ==========================================
+        // ERREUR SERVEUR
+        // ==========================================
+
+        else if (
+
+            error.response.status === 500
+
+        ) {
+
+            errorToast(
+
+                "Erreur serveur",
+
+                error.response.data?.message ||
+
+                "Une erreur interne est survenue."
+
+            );
+
+        }
+
+        return Promise.reject(error);
+
+    }
+
+);
+
+export default API;

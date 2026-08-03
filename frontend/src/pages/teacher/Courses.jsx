@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import API from "../../services/api";
+import courseService from "../../services/courseService";
 import CourseCard from "../../components/teacherCourses/CourseCard";
 import TeacherLayout from "../../layouts/TeacherLayout";
 import { Link } from "react-router-dom";
@@ -17,16 +17,29 @@ function Courses() {
 // ==========================================
 // UTILISATEUR CONNECTÉ
 // ==========================================
-
+/*
 const user = JSON.parse(
   localStorage.getItem("user")
 );
+*/
 
 // ==========================================
 // LISTE DES COURS
 // ==========================================
 
 const [courses, setCourses] = useState([]);
+
+// ==========================================
+// RECHERCHE
+// ==========================================
+
+const [search, setSearch] = useState("");
+
+// ==========================================
+// FILTRE
+// ==========================================
+
+const [filter, setFilter] = useState("Tout");
 
 // ==========================================
 // CHARGEMENT
@@ -43,17 +56,11 @@ const loadCourses = async () => {
 
   try {
 
-    console.log("Utilisateur connecté :", user);
-    console.log("Teacher ID envoyé :", user._id);
-      const res = await API.get(
+    const data = await courseService.getTeacherCourses();
 
-          `/courses/teacher/${user._id}`
-
-      );
-
-      console.log(res.data);
-
-      setCourses(res.data);
+    console.log(data);
+    
+    setCourses(data.courses);
 
   }
 
@@ -75,6 +82,42 @@ useEffect(() => {
   loadCourses();
 }, []);
 
+
+// ==========================================
+// FILTRAGE PAR RECHERCHE
+// ==========================================
+
+const filteredCourses = courses.filter((course) => {
+
+  // Recherche
+  const matchSearch = course.title
+      .toLowerCase()
+      .includes(search.toLowerCase());
+
+  // Filtre
+  let matchFilter = true;
+
+  if (filter === "Publié") {
+
+      matchFilter = course.status === "Publié";
+
+  }
+
+  else if (filter === "Brouillons") {
+
+      matchFilter = course.status === "En attente";
+
+  }
+
+  else if (filter === "Suspendus") {
+
+      matchFilter = course.status === "Suspendu";
+
+  }
+
+  return matchSearch && matchFilter;
+
+});
 
   return (
 
@@ -274,11 +317,10 @@ useEffect(() => {
         />
 
         <input
-
             type="text"
-
             placeholder="Rechercher un cours..."
-
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
             className="
                 w-full
                 pl-14
@@ -303,20 +345,29 @@ useEffect(() => {
     <div className="flex flex-wrap gap-4">
 
         <button
-            className="
+            onClick={() => setFilter("Tout")}
+            className= {`
                 bg-purple-600
                 text-white
                 px-6
                 py-3
                 rounded-full
                 font-medium
-            "
+                transition
+
+                ${
+                    filter === "Tout"
+                    ? "bg-purple-600 text-white"
+                    : "bg-gray-100 hover:bg-purple-600 hover:text-white"
+                }
+            `}
         >
-            Tous
+            Tout
         </button>
 
         <button
-            className="
+            onClick={() => setFilter("Publié")}
+            className= {`
                 bg-gray-100
                 hover:bg-green-600
                 hover:text-white
@@ -325,13 +376,21 @@ useEffect(() => {
                 py-3
                 rounded-full
                 font-medium
-            "
+                transition
+
+                ${
+                    filter === "Publié"
+                    ? "bg-green-600 text-white"
+                    : "bg-gray-100 hover:bg-green-600 hover:text-white"
+                }
+            `}
         >
             Publiés
         </button>
 
         <button
-            className="
+            onClick={() => setFilter("Brouillons")}
+            className={`
                 bg-gray-100
                 hover:bg-orange-500
                 hover:text-white
@@ -340,13 +399,21 @@ useEffect(() => {
                 py-3
                 rounded-full
                 font-medium
-            "
+                transition
+
+                ${
+                    filter === "Brouillons"
+                    ? "bg-orange-500 text-white"
+                    : "bg-gray-100 hover:bg-orange-500 hover:text-white"
+                }
+            `}
         >
             Brouillons
         </button>
 
         <button
-            className="
+            onClick={() => setFilter("Suspendus")}
+            className={`
                 bg-gray-100
                 hover:bg-red-500
                 hover:text-white
@@ -355,7 +422,14 @@ useEffect(() => {
                 py-3
                 rounded-full
                 font-medium
-            "
+                transition
+
+                ${
+                    filter === "Suspendus"
+                    ? "bg-red-500 text-white"
+                    : "bg-gray-100 hover:bg-red-500 hover:text-white"
+                }
+            `}
         >
             Suspendus
         </button>
@@ -367,14 +441,67 @@ useEffect(() => {
 
       {/* LISTE DES COURS */}
 
+{
+filteredCourses.length === 0 ?
+
+(
+
+<div
+    className="
+        bg-white
+        rounded-3xl
+        shadow-md
+        p-16
+        mt-10
+        text-center
+    "
+>
+
+    <FaBookOpen
+        className="
+            text-6xl
+            text-purple-600
+            mx-auto
+        "
+    />
+
+    <h2
+        className="
+            text-3xl
+            font-bold
+            mt-8
+        "
+    >
+        Aucun cours trouvé
+    </h2>
+
+    <p
+        className="
+            text-gray-500
+            mt-4
+            text-lg
+        "
+    >
+        Aucun cours ne correspond à votre recherche
+        ou au filtre sélectionné.
+    </p>
+
+</div>
+
+)
+
+:
+
+(
+
 <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8 mt-10">
 
 {
 
-courses.map(course => (
+filteredCourses.map(course => (
 
     <CourseCard
-        key={course.id}
+        key={course._id}
         course={course}
     />
 
@@ -383,6 +510,9 @@ courses.map(course => (
 }
 
 </div>
+
+)
+}
 
     </TeacherLayout>
 

@@ -14,6 +14,7 @@ import {
 } from "react-icons/fa";
 
 import { Link } from "react-router-dom";
+import { toast } from "react-toastify";
 
 function CourseCard({ course }) {
 
@@ -183,7 +184,8 @@ function CourseCard({ course }) {
 
                 <div className="grid grid-cols-2 gap-3 mt-8">
 
-                    <button
+                    <Link
+                        to={`/teacher-course-preview/${course._id}`}
                         className="
                             bg-blue-600
                             hover:bg-blue-700
@@ -203,9 +205,14 @@ function CourseCard({ course }) {
 
                         Voir
 
-                    </button>
+                    </Link>
 
-                    <button
+                    <Link
+                        onClick={() =>
+                                toast.info(
+                                    "🚧 Cette fonctionnalité sera disponible prochainement."
+                                )
+                        }
                         className="
                             bg-green-600
                             hover:bg-green-700
@@ -225,7 +232,7 @@ function CourseCard({ course }) {
 
                         Modifier
 
-                    </button>
+                    </Link>
 
                     <Link
                         to={`/teacher-course-content/${course._id}`}
@@ -251,7 +258,8 @@ function CourseCard({ course }) {
 
                     </Link>
 
-                    <button
+                    <Link
+                        to={`/teacher-course-statistics/${course._id}`}
                         className="
                             col-span-2
                             border
@@ -272,7 +280,7 @@ function CourseCard({ course }) {
 
                         Statistiques
 
-                    </button>
+                    </Link>
 
                 </div>
 

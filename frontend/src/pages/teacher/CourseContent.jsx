@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import API from "../../services/api";
 import AddChapterModal from "../../components/teacherContent/AddChapterModal";
 import ChapterCard from "../../components/teacherContent/ChapterCard";
+import DeleteChapterModal from "../../components/teacherContent/DeleteChapterModal";
 
 function CourseContent() {
 
@@ -24,6 +25,7 @@ function CourseContent() {
     // CHARGEMENT
     // ============================================================
     const [loading, setLoading] = useState(true);
+
 
     // ============================================================
     // RECUPERATION DES CHAPITRES
@@ -300,10 +302,11 @@ chapters.length === 0 ?
         {
 
         chapters.map((chapter) => (
-           <ChapterCard
-              key={chapter._id}
-              chapter={chapter}
-           />
+          <ChapterCard
+            key={chapter._id}
+            chapter={chapter}
+            onChapterUpdated={loadChapters}
+          />
         ))
 
         }
@@ -326,6 +329,7 @@ chapters.length === 0 ?
     courseId={id}
     onChapterCreated={loadChapters}
 />
+
 
         </TeacherLayout>
 

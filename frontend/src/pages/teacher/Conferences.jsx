@@ -1,34 +1,59 @@
-import TeacherLayout from "../../layouts/TeacherLayout"
-import { FaPlus } from "react-icons/fa"
-import { toast } from "react-toastify";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+
+import TeacherLayout from "../../layouts/TeacherLayout";
+import ConferenceRequestRow from "../../components/conference/ConferenceRequestRow";
+import conferenceService from "../../services/conferenceService";
+import { FaPlus } from "react-icons/fa";
+import { errorToast } from "../../utils/toast";
 
 function Conferences() {
 
-  const upcoming = [
-    {
-      id: 1,
-      title: "Session Q&A - Machine Learning",
-      date: "10 Juin 2026",
-      time: "14h00",
-      participants: 28
-    },
-    {
-      id: 2,
-      title: "Atelier React Hooks",
-      date: "15 Juin 2026",
-      time: "16h00",
-      participants: 19
-    }
-  ]
+    const [requests, setRequests] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-  const past = [
-    {
-      id: 3,
-      title: "Introduction à l'IA",
-      date: "01 Juin 2026",
-      participants: 45
-    }
-  ]
+// =====================================================
+// CHARGER MES DEMANDES
+// =====================================================
+
+const loadRequests = async () => {
+
+  try {
+
+      const result = await conferenceService.getTeacherRequests();
+
+      setRequests(result.requests || []);
+
+  }
+
+  catch (error) {
+
+      console.error(error);
+
+      errorToast(
+
+          "Erreur",
+
+          "Impossible de charger vos demandes."
+
+      );
+
+  }
+
+  finally {
+
+      setLoading(false);
+
+  }
+
+};
+
+useEffect(() => {
+
+  loadRequests();
+
+}, []);
+
 
   return (
 
@@ -50,110 +75,150 @@ function Conferences() {
 
         </div>
 
-        <button onClick={() =>
-          infoToast("Module de création de conférence en cours de développement 🚀")
-            } 
-            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-4 rounded-2xl flex items-center gap-3"
-          >
-             <FaPlus />
-            Créer une conférence
-        </button>
+<Link to="/teacher-create-conference" className="
+        bg-purple-600
+        hover:bg-purple-700
+        text-white
+        px-6
+        py-4
+        rounded-2xl
+        flex
+        items-center
+        gap-3
+    " >
+
+    <FaPlus />
+
+    Nouvelle demande
+
+</Link>
 
       </div>
 
-      {/* A VENIR */}
+      <div className="mt-12 bg-white rounded-3xl shadow-lg overflow-hidden">
 
-      <h2 className="text-3xl font-bold mt-12 mb-6">
-        À venir
-      </h2>
+<table className="w-full">
 
-      <div className="space-y-6">
+    <thead className="bg-gray-100">
 
-        {upcoming.map((conf) => (
+        <tr>
 
-          <div
-            key={conf.id}
-            className="bg-white rounded-3xl shadow-md p-8"
-          >
+            <th className="text-left px-6 py-4">
 
-            <h3 className="text-2xl font-bold">
-              {conf.title}
-            </h3>
+                Titre
 
-            <div className="flex gap-8 text-gray-500 mt-4">
+            </th>
 
-              <span>{conf.date}</span>
+            <th className="text-left px-6 py-4">
 
-              <span>{conf.time}</span>
+                Cours
 
-              <span>
-                {conf.participants} participants
-              </span>
+            </th>
 
-            </div>
+            <th className="text-left px-6 py-4">
 
-            <div className="flex gap-4 mt-6">
+                Date
 
-              <button className="bg-blue-600 text-white px-6 py-3 rounded-xl">
+            </th>
 
-                Rejoindre
+            <th className="text-left px-6 py-4">
 
-              </button>
+                Heure
 
-              <button className="bg-green-600 text-white px-6 py-3 rounded-xl">
+            </th>
 
-                Modifier
+            <th className="text-left px-6 py-4">
 
-              </button>
+                Statut
 
-            </div>
+            </th>
 
-          </div>
+            <th className="text-center px-6 py-4">
 
-        ))}
+                Action
 
-      </div>
+            </th>
 
-      {/* PASSEES */}
+        </tr>
 
-      <h2 className="text-3xl font-bold mt-12 mb-6">
-        Passées
-      </h2>
+    </thead>
 
-      <div className="space-y-6">
+    <tbody>
 
-        {past.map((conf) => (
+        {
 
-          <div
-            key={conf.id}
-            className="bg-white rounded-3xl shadow-md p-8"
-          >
+            loading
 
-            <h3 className="text-2xl font-bold">
-              {conf.title}
-            </h3>
+                ?
 
-            <div className="flex gap-8 text-gray-500 mt-4">
+                (
 
-              <span>{conf.date}</span>
+                    <tr>
 
-              <span>
-                {conf.participants} participants
-              </span>
+                        <td
 
-            </div>
+                            colSpan="6"
 
-            <button className="mt-6 bg-purple-600 text-white px-6 py-3 rounded-xl">
+                            className="text-center py-10"
 
-              Voir le replay
+                        >
 
-            </button>
+                            Chargement...
 
-          </div>
+                        </td>
 
-        ))}
+                    </tr>
 
-      </div>
+                )
+
+                :
+
+                requests.length === 0
+
+                ?
+
+                (
+
+                    <tr>
+
+                        <td
+
+                            colSpan="6"
+
+                            className="text-center py-10 text-gray-500"
+
+                        >
+
+                            Aucune demande envoyée.
+
+                        </td>
+
+                    </tr>
+
+                )
+
+                :
+
+                requests.map(request => (
+
+                    <ConferenceRequestRow
+
+                        key={request._id}
+
+                        request={request}
+
+                    />
+
+                ))
+
+        }
+
+    </tbody>
+
+</table>
+
+</div>
+
 
     </TeacherLayout>
 

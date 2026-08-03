@@ -39,8 +39,12 @@ import DashboardTeacher from "./pages/teacher/Dashboard"
 import CoursesTeacher from "./pages/teacher/Courses"
 import CourseContent from "./pages/teacher/CourseContent"
 import ChapterContent from "./pages/teacher/ChapterContent";
+import CoursePreview from "./pages/teacher/CoursePreview";
+import CourseStatistics from "./pages/teacher/CourseStatistics";
 import TeacherStudents from "./pages/teacher/TeacherStudents";
+import StudentDetails from "./pages/teacher/StudentDetails";
 import ConferencesTeacher from "./pages/teacher/Conferences"
+import ConferenceRequestDetails from "./pages/teacher/ConferenceRequestDetails";
 import ProfileTeacher from "./pages/teacher/Profile"
 import AddCourse from "./pages/teacher/AddCourse"
 import CreateConference from "./pages/teacher/CreateConference"
@@ -272,6 +276,16 @@ function App() {
       />
 
       <Route
+        path="/teacher-course-preview/:id"
+        element={<CoursePreview />}
+     />
+
+      <Route
+        path="/teacher-course-statistics/:id"
+        element={<CourseStatistics />}
+      />
+
+      <Route
         path="/teacher-students"
         element={
           <ProtectedRoute>
@@ -281,10 +295,28 @@ function App() {
       />
 
       <Route
+        path="/teacher-student/:id"
+        element={
+          <ProtectedRoute>
+            <StudentDetails />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/teacher-conferences"
         element={
           <ProtectedRoute>
             <ConferencesTeacher />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/teacher-conferences/:id"
+        element={
+          <ProtectedRoute>
+            <ConferenceRequestDetails />
           </ProtectedRoute>
         }
       />

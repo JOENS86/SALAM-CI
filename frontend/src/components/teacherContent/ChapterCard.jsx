@@ -11,11 +11,18 @@ import {
 } from "react-icons/fa";
 
 import { Link } from "react-router-dom";
+import { useState } from "react";
+import EditChapterModal from "./EditChapterModal";
+import DeleteChapterModal from "./DeleteChapterModal";
 
 // ============================================================
 // COMPOSANT
 // ============================================================
-function ChapterCard({ chapter }) {
+function ChapterCard({ chapter, onDelete, onChapterUpdated }) {
+    console.log(chapter);
+
+    const [showEditModal,setShowEditModal] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
 
     return (
 
@@ -58,7 +65,7 @@ function ChapterCard({ chapter }) {
                 STATISTIQUES
             ===================================== */}
 
-            <div className="grid grid-cols-3 gap-4 mt-8">
+            <div className="grid grid-cols-4 gap-4 mt-8">
 
                 <div
                     className="
@@ -79,7 +86,7 @@ function ChapterCard({ chapter }) {
 
                     <p className="mt-3 font-bold">
 
-                        0
+                    {chapter.videoCount}
 
                     </p>
 
@@ -110,7 +117,7 @@ function ChapterCard({ chapter }) {
 
                     <p className="mt-3 font-bold">
 
-                        0
+                    {chapter.pdfCount}
 
                     </p>
 
@@ -141,7 +148,7 @@ function ChapterCard({ chapter }) {
 
                     <p className="mt-3 font-bold">
 
-                        0
+                    {chapter.quizCount}
 
                     </p>
 
@@ -152,6 +159,35 @@ function ChapterCard({ chapter }) {
                     </p>
 
                 </div>
+
+                <div
+                   className="
+                      bg-orange-50
+                      rounded-2xl
+                      p-4
+                      text-center "
+                >
+
+                <FaBookOpen
+                    className="
+                      mx-auto
+                      text-orange-600
+                      text-2xl "
+                />
+
+                 <p className="mt-3 font-bold">
+ 
+                  {chapter.exerciseCount}
+
+                 </p>
+
+                 <p className="text-sm text-gray-500">
+
+                   Exercices
+
+                 </p>
+
+               </div>
 
             </div>
 
@@ -180,6 +216,7 @@ function ChapterCard({ chapter }) {
             </Link>
 
                 <button
+                    onClick={() => setShowEditModal(true)}
                     className="
                         bg-green-600
                         hover:bg-green-700
@@ -201,6 +238,7 @@ function ChapterCard({ chapter }) {
                 </button>
 
                 <button
+                    onClick={() => setShowDeleteModal(true)}
                     className="
                         col-span-2
                         bg-red-600
@@ -223,6 +261,20 @@ function ChapterCard({ chapter }) {
                 </button>
 
             </div>
+        
+            <EditChapterModal
+              isOpen={showEditModal}
+              onClose={() => setShowEditModal(false)}
+              chapter={chapter}
+              onUpdated={onChapterUpdated}
+           />
+
+            <DeleteChapterModal
+              isOpen={showDeleteModal}
+              chapter={chapter}
+              onClose={() => setShowDeleteModal(false)}
+              onDeleted={onChapterUpdated}
+            />
 
         </div>
 

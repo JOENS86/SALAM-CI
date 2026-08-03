@@ -59,27 +59,9 @@ function DeleteExerciseModal({
 
     return (
 
-        <div
-            className="
-                fixed
-                inset-0
-                bg-black/60
-                flex
-                justify-center
-                items-center
-                z-50
-            "
-        >
+        <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50">
 
-            <div
-                className="
-                    bg-white
-                    rounded-3xl
-                    w-[520px]
-                    shadow-2xl
-                    p-8
-                "
-            >
+            <div className="bg-white rounded-3xl w-[520px] shadow-2xl p-8">
 
                 {/* ========================================= */}
                 {/* ICONE */}
@@ -87,24 +69,9 @@ function DeleteExerciseModal({
 
                 <div className="flex justify-center mb-6">
 
-                    <div
-                        className="
-                            w-20
-                            h-20
-                            rounded-full
-                            bg-red-100
-                            flex
-                            items-center
-                            justify-center
-                        "
-                    >
+                    <div className="w-20 h-20 rounded-full bg-red-100 flex items-center justify-center">
 
-                        <FaTrash
-                            className="
-                                text-red-600
-                                text-3xl
-                            "
-                        />
+                        <FaTrash className="text-red-600 text-3xl "/>
 
                     </div>
 
