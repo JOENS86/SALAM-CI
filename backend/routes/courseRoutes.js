@@ -1,6 +1,7 @@
 import express from "express"
 
 import upload from "../middleware/uploadMiddleware.js"
+import authMiddleware from "../middleware/authMiddleware.js";
 
 import {
 
@@ -37,12 +38,17 @@ router.post(
 )
 
 // ======================================
-// COURS D'UN ENSEIGNANT
+// COURS DE L'ENSEIGNANT CONNECTE
 // ======================================
 router.get(
-  "/teacher/:teacherId",
+
+  "/teacher",
+
+  authMiddleware,
+
   getTeacherCourses
-)
+
+);
 
 // ======================================
 // STATISTIQUES

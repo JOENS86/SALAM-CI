@@ -1,73 +1,140 @@
-import express from "express"
+import express from "express";
+
+import authMiddleware from "../middleware/authMiddleware.js";
 
 import {
 
-    createConference,
-    getConferences,
-    getConferenceStats,
+    startConference,
+    endConference,
     getConferenceById,
-    publishConference,
-    suspendConference,
-    deleteConference
+    getTeacherConferences,
+    getStudentConferences,
+    joinConference,
+    leaveConference,
+    getParticipants,
+    testEmail
 
-} from "../controllers/conferenceController.js"
+} from "../controllers/conferenceController.js";
 
-const router = express.Router()
+const router = express.Router();
 
-// =========================
-// STATISTIQUES
-// =========================
+// Mail
 router.get(
-    "/stats",
-    getConferenceStats
-)
 
-// =========================
-// LISTE DES CONFERENCES
-// =========================
+    "/test-email",
+
+    testEmail
+
+);
+
+// =====================================================
+// ENSEIGNANT
+// =====================================================
+
+// Mes conférences
+
 router.get(
-    "/",
-    getConferences
-)
 
-// =========================
-// DETAILS
-// =========================
+    "/teacher",
+
+    authMiddleware,
+
+    getTeacherConferences
+
+);
+
+// Démarrer une conférence
+
+router.put(
+
+    "/:id/start",
+
+    authMiddleware,
+
+    startConference
+
+);
+
+// Terminer une conférence
+
+router.put(
+
+    "/:id/end",
+
+    authMiddleware,
+
+    endConference
+
+);
+
+// =====================================================
+// ETUDIANT
+// =====================================================
+
+// Voir ses conférences
+
 router.get(
-    "/:id",
-    getConferenceById
-)
 
-// =========================
-// CREATION
-// =========================
+    "/student",
+
+    authMiddleware,
+
+    getStudentConferences
+
+);
+
+// Rejoindre
+
 router.post(
-    "/",
-    createConference
-)
 
-// =========================
-// PUBLIER
-// =========================
-router.patch(
-    "/:id/publish",
-    publishConference
-)
+    "/:id/join",
 
-// =========================
-// SUSPENDRE
-// =========================
-router.patch(
-    "/:id/suspend",
-    suspendConference
-)
+    authMiddleware,
 
-// =========================
-// SUPPRIMER
-// =========================
-router.delete(
+    joinConference
+
+);
+
+// Quitter
+
+router.post(
+
+    "/:id/leave",
+
+    authMiddleware,
+
+    leaveConference
+
+);
+
+// =====================================================
+// COMMUN
+// =====================================================
+
+// Détails
+
+router.get(
+
     "/:id",
-    deleteConference
-)
 
-export default router
+    authMiddleware,
+
+    getConferenceById
+
+);
+
+// Participants
+
+router.get(
+
+    "/:id/participants",
+
+    authMiddleware,
+
+    getParticipants
+
+);
+
+
+
+export default router;

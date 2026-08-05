@@ -1,7 +1,14 @@
+import "dotenv/config";
 import express from "express"
 import cors from "cors"
 import mongoose from "mongoose"
-import dotenv from "dotenv"
+
+// =========================
+// IMPORT SOCKET
+// =========================
+import http from "http";
+import { Server } from "socket.io";
+import initializeSocket from "./socket/index.js";
 
 // =========================
 // IMPORT ROUTES
@@ -11,6 +18,7 @@ import authRoutes from "./routes/authRoutes.js"
 import userRoutes from "./routes/userRoutes.js"
 import courseRoutes from "./routes/courseRoutes.js"
 import conferenceRoutes from "./routes/conferenceRoutes.js"
+import conferenceRequestRoutes from "./routes/conferenceRequestRoutes.js";
 import categoryRoutes from "./routes/categoryRoutes.js"
 //Côté enseignant
 import chapterRoutes from "./routes/chapterRoutes.js";
@@ -18,11 +26,12 @@ import videoRoutes from "./routes/videoRoutes.js";
 import pdfRoutes from "./routes/pdfRoutes.js";
 import quizRoutes from "./routes/quizRoutes.js";
 import exerciseRoutes from "./routes/exerciseRoutes.js";
+import enrollmentRoutes from "./routes/enrollmentRoutes.js";
 
 // =========================
 // CONFIGURATION .ENV
 // =========================
-dotenv.config()
+
 
 // =========================
 // INITIALISATION EXPRESS
@@ -68,6 +77,7 @@ app.use("/api/courses", courseRoutes)
 
 // Conférences
 app.use("/api/conferences", conferenceRoutes)
+app.use("/api/conference-requests", conferenceRequestRoutes);
 
 // Catégories
 app.use("/api/categories", categoryRoutes)
@@ -95,6 +105,17 @@ app.use("/api/quizzes", quizRoutes);
 
 // Exercise
 app.use("/api/exercises", exerciseRoutes);
+
+// =========================
+// ENROLLMENTS
+// =========================
+app.use(
+
+  "/api/enrollments",
+
+  enrollmentRoutes
+
+);
 
 // =========================
 // ROUTE TEST API
@@ -145,10 +166,29 @@ mongoose.connect(
 const PORT = process.env.PORT || 5000
 
 // =========================
+// CREER LE SERVEUR
+// =========================
+const server = http.createServer(app);
+
+const io = new Server(server, {
+
+    cors: {
+
+        origin: "*",
+
+        methods: ["GET", "POST"]
+
+    }
+
+});
+
+initializeSocket(io);
+
+// =========================
 // LANCEMENT SERVEUR
 // =========================
-app.listen(PORT, () => {
+server.listen(PORT, () => {
 
-  console.log(`🚀 Serveur lancé sur ${PORT}`)
+  console.log(`🚀 Serveur lancé sur ${PORT}`);
 
-})
+});

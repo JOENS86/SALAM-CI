@@ -156,8 +156,6 @@ export const getCourses = async (req, res) => {
       .skip(skip)
       .limit(limit)
 
-      console.log(courses)
-
     // =========================
     // RÉPONSE
     // =========================
@@ -190,37 +188,60 @@ export const getCourses = async (req, res) => {
 }
 
 
-// ======================================
-// COURS D'UN ENSEIGNANT
-// GET /api/courses/teacher/:teacherId
-// ======================================
+// =====================================================
+// COURS DE L'ENSEIGNANT CONNECTE
+// GET /api/courses/teacher
+// =====================================================
+
 export const getTeacherCourses = async (req, res) => {
 
   try {
 
-      console.log("========== ROUTE TEACHER ==========");
-      console.log("Teacher reçu :", req.params.teacherId);
-
       const courses = await Course.find({
-          teacher: req.params.teacherId
+
+          teacher: req.user.id
+
+      })
+
+      .populate(
+
+          "category",
+
+          "name"
+
+      )
+
+      .sort({
+
+          createdAt: -1
+
       });
 
-      console.log("Nombre de cours :", courses.length);
-      console.log(courses);
+      res.status(200).json({
 
-      res.json(courses);
+          success: true,
 
-  } catch (error) {
+          courses
 
-      console.log(error);
-
-      res.status(500).json({
-          message: error.message
       });
 
   }
 
-}
+  catch (error) {
+
+      console.log(error);
+
+      res.status(500).json({
+
+          success: false,
+
+          message: error.message
+
+      });
+
+  }
+
+};
 
 // ======================================
 // RÉCUPÉRER LES STATISTIQUES
@@ -230,66 +251,87 @@ export const getCourseStats = async (req, res) => {
 
   try {
 
-    // =========================
-    // TOTAL DES COURS
-    // =========================
-    const total = await Course.countDocuments()
+      // =========================
+      // NOMBRE DE COURS
+      // =========================
 
-    // =========================
-    // COURS PUBLIÉS
-    // =========================
-    const published = await Course.countDocuments({
+      const totalCourses = await Course.countDocuments();
 
-      status: "Publié"
+      const publishedCourses = await Course.countDocuments({
+          status: "Publié"
+      });
 
-    })
+      const draftCourses = await Course.countDocuments({
+          status: "En attente"
+      });
 
-    // =========================
-    // COURS EN ATTENTE
-    // =========================
-    const pending = await Course.countDocuments({
+      const suspendedCourses = await Course.countDocuments({
+          status: "Suspendu"
+      });
 
-      status: "En attente"
+      // =========================
+      // SOMME DES STATISTIQUES
+      // =========================
 
-    })
+      const stats = await Course.aggregate([
 
-    // =========================
-    // COURS SUSPENDUS
-    // =========================
-    const suspended = await Course.countDocuments({
+          {
 
-      status: "Suspendu"
+              $group: {
 
-    })
+                  _id: null,
 
-    // =========================
-    // RÉPONSE
-    // =========================
-    res.status(200).json({
+                  totalStudents: {
+                      $sum: "$studentsCount"
+                  },
 
-      total,
+                  totalViews: {
+                      $sum: "$views"
+                  },
 
-      published,
+                  totalDownloads: {
+                      $sum: "$downloads"
+                  }
 
-      pending,
+              }
 
-      suspended
+          }
 
-    })
+      ]);
+
+      res.json({
+
+          totalCourses,
+
+          publishedCourses,
+
+          draftCourses,
+
+          suspendedCourses,
+
+          totalStudents: stats[0]?.totalStudents || 0,
+
+          totalViews: stats[0]?.totalViews || 0,
+
+          totalDownloads: stats[0]?.totalDownloads || 0
+
+      });
 
   }
 
   catch (error) {
 
-    res.status(500).json({
+      console.log(error);
 
-      message: error.message
+      res.status(500).json({
 
-    })
+          message: error.message
+
+      });
 
   }
 
-}
+};
 
 
 // =========================

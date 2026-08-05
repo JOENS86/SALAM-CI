@@ -9,252 +9,299 @@ import {
     FaVideo,
     FaCalendarAlt,
     FaCheckCircle
-  } from "react-icons/fa"
+} from "react-icons/fa"
 
+// =========================
+// COMPOSANT
+// =========================
 function Conferences() {
 
-// =========================
-// DONNEES
-// =========================
-const [conferences, setConferences] = useState([])
+    // =========================
+    // DONNEES
+    // =========================
+    const [conferences, setConferences] = useState([])
 
-// =========================
-// STATISTIQUES
-// =========================
-const [stats, setStats] = useState({})
+    // =========================
+    // STATISTIQUES
+    // =========================
+    const [stats, setStats] = useState({
 
-// =========================
-// RECHERCHE
-// =========================
-const [search, setSearch] = useState("")
+      total: 0,
+  
+      pending: 0,
+  
+      approved: 0,
+  
+      rejected: 0
+  
+  });
 
-// =========================
-// FILTRE
-// =========================
-const [statusFilter, setStatusFilter] = useState("Tous")
+    // =========================
+    // RECHERCHE
+    // =========================
+    const [search, setSearch] = useState("")
 
-// =========================
-// PAGINATION
-// =========================
-const [page, setPage] = useState(1)
-const [limit] = useState(10)
-const [totalPages, setTotalPages] = useState(1)
-const [totalConferences, setTotalConferences] = useState(0)
+    // =========================
+    // FILTRE
+    // =========================
+    const [statusFilter, setStatusFilter] = useState("Tout")
 
-// =========================
-// LOADER
-// =========================
-const [loading, setLoading] = useState(true)
+    // =========================
+    // PAGINATION
+    // =========================
+    const [page, setPage] = useState(1)
 
-// =========================
-// DETAILS
-// =========================
-const [selectedConference, setSelectedConference] = useState(null)
-const [showModal, setShowModal] = useState(false)
+    const [limit] = useState(10)
 
-// =========================
-// SUPPRESSION
-// =========================
-const [conferenceToDelete, setConferenceToDelete] = useState(null)
-const [showDeleteModal, setShowDeleteModal] = useState(false)
+    const [totalPages, setTotalPages] = useState(1)
 
+    const [totalConferences, setTotalConferences] = useState(0)
 
-// =========================
-// RECUPERER LES CONFERENCES
-// =========================
-const getConferences = async () => {
+    // =========================
+    // LOADER
+    // =========================
+    const [loading, setLoading] = useState(true)
+
+    // =========================
+    // DETAILS
+    // =========================
+    const [selectedConference, setSelectedConference] = useState(null)
+
+    const [showModal, setShowModal] = useState(false)
+
+    // =========================
+    // SUPPRESSION
+    // =========================
+    const [conferenceToDelete, setConferenceToDelete] = useState(null)
+
+    const [showDeleteModal, setShowDeleteModal] = useState(false)
+
+    // =====================================================
+    // RECUPERER LES DEMANDES EN ATTENTE
+    // =====================================================
+    const getConferences = async () => {
+
+        try {
+
+            setLoading(true)
+
+            const res = await API.get(
+
+                "/conference-requests/pending"
+
+            )
+
+        const requests = Array.isArray(res.data.requests)
+            ? res.data.requests
+            : [];
+        
+        setConferences(requests);
+        setTotalConferences(requests.length);       
+        setTotalPages(1);
+        setStats({
+        
+            total: requests.length,
+            pending: requests.filter(
+                request => request.status === "pending"
+            ).length,
+            approved: requests.filter(
+                request => request.status === "approved"
+            ).length,
+            rejected: requests.filter(
+                request => request.status === "rejected"
+            ).length
+        
+        });
+
+        }
+
+        catch (error) {
+
+          console.error("Erreur getConferences :", error);
+          setConferences([]);
+          setStats({
+      
+              total: 0,
+              pending: 0,
+              approved: 0,
+              rejected: 0
+      
+          });
+      
+      }
+
+        finally {
+
+            setLoading(false)
+
+        }
+
+    }
+
+    useEffect(() => {
+
+        getConferences()
+
+    }, [])
+
+    // =====================================================
+    // DETAILS
+    // =====================================================
+    const handleViewConference = (conference) => {
+
+        setSelectedConference(conference)
+
+        setShowModal(true)
+
+    }
+
+// =====================================================
+// REFUSER UNE DEMANDE
+// =====================================================
+const rejectConference = async (id) => {
 
   try {
 
-      setLoading(true)
+      const res = await API.put(
 
-      const res = await API.get(
-          `/conferences?page=${page}&limit=${limit}`
-      )
+          `/conference-requests/${id}/reject`,
 
-      setConferences(res.data.conferences)
+          {
 
-      setTotalPages(res.data.totalPages)
+              adminComment: ""
 
-      setTotalConferences(res.data.totalConferences)
+          }
 
-  }
+      );
 
-  catch(error){
+      console.log(res.data);
 
-      console.log(error)
-
-  }
-
-  finally{
-
-      setLoading(false)
-
-  }
-
-}
-
-
-// =========================
-// STATISTIQUES
-// =========================
-const getStats = async () => {
-
-  try {
-
-      const res = await API.get("/conferences/stats")
-
-      setStats(res.data)
+      await getConferences();
 
   }
 
   catch (error) {
 
-      console.log(error)
+      console.error(error.response?.data || error);
 
   }
 
-}
+};
 
-useEffect(() => {
-  getConferences()
-  getStats()
-}, [page, limit])
-
-
-// =========================
-// DETAILS
-// =========================
-const handleViewConference = async (id) => {
+// =====================================================
+// APPROUVER UNE DEMANDE (PUBLIER)
+// =====================================================
+const approveConference = async (id) => {
 
   try {
 
-      const res = await API.get(`/conferences/${id}`)
+      const res = await API.put(
 
-      setSelectedConference(res.data)
+          `/conference-requests/${id}/approve`
 
-      setShowModal(true)
+      );
+
+      console.log(res.data);
+
+      await getConferences();
 
   }
 
   catch (error) {
 
-      console.log(error)
+      console.error(error.response?.data || error);
 
   }
 
-}
+};
 
-
-// =========================
-// SUSPENDRE UNE CONFERENCE
-// =========================
-const suspendConference = async (id) => {
-
-  try {
-
-      await API.patch(`/conferences/${id}/suspend`)
-
-      getConferences()
-
-      getStats()
-
-  }
-
-  catch (error) {
-
-      console.log(error)
-
-  }
-
-}
-
-// =========================
-// PUBLIER UNE CONFERENCE
-// =========================
-const publishConference = async (id) => {
-
-  try {
-
-      await API.patch(`/conferences/${id}/publish`)
-
-      getConferences()
-
-      getStats()
-
-  }
-
-  catch (error) {
-
-      console.log(error)
-
-  }
-
-}
-
-// =========================
-// SUPPRIMER UNE CONFERENCE
-// =========================
+// ====================================================
+// SUPPRIMER UNE DEMANDE
+// ====================================================
 const deleteConference = async () => {
 
   try {
 
       await API.delete(
 
-          `/conferences/${conferenceToDelete._id}`
+          `/conference-requests/${conferenceToDelete._id}`
 
-      )
+      );
 
-      setShowDeleteModal(false)
+      setShowDeleteModal(false);
 
-      setConferenceToDelete(null)
+      setConferenceToDelete(null);
 
-      getConferences()
-
-      getStats()
+      await getConferences();
 
   }
 
-  catch(error){
+  catch (error) {
 
-      console.log(error)
+      console.error(error.response?.data || error);
 
   }
 
 }
 
 
-// =========================
-// Filtrage
-// =========================
-const filteredConferences = conferences.filter((conference) => {
+    // =====================================================
+    // FILTRE
+    // =====================================================
 
-  const matchesSearch =
+    const statusMap = {
 
-      conference.title
-          ?.toLowerCase()
-          .includes(search.toLowerCase())
+      Tout: "all",
+  
+      "En attente": "pending",
+  
+      Acceptée: "approved",
+  
+      Refusée: "rejected"
+  
+  };
 
-      ||
+    const filteredConferences = conferences.filter(
 
-      conference.teacher?.name
-          ?.toLowerCase()
-          .includes(search.toLowerCase())
+        (conference) => {
 
-  const matchesStatus =
+          const matchesSearch =
 
-      statusFilter === "Tous"
+          conference.title
+              ?.toLowerCase()
+              .includes(search.toLowerCase())
+      
+          ||
+      
+          conference.teacher?.name
+              ?.toLowerCase()
+              .includes(search.toLowerCase())
+      
+          ||
+      
+          conference.course?.title
+              ?.toLowerCase()
+              .includes(search.toLowerCase());
 
-      ||
+              const matchesStatus =
 
-      conference.status === statusFilter
+              statusFilter === "Tout"
+          
+              ||
+          
+              conference.status === statusMap[statusFilter];
 
-  return matchesSearch && matchesStatus
+            return (
 
-})
+                matchesSearch && matchesStatus
 
+            )
 
-  return (
+        }
+
+    )
+
+    return (
 
     <AdminLayout>
 
@@ -263,11 +310,11 @@ const filteredConferences = conferences.filter((conference) => {
       <div className="mb-10">
 
         <h1 className="text-4xl font-bold">
-          Gestion des Conférences
+          Demandes de conférences
         </h1>
 
         <p className="text-gray-500 mt-2">
-          Supervisez les conférences de la plateforme
+        Gérez les demandes envoyées par les enseignants.
         </p>
 
       </div>
@@ -283,7 +330,7 @@ const filteredConferences = conferences.filter((conference) => {
     <div>
 
       <p className="text-gray-500">
-        Total conférences
+         Total demandes
       </p>
 
       <h2 className="text-4xl font-bold mt-2">
@@ -309,11 +356,11 @@ const filteredConferences = conferences.filter((conference) => {
     <div>
 
       <p className="text-gray-500">
-        Programmées
+         En attente
       </p>
 
       <h2 className="text-4xl font-bold mt-2 text-blue-600">
-      {stats.published || 0}
+      {stats.pending || 0}
       </h2>
 
     </div>
@@ -335,11 +382,11 @@ const filteredConferences = conferences.filter((conference) => {
     <div>
 
       <p className="text-gray-500">
-        Terminées
+        Approuvées
       </p>
 
       <h2 className="text-4xl font-bold mt-2 text-green-600">
-      {stats.finished || 0}
+      {stats.approved || 0}
       </h2>
 
     </div>
@@ -364,7 +411,7 @@ const filteredConferences = conferences.filter((conference) => {
 
         <input
           type="text"
-          placeholder="Rechercher une conférence..."
+          placeholder="Rechercher une demande..."
           value={search}
           onChange={(e)=>setSearch(e.target.value)}
           className="flex-1 outline-none"
@@ -375,11 +422,10 @@ const filteredConferences = conferences.filter((conference) => {
           onChange={(e)=>setStatusFilter(e.target.value)}
           className="border rounded-xl px-4 py-2"
         >
-            <option>Tous</option>
+            <option>Tout</option>
             <option>En attente</option>
-            <option>Publié</option>
-            <option>Suspendu</option>
-            <option>Terminée</option>
+            <option>Acceptée</option>
+            <option>Refusée</option>
         </select>
 
 
@@ -461,42 +507,47 @@ const filteredConferences = conferences.filter((conference) => {
 
                 </td>
 
-                <td>
-                <td>
-                  {conference.teacher?.name}
-                </td>
-                </td>
+                  <td>
+                {conference.teacher?.name || "Inconnu"}
+                  </td>
 
                 <td>
-                  {new Date(conference.conferenceDate).toLocaleDateString("fr-FR")}
-                </td>
-
-                <td>
-                  {conference.participantsCount}
+                {conference.date
+                  ? new Date(conference.date).toLocaleDateString("fr-FR")
+                  : "-"}                
                 </td>
 
                 <td>
+                {conference.maxParticipants}
+                </td>
 
-                  <span
-                    className={`
-                      px-3
-                      py-1
-                      rounded-full
-                      text-sm
+                <td>
 
+                <span
+                  className={`px-3 py-1 rounded-full text-sm
                     ${
-                      conference.status === "Publié"
-                      ? "bg-green-100 text-green-600"
-                      : conference.status === "Suspendu"
-                      ? "bg-red-100 text-red-600"
-                      : conference.status === "Terminée"
-                      ? "bg-blue-100 text-blue-600"
-                      : "bg-orange-100 text-orange-600"
-                     }
-`                   }
-                  >
-                    {conference.status}
-                  </span>
+                        conference.status === "approved"
+                        ? "bg-green-100 text-green-600"
+
+                        : conference.status === "rejected"
+                        ? "bg-red-100 text-red-600"
+
+                        : "bg-orange-100 text-orange-600"
+                      }
+                          `}
+                >
+
+                  {
+                    conference.status === "pending"
+                    ? "En attente"
+
+                    : conference.status === "approved"
+                    ? "Acceptée"
+
+                    : "Refusée"
+                  }
+
+                </span>
 
                 </td>
 
@@ -505,16 +556,16 @@ const filteredConferences = conferences.filter((conference) => {
                   <div className="flex gap-4 text-lg">
 
                     <button
-                      onClick={() => handleViewConference(conference._id)}
+                      onClick={() => handleViewConference(conference)}
                       className="text-blue-600 hover:scale-110 transition"
                     >
                       <FaEye />
                     </button>
 
                     {
-                      conference.status !== "Suspendu" && (
+                      conference.status === "pending" && (
                         <button
-                          onClick={() => suspendConference(conference._id)}
+                          onClick={() => rejectConference(conference._id)}
                           className="text-orange-500 hover:scale-110 transition"
                         >
                           <FaBan />
@@ -523,9 +574,9 @@ const filteredConferences = conferences.filter((conference) => {
                     }
 
                     {
-                      conference.status !== "Publié" && (
+                      conference.status === "pending" && (
                         <button
-                          onClick={() => publishConference(conference._id)}
+                          onClick={() => approveConference(conference._id)}
                           className="text-green-600 hover:scale-110 transition"
                         >
                           <FaCheckCircle />
@@ -565,12 +616,11 @@ const filteredConferences = conferences.filter((conference) => {
               </div>
             
               <h2 className="text-2xl font-bold">
-                Aucune conférence trouvée
+              Aucune demande trouvée
               </h2>
             
               <p className="text-gray-500 mt-2">
-                Aucune conférence ne correspond à votre recherche.
-              </p>         
+              Aucune demande ne correspond à votre recherche.              </p>         
             </div>
             
               </td>
@@ -642,13 +692,28 @@ const filteredConferences = conferences.filter((conference) => {
             <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
               <div className="bg-white rounded-3xl p-8 w-[600px]">
                     <h2 className="text-3xl font-bold mb-6">
-                  Détails de la conférence
+                    Détails de la conférence
                     </h2>
 
               <div className="space-y-4">
                     <p>
                   <strong>Titre :</strong>
                       {selectedConference.title}
+                    </p>
+
+                    <p>
+                  <strong>Cours :</strong>{" "}
+                      {selectedConference.course?.title}
+                    </p>
+
+                    <p>
+                 <strong>Heure :</strong>{" "}
+                      {selectedConference.time}
+                    </p>
+
+                    <p>
+                 <strong>Durée :</strong>{" "}
+                    {selectedConference.duration} min
                     </p>
 
                     <p>
@@ -669,26 +734,25 @@ const filteredConferences = conferences.filter((conference) => {
                     <p>
                   <strong>Date :</strong>
                       {new Date(
-                        selectedConference.conferenceDate
+                        selectedConference.date
                       ).toLocaleDateString("fr-FR")}
                     </p>
 
                     <p>
                   <strong>Participants :</strong>
-                      {selectedConference.participantsCount}
+                      {selectedConference.maxParticipants}
                     </p>
 
                     <p>
                   <strong>Statut :</strong>
-                      {selectedConference.status}
-                    </p>
-
-                    <p>
-                  <strong>Lien :</strong>
-                      <a href={selectedConference.meetingLink} target="_blank" rel="noreferrer" className="text-blue-600 underline" >
-                        Rejoindre la conférence
-                      </a>
-                    </p>
+                    {
+              selectedConference.status === "pending"
+                ? "En attente"
+                : selectedConference.status === "approved"
+                ? "Acceptée"
+                : "Refusée"
+                    } 
+                   </p>
 
               </div>
 
@@ -717,11 +781,11 @@ const filteredConferences = conferences.filter((conference) => {
                   </div>
 
                   <h2 className="text-3xl font-bold">
-                    Supprimer la conférence
+                  Supprimer la demande
                   </h2>
 
                   <p className="mt-4 text-gray-600">
-                    Voulez-vous vraiment supprimer
+                  Voulez-vous vraiment supprimer cette demande de conférence ?
                   </p>
 
                   <p className="font-bold text-xl mt-2">

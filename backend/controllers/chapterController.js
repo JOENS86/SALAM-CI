@@ -1,5 +1,9 @@
 // Import du modèle Chapter
 import Chapter from "../models/Chapter.js";
+import Video from "../models/Video.js";
+import Pdf from "../models/Pdf.js";
+import Quiz from "../models/Quiz.js";
+import Exercise from "../models/Exercise.js";
 
 /**
  * ============================================================
@@ -85,18 +89,61 @@ export const getCourseChapters = async (req, res) => {
          * Recherche de tous les chapitres
          * appartenant au cours.
          */
+
         const chapters = await Chapter
             .find({ course: courseId })
             .sort({ order: 1 });
 
-        return res.json(chapters);
+        const chaptersWithStats = await Promise.all(
 
-    } catch (error) {
+            chapters.map(async (chapter) => {
+
+                const videoCount = await Video.countDocuments({
+                    chapter: chapter._id
+                });
+
+                const pdfCount = await Pdf.countDocuments({
+                    chapter: chapter._id
+                });
+
+                const quizCount = await Quiz.countDocuments({
+                    chapter: chapter._id
+                });
+
+                const exerciseCount = await Exercise.countDocuments({
+                    chapter: chapter._id
+                });
+
+                return {
+
+                    ...chapter.toObject(),
+
+                    videoCount,
+
+                    pdfCount,
+
+                    quizCount,
+
+                    exerciseCount
+
+                };
+
+            })
+
+        );
+
+        return res.json(chaptersWithStats);
+
+    }
+
+    catch (error) {
 
         console.error(error);
 
         return res.status(500).json({
+
             message: "Erreur serveur."
+
         });
 
     }

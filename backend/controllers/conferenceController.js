@@ -1,297 +1,440 @@
-import Conference from "../models/Conference.js"
+import conferenceService from "../services/conferenceService.js";
 
-// =========================
-// CREER UNE CONFERENCE
-// =========================
+/* ===========================================================
+   CREER UNE CONFERENCE
+=========================================================== */
 export const createConference = async (req, res) => {
 
     try {
 
-        const conference = await Conference.create(req.body)
+        const result = await conferenceService.createConference(
 
-        res.status(201).json(conference)
+            req.user,
+
+            req.body
+
+        );
+
+        res.status(201).json(result);
 
     }
 
     catch (error) {
 
-        res.status(500).json({
+        res.status(400).json({
+
+            success: false,
+
             message: error.message
-        })
+
+        });
 
     }
 
-}
+};
 
-// =========================
-// LISTE DES CONFERENCES
-// =========================
-export const getConferences = async (req, res) => {
+/* ===========================================================
+   DEMARRER UNE CONFERENCE
+=========================================================== */
+export const startConference = async (req, res) => {
 
     try {
 
-        const page = Number(req.query.page) || 1
+        const result = await conferenceService.startConference(
 
-        const limit = Number(req.query.limit) || 10
+            req.user,
 
-        const skip = (page - 1) * limit
+            req.params.id
 
-        const conferences = await Conference.find()
+        );
 
-            .populate("teacher", "name email")
-
-            .sort({ createdAt: -1 })
-
-            .skip(skip)
-
-            .limit(limit)
-
-        const totalConferences = await Conference.countDocuments()
-
-        res.json({
-
-            conferences,
-
-            currentPage: page,
-
-            totalPages: Math.ceil(totalConferences / limit),
-
-            totalConferences
-
-        })
+        res.json(result);
 
     }
 
     catch (error) {
 
-        res.status(500).json({
+        res.status(400).json({
+
+            success: false,
 
             message: error.message
 
-        })
+        });
 
     }
 
-}
+};
 
-// =========================
-// STATISTIQUES
-// =========================
-export const getConferenceStats = async (req, res) => {
+/* ===========================================================
+   TOUTES LES CONFERENCES (ADMIN)
+=========================================================== */
+export const getAllConferences = async (req, res) => {
 
     try {
 
-        const total = await Conference.countDocuments()
+        const result = await conferenceService.getAllConferences();
 
-        const pending = await Conference.countDocuments({
-
-            status: "En attente"
-
-        })
-
-        const published = await Conference.countDocuments({
-
-            status: "Publié"
-
-        })
-
-        const suspended = await Conference.countDocuments({
-
-            status: "Suspendu"
-
-        })
-
-        const finished = await Conference.countDocuments({
-
-            status: "Terminée"
-
-        })
-
-        res.json({
-
-            total,
-
-            pending,
-
-            published,
-
-            suspended,
-
-            finished
-
-        })
+        res.json(result);
 
     }
 
     catch (error) {
 
-        res.status(500).json({
+        res.status(400).json({
+
+            success: false,
 
             message: error.message
 
-        })
+        });
 
     }
 
-}
+};
 
-// =========================
-// DETAILS
-// =========================
+/* ===========================================================
+   MODIFIER UNE CONFERENCE
+=========================================================== */
+export const updateConference = async (req, res) => {
+
+    try {
+
+        const result = await conferenceService.updateConference(
+
+            req.user,
+
+            req.params.id,
+
+            req.body
+
+        );
+
+        res.json(result);
+
+    }
+
+    catch (error) {
+
+        res.status(400).json({
+
+            success: false,
+
+            message: error.message
+
+        });
+
+    }
+
+};
+
+/* ===========================================================
+   TERMINER UNE CONFERENCE
+=========================================================== */
+export const endConference = async (req, res) => {
+
+    try {
+
+        const result = await conferenceService.endConference(
+
+            req.user,
+
+            req.params.id
+
+        );
+
+        res.json(result);
+
+    }
+
+    catch (error) {
+
+        res.status(400).json({
+
+            success: false,
+
+            message: error.message
+
+        });
+
+    }
+
+};
+
+/* ===========================================================
+   DETAILS D'UNE CONFERENCE
+=========================================================== */
 export const getConferenceById = async (req, res) => {
 
     try {
 
-        const conference = await Conference.findById(
+        const result = await conferenceService.getConferenceById(
 
             req.params.id
 
-        ).populate(
+        );
 
-            "teacher",
-
-            "name email"
-        )
-
-        if (!conference) {
-
-            return res.status(404).json({
-
-                message: "Conférence introuvable"
-
-            })
-
-        }
-
-        res.json(conference)
+        res.json(result);
 
     }
 
     catch (error) {
 
-        res.status(500).json({
+        res.status(404).json({
+
+            success: false,
 
             message: error.message
 
-        })
+        });
 
     }
 
-}
+};
 
-// =========================
-// PUBLIER
-// =========================
-export const publishConference = async (req, res) => {
+/* ===========================================================
+   REJOINDRE UNE CONFERENCE
+=========================================================== */
+export const joinConference = async (req, res) => {
 
     try {
 
-        const conference = await Conference.findByIdAndUpdate(
+        const result = await conferenceService.joinConference(
 
-            req.params.id,
+            req.user,
 
-            {
+            req.params.id
 
-                status: "Publié",
+        );
 
-                publishedAt: new Date()
-
-            },
-
-            {
-
-                new: true
-
-            }
-
-        )
-
-        res.json(conference)
+        res.json(result);
 
     }
 
     catch (error) {
 
-        res.status(500).json({
+        res.status(400).json({
+
+            success: false,
 
             message: error.message
 
-        })
+        });
 
     }
 
-}
+};
 
-// =========================
-// SUSPENDRE
-// =========================
-export const suspendConference = async (req, res) => {
+/* ===========================================================
+   CONFERENCES DE L'ENSEIGNANT
+=========================================================== */
+export const getTeacherConferences = async (req, res) => {
 
     try {
 
-        const conference = await Conference.findByIdAndUpdate(
+        const result = await conferenceService.getTeacherConferences(
 
-            req.params.id,
+            req.user
 
-            {
+        );
 
-                status: "Suspendu"
-
-            },
-
-            {
-
-                new: true
-
-            }
-
-        )
-
-        res.json(conference)
+        res.json(result);
 
     }
 
     catch (error) {
 
-        res.status(500).json({
+        res.status(400).json({
+
+            success: false,
 
             message: error.message
 
-        })
+        });
 
     }
 
-}
+};
 
-// =========================
-// SUPPRIMER
-// =========================
+/* ===========================================================
+   CONFERENCES DE L'ETUDIANT
+=========================================================== */
+export const getStudentConferences = async (req, res) => {
+
+    try {
+
+        const result = await conferenceService.getStudentConferences(
+
+            req.user
+
+        );
+
+        res.json(result);
+
+    }
+
+    catch (error) {
+
+        res.status(400).json({
+
+            success: false,
+
+            message: error.message
+
+        });
+
+    }
+
+};
+/* ===========================================================
+   QUITTER UNE CONFERENCE
+=========================================================== */
+export const leaveConference = async (req, res) => {
+
+    try {
+
+        const result = await conferenceService.leaveConference(
+
+            req.user,
+
+            req.params.id
+
+        );
+
+        res.json(result);
+
+    }
+
+    catch (error) {
+
+        res.status(400).json({
+
+            success: false,
+
+            message: error.message
+
+        });
+
+    }
+
+};
+
+/* ===========================================================
+   PARTICIPANTS DE LA CONFERENCE
+=========================================================== */
+export const getParticipants = async (req, res) => {
+
+    try {
+
+        const result = await conferenceService.getParticipants(
+
+            req.params.id
+
+        );
+
+        res.json(result);
+
+    }
+
+    catch (error) {
+
+        res.status(400).json({
+
+            success: false,
+
+            message: error.message
+
+        });
+
+    }
+
+};
+
+/* ===========================================================
+   SUPPRIMER LA CONFERENCE
+=========================================================== */
 export const deleteConference = async (req, res) => {
 
     try {
 
-        await Conference.findByIdAndDelete(
+        const result = await conferenceService.deleteConference(
+
+            req.user,
 
             req.params.id
 
-        )
+        );
 
-        res.json({
-
-            message: "Conférence supprimée"
-
-        })
+        res.json(result);
 
     }
 
     catch (error) {
 
-        res.status(500).json({
+        res.status(400).json({
+
+            success: false,
 
             message: error.message
 
-        })
+        });
 
     }
 
-}
+};
+
+import emailService from "../services/emailService.js";
+
+/* ===========================================================
+   TEST EMAIL
+=========================================================== */
+
+export const testEmail = async (req, res) => {
+
+    try {
+
+        await emailService.sendMail({
+
+            to: process.env.MAIL_USER,
+
+            subject: "Test SALAM CI",
+
+            html: `
+
+                <h1>Bonjour 👋</h1>
+
+                <p>Si vous recevez cet email, alors le système d'envoi d'emails de SALAM CI fonctionne parfaitement.</p>
+
+                <hr>
+
+                <h3>SALAM CI</h3>
+
+            `
+
+        });
+
+        res.json({
+
+            success: true,
+
+            message: "Email envoyé."
+
+        });
+
+    }
+
+    catch (error) {
+
+        console.log(error);
+
+        res.status(500).json({
+
+            success: false,
+
+            message: error.message
+
+        });
+
+    }
+
+};
