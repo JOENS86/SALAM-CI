@@ -2,7 +2,6 @@ import {
     FaCalendarAlt,
     FaClock,
     FaImage,
-    FaLink,
     FaUsers,
     FaBook,
     FaHeading,
@@ -26,23 +25,21 @@ function ConferenceForm() {
     const [formData, setFormData] = useState({
 
         image: "",
-
+    
         title: "",
-
+    
         description: "",
-
+    
         course: "",
-
+    
         date: "",
-
+    
         time: "",
-
+    
         duration: 60,
-
-        maxParticipants: 100,
-
-        meetingLink: ""
-
+    
+        maxParticipants: 100
+    
     });
 
     const handleChange = (e) => {
@@ -333,19 +330,7 @@ const handleSubmit = async (e) => {
 
                         </label>
 
-                        <input
-
-                            type="date"
-
-                            name="date"
-
-                            value={formData.date}
-
-                            onChange={handleChange}
-
-                            className="w-full border rounded-xl p-3"
-
-                        />
+                        <input type="date" name="date" value={formData.date} min={new Date().toISOString().split("T")[0]} onChange={handleChange} className="w-full border rounded-xl p-3"/>
 
                     </div>
 
@@ -434,32 +419,6 @@ const handleSubmit = async (e) => {
                             name="maxParticipants"
 
                             value={formData.maxParticipants}
-
-                            onChange={handleChange}
-
-                            className="w-full border rounded-xl p-3"
-
-                        />
-
-                    </div>
-
-                    <div>
-
-                        <label className="font-semibold flex items-center gap-2 mb-2">
-
-                            <FaLink />
-
-                            Lien Meet / Zoom (optionnel)
-
-                        </label>
-
-                        <input
-
-                            type="text"
-
-                            name="meetingLink"
-
-                            value={formData.meetingLink}
 
                             onChange={handleChange}
 

@@ -121,19 +121,7 @@ const conferenceRequestSchema = new mongoose.Schema(
             default: 100
 
         },
-
-        // =====================================================
-        // LIEN DE CONFERENCE (JITSI, ZOOM...)
-        // =====================================================
-
-        meetingLink: {
-
-            type: String,
-
-            default: ""
-
-        },
-
+        
         // =====================================================
         // STATUT DE LA DEMANDE
         // =====================================================

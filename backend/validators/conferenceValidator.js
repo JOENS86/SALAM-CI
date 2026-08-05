@@ -88,9 +88,7 @@ export const createConferenceSchema = Joi.object({
 
             "number.min": "Au moins 2 participants."
 
-        }),
-
-    meetingLink: Joi.string()
+        })
 
         .allow("")
 
