@@ -347,9 +347,11 @@ async approveRequest(admin, requestId) {
 
     });
 
-    // ==========================================
-    // NOTIFICATION ENSEIGNANT
-    // ==========================================
+// ==========================================
+// NOTIFICATION ENSEIGNANT
+// ==========================================
+
+try {
 
     await notificationService.create({
 
@@ -369,9 +371,21 @@ async approveRequest(admin, requestId) {
 
     });
 
-    // ==========================================
-    // EMAIL ENSEIGNANT
-    // ==========================================
+}
+catch (error) {
+
+    console.error(
+        "Erreur notification enseignant :",
+        error.message
+    );
+
+}
+
+// ==========================================
+// EMAIL ENSEIGNANT
+// ==========================================
+
+try {
 
     await emailService.sendConferenceApproved(
 
@@ -381,29 +395,46 @@ async approveRequest(admin, requestId) {
 
     );
 
-    // ==========================================
-    // ETUDIANTS INSCRITS
-    // ==========================================
+}
+catch (error) {
 
-    const enrollments = await Enrollment.find({
+    console.error(
 
-        course: request.course._id
+        "Erreur email enseignant :",
 
-    }).populate(
-
-        "student",
-
-        "name email"
+        error.message
 
     );
 
-    for (const enrollment of enrollments) {
+}
 
-        const student = enrollment.student;
+// ==========================================
+// ETUDIANTS INSCRITS
+// ==========================================
 
-        if (!student) continue;
+const enrollments = await Enrollment.find({
 
-        // Notification
+    course: request.course._id
+
+}).populate(
+
+    "student",
+
+    "name email"
+
+);
+
+for (const enrollment of enrollments) {
+
+    const student = enrollment.student;
+
+    if (!student) continue;
+
+    // -------------------------------
+    // Notification
+    // -------------------------------
+
+    try {
 
         await notificationService.create({
 
@@ -423,7 +454,24 @@ async approveRequest(admin, requestId) {
 
         });
 
-        // Email
+    }
+    catch (error) {
+
+        console.error(
+
+            "Erreur notification étudiant :",
+
+            error.message
+
+        );
+
+    }
+
+    // -------------------------------
+    // Email
+    // -------------------------------
+
+    try {
 
         await emailService.sendConferenceInvitation(
 
@@ -434,71 +482,133 @@ async approveRequest(admin, requestId) {
         );
 
     }
+    catch (error) {
 
-    return {
+        console.error(
 
-        success: true,
+            "Erreur email étudiant :",
 
-        message: "Conférence approuvée avec succès.",
-
-        conference
-
-    };
-
-}
-
-    // =====================================================
-    // REFUSER UNE DEMANDE
-    // =====================================================
-    async rejectRequest(
-
-        admin,
-
-        requestId,
-
-        adminComment
-
-    ) {
-
-        const request = await ConferenceRequest.findById(
-
-            requestId
+            error.message
 
         );
 
-        if (!request) {
+    }
 
-            throw new Error(
+}
 
-                "Demande introuvable."
+return {
 
-            );
+    success: true,
 
-        }
+    message: "Conférence approuvée avec succès.",
 
-        if (request.status === "rejected") {
+    conference
 
-            throw new Error(
+};
 
-                "Cette demande est déjà refusée."
+}
 
-            );
+// =====================================================
+// REFUSER UNE DEMANDE
+// =====================================================
+async rejectRequest(
 
-        }
+    admin,
 
-        request.status = "rejected";
+    requestId,
 
-        request.adminComment = adminComment || "";
+    adminComment
 
-        request.approvedBy = admin._id;
+) {
 
-        request.approvedAt = new Date();
+    // ==========================================
+    // VERIFIER LE ROLE
+    // ==========================================
 
-        await request.save();
+    if (admin.role !== "admin") {
 
-        // ==========================================
-        // NOTIFIER LE PROFESSEUR
-        // ==========================================
+        throw new Error(
+
+            "Accès réservé aux administrateurs."
+
+        );
+
+    }
+
+    // ==========================================
+    // RECHERCHER LA DEMANDE
+    // ==========================================
+
+    const request = await ConferenceRequest.findById(
+
+        requestId
+
+    );
+
+    if (!request) {
+
+        throw new Error(
+
+            "Demande introuvable."
+
+        );
+
+    }
+
+    // ==========================================
+    // VERIFIER LE STATUT
+    // ==========================================
+
+    if (request.status === "approved") {
+
+        throw new Error(
+
+            "Cette demande est déjà approuvée."
+
+        );
+
+    }
+
+    if (request.status === "rejected") {
+
+        throw new Error(
+
+            "Cette demande est déjà refusée."
+
+        );
+
+    }
+
+    // ==========================================
+    // REFUSER LA DEMANDE
+    // ==========================================
+
+    request.status = "rejected";
+
+    request.adminComment = adminComment || "";
+
+    request.approvedBy = admin._id;
+
+    request.approvedAt = new Date();
+
+    await request.save();
+
+    // ==========================================
+    // RECUPERER L'ENSEIGNANT
+    // ==========================================
+
+    const teacher = await User.findById(
+
+        request.teacher
+
+    );
+
+    // ==========================================
+    // NOTIFICATION
+    // ==========================================
+
+    try {
+
         await notificationService.create({
 
             recipient: request.teacher,
@@ -519,29 +629,66 @@ async approveRequest(admin, requestId) {
 
         });
 
-        const teacher = await User.findById(request.teacher);
+    }
 
-          await emailService.sendConferenceRejected(
+    catch (error) {
 
-          teacher,
+        console.error(
 
-          request
+            "Erreur notification refus conférence :",
+
+            error.message
 
         );
 
-        return {
+    }
 
-            success: true,
+    // ==========================================
+    // EMAIL
+    // ==========================================
 
-            message:
+    if (teacher) {
 
-                "Demande refusée.",
+        try {
 
-            request
+            await emailService.sendConferenceRejected(
 
-        };
+                teacher,
+
+                request
+
+            );
+
+        }
+
+        catch (error) {
+
+            console.error(
+
+                "Erreur email refus conférence :",
+
+                error.message
+
+            );
+
+        }
 
     }
+
+    return {
+
+        success: true,
+
+        message:
+
+            "Demande refusée.",
+
+        request
+
+    };
+
+}
+
 
     // =====================================================
     // RECUPERER LES DEMANDES D'UN ENSEIGNANT
