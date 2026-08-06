@@ -76,28 +76,18 @@ export const createConferenceSchema = Joi.object({
 
         }),
 
-    maxParticipants: Joi.number()
+        maxParticipants: Joi.number()
 
         .min(2)
-
+    
         .max(1000)
-
+    
         .required()
-
+    
         .messages({
-
+    
             "number.min": "Au moins 2 participants."
-
-        })
-
-        .allow("")
-
-        .uri()
-
-        .messages({
-
-            "string.uri": "Lien de conférence invalide."
-
+    
         })
 
 });

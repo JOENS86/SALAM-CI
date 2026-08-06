@@ -23,18 +23,19 @@ export const createCourse = async (req, res) => {
     // =========================
     // FICHIERS UPLOADÉS
     // =========================
+
     const thumbnail =
 
-      req.files.thumbnail?.[0]?.path || ""
+    req.files?.thumbnail?.[0]?.path.replace(/\\/g, "/") || "";
 
     const pdf =
 
-      req.files.pdf?.[0]?.path || ""
+    req.files?.pdf?.[0]?.path.replace(/\\/g, "/") || "";
 
     const video =
 
-      req.files.video?.[0]?.path || ""
-
+    req.files?.video?.[0]?.path.replace(/\\/g, "/") || "";
+    
     // =========================
     // CRÉATION DU COURS
     // =========================

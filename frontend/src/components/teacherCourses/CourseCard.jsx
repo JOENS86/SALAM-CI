@@ -18,6 +18,13 @@ import { toast } from "react-toastify";
 
 function CourseCard({ course }) {
 
+    console.log("Course :", course);
+    console.log("Thumbnail :", course.thumbnail);
+    console.log(
+        "URL finale :",
+        `http://localhost:5000/${course.thumbnail}`
+    );
+
     return (
 
         <div
