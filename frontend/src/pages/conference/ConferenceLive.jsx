@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState, useRef } from "react";
 
 import {
   FaArrowLeft,
@@ -11,55 +11,465 @@ import {
   FaPaperPlane,
   FaUsers,
   FaDesktop
-} from "react-icons/fa"
+} from "react-icons/fa";
 
-import { useNavigate } from "react-router-dom"
+import {useNavigate, useParams} from "react-router-dom";
+import conferenceService from "../../services/conferenceService";
+import socket from "../../socket/socket";
+import webrtcService from "../../services/webrtcService";
 
 function ConferenceLive() {
 
-  const navigate = useNavigate()
+  const navigate = useNavigate();
+
+  const { id } = useParams();
 
   const user =
-    JSON.parse(localStorage.getItem("user")) || {}
+    JSON.parse(localStorage.getItem("user")) || {};
 
-  const [micOn, setMicOn] = useState(true)
-  const [camOn, setCamOn] = useState(true)
+  const [conference, setConference] = useState(null);
 
-  const [message, setMessage] = useState("")
+  const [participants, setParticipants] = useState([]);
 
-  const [messages, setMessages] = useState([
-    {
-      sender: "Professeur Moussa Traoré",
-      text: "Bienvenue à tous dans cette conférence."
-    },
-    {
-      sender: "Étudiant Koné",
-      text: "Merci professeur."
+  const [loading, setLoading] = useState(true);
+
+  const [micOn, setMicOn] = useState(true);
+
+  const [camOn, setCamOn] = useState(true);
+
+  const [message, setMessage] = useState("");
+
+  const [messages, setMessages] = useState([]);
+
+  const remoteVideoRef = useRef(null);
+
+  const localVideoRef = useRef(null);
+  
+  // =====================================================
+  // CHARGER LA CONFERENCE
+  // =====================================================
+  const loadConference = async () => {
+
+    try {
+
+      setLoading(true);
+
+      const result = await conferenceService.getConferenceById(id);
+
+      setConference(result.conference);
+
     }
-  ])
 
-  const participants = [
-    "Professeur Moussa Traoré",
-    "Étudiant Koné",
-    "Étudiante Traoré",
-    "Étudiant Sow",
-    user?.name || "Moi"
-  ]
+    catch (error) {
 
+      console.error(error);
+
+    }
+
+    finally {
+
+      setLoading(false);
+
+    }
+
+  };
+
+  useEffect(() => {
+
+    loadConference();
+
+  }, [id]);
+
+
+// =====================================================
+// SOCKET.IO
+// =====================================================
+useEffect(() => {
+
+  if (!conference) return;
+
+  socket.emit(
+      "conference:joinRoom",
+      {
+          roomId: conference._id,
+          user
+      }
+  );
+
+  socket.on(
+      "conference:participants",
+      ({ participants }) => {
+
+          setParticipants(participants);
+
+      }
+  );
+
+// =====================================================
+// UN NOUVEAU PARTICIPANT REJOINT
+// =====================================================
+socket.on(
+
+  "conference:userJoined",
+
+  async ({ participant }) => {
+
+      // Ignorer soi-même
+      if (participant.socketId === socket.id) return;
+
+      // Seul le professeur envoie une Offer
+      if (user.role !== "teacher") return;
+
+      console.log(
+
+          "👤 Nouvel étudiant :", participant.name
+
+      );
+
+      try {
+
+        if (
+          webrtcService.hasPeerConnection(
+              participant.socketId
+          )
+      
+           ) {
+      
+            console.log(
+              "Connexion déjà créée"
+            );
+      
+            return;
+      
+             }
+      
+             webrtcService.createPeerConnection(
+               participant.socketId
+             );
+
+
+          // Création de l'Offer
+          const offer = await webrtcService.createOffer(
+
+              participant.socketId
+
+          );
+
+          // Envoi de l'Offer
+          socket.emit(
+
+              "webrtc:offer",
+
+              {
+
+                  roomId: conference._id,
+
+                  sender: socket.id,
+
+                  target: participant.socketId,
+
+                  offer
+
+              }
+
+          );
+
+          console.log(
+
+              "📤 Offer envoyée"
+
+          );
+
+      }
+
+      catch (error) {
+
+          console.error(
+
+              "Erreur Offer :", error
+
+          );
+
+      }
+
+  }
+
+);
+
+
+// ====================================
+// ICE CANDIDATE RECU
+// ====================================
+
+socket.on(
+
+  "webrtc:iceCandidate",
+
+  async ({
+
+      sender,
+
+      target,
+
+      candidate
+
+  }) => {
+
+      if (target !== socket.id) return;
+
+      if (sender === socket.id) return;
+
+      await webrtcService.addIceCandidate(
+
+          sender,
+
+          candidate
+
+      );
+
+  }
+
+);
+
+  // ============================
+  // OUVRIR LA CAMERA
+  // ============================
+  const initCamera = async () => {
+
+      try {
+
+          const stream = await webrtcService.startLocalStream();
+
+          if (localVideoRef.current) {
+
+              localVideoRef.current.srcObject = stream;
+
+              // ====================================
+              // ECOUTER LES ICE CANDIDATES
+              // ====================================
+
+            webrtcService.setIceCandidateCallback(
+              (socketId, candidate) => {
+
+                socket.emit(
+                    "webrtc:iceCandidate",
+                  {
+                    roomId: conference._id,
+                    sender: socket.id,
+                    socketId,
+                    candidate
+                  }
+               );
+              }
+
+              );
+            }
+
+      }
+
+      catch (error) {
+
+          console.error(error);
+
+      }
+
+  };
+
+  initCamera();
+
+// =====================================================
+// RECEPTION DU FLUX DISTANT
+// =====================================================
+webrtcService.setRemoteStreamCallback(
+
+  (socketId, stream) => {
+
+      console.log(
+
+          "📹 Flux reçu :", socketId
+
+      );
+
+      if (remoteVideoRef.current) {
+
+          remoteVideoRef.current.srcObject = stream;
+
+      }
+
+  }
+
+);
+
+// =====================================================
+// RECEPTION D'UNE OFFER
+// =====================================================
+socket.on(
+
+  "webrtc:offer",
+
+  async ({
+
+      sender,
+
+      target,
+
+      offer
+
+  }) => {
+
+      // Cette Offer n'est pas pour moi
+      if (target !== socket.id) return;
+
+      // J'ignore ma propre Offer
+      if (sender === socket.id) return;
+
+      console.log("📥 Offer reçue");
+
+      try {
+
+          const answer = await webrtcService.handleOffer(
+
+              sender,
+
+              offer
+
+          );
+
+          socket.emit(
+
+              "webrtc:answer",
+
+              {
+
+                  roomId: conference._id,
+
+                  sender: socket.id,
+
+                  target: sender,
+
+                  answer
+
+              }
+
+          );
+
+          console.log("📤 Answer envoyée");
+
+      }
+
+      catch (error) {
+
+          console.error(error);
+
+      }
+
+  }
+
+);
+
+// =====================================================
+// ANSWER RECUE
+// =====================================================
+socket.on(
+
+  "webrtc:answer",
+
+  async ({
+
+      sender,
+
+      answer
+
+  }) => {
+
+      if (sender === socket.id) return;
+
+      await webrtcService.handleAnswer(
+
+          sender,
+
+          answer
+
+      );
+
+  }
+
+);
+  
+  return () => {
+
+      socket.emit(
+          "conference:leaveRoom",
+          {
+              roomId: conference._id,
+              user
+          }
+      );
+
+      socket.off("conference:participants");
+      socket.off("webrtc:iceCandidate");
+      socket.off("webrtc:offer");
+      socket.off("webrtc:answer");
+      socket.off("webrtc:userJoined");
+
+  };
+
+}, [conference]);
+
+  // =====================================================
+  // ENVOI MESSAGE (temporaire)
+  // =====================================================
   const sendMessage = () => {
 
-    if (!message.trim()) return
+    if (!message.trim()) return;
 
-    setMessages([
-      ...messages,
+    setMessages((prev) => [
+
+      ...prev,
+
       {
-        sender: user?.name || "Moi",
-        text: message
-      }
-    ])
 
-    setMessage("")
+        sender: user?.name || "Moi",
+
+        text: message
+
+      }
+
+    ]);
+
+    setMessage("");
+
+  };
+
+
+  if (loading) {
+
+    return (
+      <div className="h-screen flex items-center justify-center">
+  
+        <h2 className="text-2xl font-bold">
+          Chargement de la conférence...
+        </h2>
+  
+      </div>
+    );
+  
   }
+  
+  if (!conference) {
+  
+    return (
+      <div className="h-screen flex items-center justify-center">
+        
+        <h2 className="text-2xl text-red-500 font-bold">
+          Conférence introuvable. 
+        </h2>
+  
+      </div>
+    );
+  
+  }
+
 
   return (
 
@@ -88,11 +498,11 @@ function ConferenceLive() {
           <div>
 
             <h1 className="text-2xl font-bold">
-              Mathématiques Appliquées
+            {conference.title}
             </h1>
 
             <p className="text-gray-300 text-sm">
-              Professeur Moussa Traoré
+            {conference.teacher?.name}
             </p>
 
           </div>
@@ -125,7 +535,7 @@ function ConferenceLive() {
               className="
               w-full
               max-w-5xl
-              h-[500px]
+              h-[530px]
               bg-[#16233d]
               rounded-3xl
               flex
@@ -136,18 +546,40 @@ function ConferenceLive() {
               "
             >
 
-              <img
-                src="https://cdn-icons-png.flaticon.com/512/4140/4140048.png"
-                alt=""
-                className="w-32"
-              />
+            <video
+              ref={localVideoRef}
+              autoPlay
+              playsInline
+              muted
+              className="
+                w-full
+                h-full
+                object-cover
+                rounded-3xl"
+            />
 
-              <h2 className="text-white text-3xl font-bold mt-5">
-                Professeur Moussa Traoré
+            <video
+              ref={remoteVideoRef}
+              autoPlay
+              playsInline
+              className="
+                absolute
+                bottom-5
+                right-5
+                w-72
+                rounded-2xl
+                shadow-2xl
+                border-4
+                border-white
+                bg-black"
+            />
+
+              <h2 className="text-white text-2xl font-bold mt-3 text-center">
+                {conference.teacher?.name}
               </h2>
 
-              <p className="text-gray-400 mt-2">
-                Enseignant
+              <p className="text-gray-300 text-base mt-2 mb-4 text-center">
+                {conference.course?.title}
               </p>
 
               <span
@@ -393,29 +825,31 @@ function ConferenceLive() {
             <div className="space-y-3">
 
               {
-                participants.map((participant, index) => (
-
-                  <div
-                    key={index}
+                participants.map((participant) => (
+                  <div 
+                    key={participant._id}
                     className="
-                    flex
-                    items-center
-                    gap-3
-                    "
+                      flex
+                      items-center
+                      gap-3"
                   >
 
-                    <img
-                      src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
-                      alt=""
-                      className="w-10 h-10"
-                    />
+                  <img
+                    src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
+                    alt=""
+                    className="w-10 h-10"
+                  />
 
-                    <span>
-                      {participant}
-                    </span>
+                  <div>
+                    <p className="font-medium">
+                        {participant.name}
+                    </p>
 
+                    <p className="text-xs text-gray-500">
+                        {participant.role}
+                    </p>
                   </div>
-
+                </div>
                 ))
               }
 

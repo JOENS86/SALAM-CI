@@ -4,8 +4,12 @@ import {
   FaVideo,
   FaUser,
   FaUserGraduate,
-  FaSignOutAlt
-} from "react-icons/fa"
+  FaSignOutAlt,
+  FaChevronDown,
+  FaChevronUp
+} from "react-icons/fa";
+
+import { useState } from "react";
   
   import {
     Link,
@@ -17,6 +21,7 @@ import {
   
     const location = useLocation()
     const navigate = useNavigate()
+    const [conferenceOpen, setConferenceOpen] = useState(true);
   
     const logout = () => {
   
@@ -106,13 +111,54 @@ import {
             Mes étudiants
           </Link>
   
-          <Link
+        <div>
+          <button
+              onClick={() => setConferenceOpen(!conferenceOpen)}
+              className="
+                w-full
+                flex
+                items-center
+                justify-between
+                px-5
+                py-4
+                rounded-2xl
+                hover:bg-[#1a2342]
+                transition-all " >
+
+            <div className="flex items-center gap-4">
+              <FaVideo />
+                Conférences
+            </div>
+
+              {
+                  conferenceOpen
+                  ?
+                  <FaChevronUp />
+                  :
+                  <FaChevronDown />
+              }
+          </button>
+
+{
+    conferenceOpen &&
+    <div className="ml-10 mt-2 space-y-2">
+        <Link
             to="/teacher-conferences"
             className={menuClass("/teacher-conferences")}
-          >
-            <FaVideo />
-            Conférences
-          </Link>
+        >
+            Demandes
+        </Link>
+
+        <Link
+            to="/teacher-my-conferences"
+            className={menuClass("/teacher-my-conferences")}
+        >
+            Mes conférences
+        </Link>
+    </div>
+}
+
+      </div>
   
           <Link
             to="/teacher-profile"

@@ -1,74 +1,155 @@
-import { useState } from "react"
+import { useEffect, useState } from "react";
 
 import {
   FaVideo,
   FaCalendarAlt,
   FaHistory,
   FaArrowLeft
-} from "react-icons/fa"
+} from "react-icons/fa";
 
-import { useNavigate } from "react-router-dom"
+import { useNavigate } from "react-router-dom";
+
+import conferenceService from "../../services/conferenceService";
 
 function ConferenceRoom() {
 
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] =
-    useState("live")
+  // =====================================================
+  // ONGLET ACTIF
+  // =====================================================
 
-  const conferencesLive = [
-    {
-      id: 1,
-      title: "Mathématiques Appliquées"
+  const [activeTab, setActiveTab] = useState("live");
+
+  // =====================================================
+  // ETATS
+  // =====================================================
+
+  const [liveConferences, setLiveConferences] = useState([]);
+
+  const [upcomingConferences, setUpcomingConferences] = useState([]);
+
+  const [historyConferences, setHistoryConferences] = useState([]);
+
+  const [loading, setLoading] = useState(true);
+
+  // =====================================================
+  // CHARGER LES CONFERENCES
+  // =====================================================
+
+  const loadConferences = async () => {
+
+    try {
+
+      setLoading(true);
+
+      const [
+
+        live,
+
+        upcoming,
+
+        history
+
+      ] = await Promise.all([
+
+        conferenceService.getLiveConferences(),
+
+        conferenceService.getUpcomingConferences(),
+
+        conferenceService.getHistoryConferences()
+
+      ]);
+
+      setLiveConferences(
+
+        live.conferences || []
+
+      );
+
+      setUpcomingConferences(
+
+        upcoming.conferences || []
+
+      );
+
+      setHistoryConferences(
+
+        history.conferences || []
+
+      );
+
     }
-  ]
 
-  const conferencesUpcoming = [
-    {
-      id: 2,
-      title: "Introduction au Développement Web avec React"
-    },
-    {
-      id: 3,
-      title: "Design Thinking et Innovation"
-    },
-    {
-      id: 4,
-      title: "Sécurité Informatique et Cybersécurité"
+    catch (error) {
+
+      console.error(
+
+        "Erreur chargement conférences :",
+
+        error
+
+      );
+
     }
-  ]
 
-  const conferencesHistory = [
-    {
-      id: 5,
-      title: "Base de Données et SQL Avancé"
-    },
-    {
-      id: 6,
-      title: "Intelligence Artificielle et Machine Learning"
+    finally {
+
+      setLoading(false);
+
     }
-  ]
 
-  const getConferenceImage = (title) => {
+  };
 
-    if (title.toLowerCase().includes("math"))
-      return "https://images.unsplash.com/photo-1509228468518-180dd4864904?w=800"
-  
-    if (title.toLowerCase().includes("react"))
-      return "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800"
-  
-    if (title.toLowerCase().includes("design"))
-      return "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800"
-  
-    if (title.toLowerCase().includes("cyber"))
-      return "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=800"
-  
-    if (title.toLowerCase().includes("sql"))
-      return "https://images.unsplash.com/photo-1544383835-bda2bc66a55d?w=800"
-  
-    return "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800"
-  }
+  // =====================================================
+  // AU CHARGEMENT
+  // =====================================================
 
+  useEffect(() => {
+
+    loadConferences();
+
+  }, []);
+
+  // =====================================================
+  // IMAGE
+  // =====================================================
+
+  const getConferenceImage = (conference) => {
+
+    if (conference.image) {
+
+      return conference.image;
+
+    }
+
+    const title = conference.title.toLowerCase();
+
+    if (title.includes("math"))
+
+      return "https://images.unsplash.com/photo-1509228468518-180dd4864904?w=800";
+
+    if (title.includes("react"))
+
+      return "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800";
+
+    if (title.includes("design"))
+
+      return "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800";
+
+    if (title.includes("cyber"))
+
+      return "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=800";
+
+    if (title.includes("sql"))
+
+      return "https://images.unsplash.com/photo-1544383835-bda2bc66a55d?w=800";
+
+    return "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800";
+
+  };
+
+  
   return (
 
     <div
@@ -161,7 +242,7 @@ function ConferenceRoom() {
           <FaVideo className="mx-auto text-3xl" />
 
           <h2 className="text-4xl font-bold mt-3">
-            1
+          {liveConferences.length}
           </h2>
 
           <p>
@@ -190,7 +271,7 @@ function ConferenceRoom() {
           <FaCalendarAlt className="mx-auto text-3xl" />
 
           <h2 className="text-4xl font-bold mt-3">
-            3
+          {upcomingConferences.length}
           </h2>
 
           <p>
@@ -219,7 +300,7 @@ function ConferenceRoom() {
           <FaHistory className="mx-auto text-3xl" />
 
           <h2 className="text-4xl font-bold mt-3">
-            2
+          {historyConferences.length}
           </h2>
 
           <p>
@@ -255,14 +336,24 @@ function ConferenceRoom() {
 
       {/* CONFERENCES */}
 
+      {loading ? (
+        <div className="text-center py-20">
+          
+          <p className="text-xl text-gray-500">
+              Chargement des conférences...
+          </p>
+
+        </div>
+      ) : (
+
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mt-10">
 
         {activeTab === "live" &&
-          conferencesLive.map((conference) => (
+       liveConferences.map((conference) => (
 
             <div
-              key={conference.id}
-              className="
+            key={conference._id}
+            className="
               bg-white
               rounded-3xl
               shadow-lg
@@ -278,7 +369,7 @@ function ConferenceRoom() {
               </h3>
         <br/>
               <img
-                src={getConferenceImage(conference.title)}
+                src={getConferenceImage(conference)}
                 alt={conference.title}
                 className="
                   w-full
@@ -299,7 +390,7 @@ function ConferenceRoom() {
                   Détails
                 </button>
 
-                <button onClick={() => navigate("/conference-live") } className=" flex-1 bg-red-500 text-white rounded-xl py-3 hover:bg-red-600 transition " >
+                <button onClick={() => navigate(`/conference-live/${conference._id}`)} className=" flex-1 bg-red-500 text-white rounded-xl py-3 hover:bg-red-600 transition " >
                   Rejoindre
                 </button>
 
@@ -309,12 +400,22 @@ function ConferenceRoom() {
 
           ))}
 
+        {liveConferences.length === 0 && (
+          <div className="col-span-full text-center py-20">
+
+            <h2 className="text-2xl font-bold text-gray-500">
+              Aucune conférence en direct.
+            </h2>
+
+          </div>
+        )}
+
         {activeTab === "upcoming" &&
-          conferencesUpcoming.map((conference) => (
+         upcomingConferences.map((conference) => (
 
             <div
-              key={conference.id}
-              className="
+            key={conference._id}
+            className="
               bg-white
               rounded-3xl
               shadow-lg
@@ -330,7 +431,7 @@ function ConferenceRoom() {
               </h3>
                   <br/>
               <img
-                src={getConferenceImage(conference.title)}
+                src={getConferenceImage(conference)}
                 alt={conference.title}
                 className="
                   w-full
@@ -344,7 +445,7 @@ function ConferenceRoom() {
                 📅 À venir
               </p>
 
-              <button className="mt-6 w-full border rounded-xl py-3" onClick={() => navigate(`/conference-details/${conference.id}`)} >
+              <button className="mt-6 w-full border rounded-xl py-3" onClick={() => navigate(`/conference-details/${conference._id}`)} >
                 Détails
               </button>
 
@@ -352,11 +453,21 @@ function ConferenceRoom() {
 
           ))}
 
+        {upcomingConferences.length === 0 && (
+          <div className="col-span-full text-center py-20">
+            
+            <h2 className="text-2xl font-bold text-gray-500">
+              Aucune conférence à Venir.
+            </h2>
+          
+          </div>
+        )}
+
         {activeTab === "history" &&
-          conferencesHistory.map((conference) => (
+         historyConferences.map((conference) => (
 
             <div
-              key={conference.id}
+              key={conference._id}
               className="
               bg-white
               rounded-3xl
@@ -373,7 +484,7 @@ function ConferenceRoom() {
               </h3>
                   <br/>
               <img
-                src={getConferenceImage(conference.title)}
+                src={getConferenceImage(conference)}
                 alt={conference.title}
                 className="
                   w-full
@@ -388,11 +499,11 @@ function ConferenceRoom() {
               </p>
 
               <div className="mt-6 flex gap-3">
-                <button className="flex-1 border rounded-xl py-3" onClick={() => navigate(`/conference-details/${conference.id}`)}>
+                <button className="flex-1 border rounded-xl py-3" onClick={() => navigate(`/conference-details/${conference._id}`)}>
                   Détails
                 </button>
 
-                <button   onClick={() => navigate(`/conference-replay/${conference.id}`)} className="flex-1 bg-green-500 text-white rounded-xl py-3">
+                <button   onClick={() => navigate(`/conference-replay/${conference._id}`)} className="flex-1 bg-green-500 text-white rounded-xl py-3">
                 Voir le replay
               </button>
              </div>
@@ -401,7 +512,19 @@ function ConferenceRoom() {
 
           ))}
 
+        {historyConferences.length === 0 && (
+          <div className="col-span-full text-center py-20">
+            
+            <h2 className="text-2xl font-bold text-gray-500">
+              Aucun Historique de Conférence.
+            </h2>
+          
+          </div>
+        )}
+
       </div>
+
+      )}
 
     </div>
 

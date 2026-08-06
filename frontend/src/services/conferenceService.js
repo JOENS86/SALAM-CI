@@ -40,21 +40,21 @@ class ConferenceService {
 
     }
 
-// =====================================================
-// DETAILS D'UNE DEMANDE
-// =====================================================
+    // =====================================================
+    // DETAILS D'UNE DEMANDE
+    // =====================================================
 
-async getRequestById(id) {
+    async getRequestById(id) {
 
-    const response = await API.get(
+        const response = await API.get(
 
-        `/conference-requests/${id}`
+            `/conference-requests/${id}`
 
-    );
+        );
 
-    return response.data;
+        return response.data;
 
-}
+    }
 
     // =====================================================
     // DEMANDES EN ATTENTE
@@ -92,13 +92,7 @@ async getRequestById(id) {
     // REFUSER UNE DEMANDE
     // =====================================================
 
-    async rejectRequest(
-
-        id,
-
-        adminComment
-
-    ) {
+    async rejectRequest(id, adminComment) {
 
         const response = await API.put(
 
@@ -109,24 +103,6 @@ async getRequestById(id) {
                 adminComment
 
             }
-
-        );
-
-        return response.data;
-
-    }
-
-    // =====================================================
-    // CREER UNE CONFERENCE
-    // =====================================================
-
-    async createConference(data) {
-
-        const response = await API.post(
-
-            "/conferences",
-
-            data
 
         );
 
@@ -174,7 +150,7 @@ async getRequestById(id) {
 
         const response = await API.get(
 
-            "/conferences/admin"
+            "/conferences"
 
         );
 
@@ -183,7 +159,55 @@ async getRequestById(id) {
     }
 
     // =====================================================
-    // DETAILS
+    // CONFERENCES EN DIRECT
+    // =====================================================
+
+    async getLiveConferences() {
+
+        const response = await API.get(
+
+            "/conferences/live"
+
+        );
+
+        return response.data;
+
+    }
+
+    // =====================================================
+    // CONFERENCES PROGRAMMEES
+    // =====================================================
+
+    async getUpcomingConferences() {
+
+        const response = await API.get(
+
+            "/conferences/upcoming"
+
+        );
+
+        return response.data;
+
+    }
+
+    // =====================================================
+    // HISTORIQUE DES CONFERENCES
+    // =====================================================
+
+    async getHistoryConferences() {
+
+        const response = await API.get(
+
+            "/conferences/history"
+
+        );
+
+        return response.data;
+
+    }
+
+    // =====================================================
+    // DETAILS D'UNE CONFERENCE
     // =====================================================
 
     async getConferenceById(id) {
@@ -199,16 +223,10 @@ async getRequestById(id) {
     }
 
     // =====================================================
-    // MODIFIER
+    // MODIFIER UNE CONFERENCE
     // =====================================================
 
-    async updateConference(
-
-        id,
-
-        data
-
-    ) {
+    async updateConference(id, data) {
 
         const response = await API.put(
 
@@ -223,7 +241,7 @@ async getRequestById(id) {
     }
 
     // =====================================================
-    // SUPPRIMER
+    // SUPPRIMER UNE CONFERENCE
     // =====================================================
 
     async deleteConference(id) {
@@ -239,16 +257,10 @@ async getRequestById(id) {
     }
 
     // =====================================================
-    // ANNULER
+    // ANNULER UNE CONFERENCE
     // =====================================================
 
-    async cancelConference(
-
-        id,
-
-        reason
-
-    ) {
+    async cancelConference(id, reason) {
 
         const response = await API.put(
 
@@ -267,7 +279,7 @@ async getRequestById(id) {
     }
 
     // =====================================================
-    // DEMARRER
+    // DEMARRER UNE CONFERENCE
     // =====================================================
 
     async startConference(id) {
@@ -283,7 +295,7 @@ async getRequestById(id) {
     }
 
     // =====================================================
-    // TERMINER
+    // TERMINER UNE CONFERENCE
     // =====================================================
 
     async endConference(id) {
@@ -299,7 +311,7 @@ async getRequestById(id) {
     }
 
     // =====================================================
-    // REJOINDRE
+    // REJOINDRE UNE CONFERENCE
     // =====================================================
 
     async joinConference(id) {
@@ -315,7 +327,7 @@ async getRequestById(id) {
     }
 
     // =====================================================
-    // QUITTER
+    // QUITTER UNE CONFERENCE
     // =====================================================
 
     async leaveConference(id) {

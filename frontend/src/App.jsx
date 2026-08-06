@@ -48,6 +48,7 @@ import ConferenceRequestDetails from "./pages/teacher/ConferenceRequestDetails";
 import ProfileTeacher from "./pages/teacher/Profile"
 import AddCourse from "./pages/teacher/AddCourse"
 import CreateConference from "./pages/teacher/CreateConference"
+import MyConferences from "./pages/teacher/MyConferences";
 
 // ADMIN
 import AdminDashboard from "./pages/admin/Dashboard"
@@ -94,7 +95,7 @@ function App() {
       />
 
       <Route
-        path="/conference-live"
+        path="/conference-live/:id"
         element={<ConferenceLive />}
       />
 
@@ -308,6 +309,15 @@ function App() {
         element={
           <ProtectedRoute>
             <ConferencesTeacher />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/teacher-my-conferences"
+        element={
+          <ProtectedRoute>
+            <MyConferences />
           </ProtectedRoute>
         }
       />

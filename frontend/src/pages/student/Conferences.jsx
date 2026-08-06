@@ -1,128 +1,400 @@
-import DashboardLayout from "../../layouts/DashboardLayout"
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import DashboardLayout from "../../layouts/DashboardLayout";
+import conferenceService from "../../services/conferenceService";
 import {
-  FaVideo,
-  FaUsers,
-  FaCalendarAlt,
-  FaClock
-} from "react-icons/fa"
+    FaVideo,
+    FaUsers,
+    FaCalendarAlt,
+    FaClock
+} from "react-icons/fa";
+
+import {
+    errorToast
+} from "../../utils/toast";
+import StudentConferenceCard from "../../components/conference/StudentConferenceCard";
+import socket from "../../socket/socket";
 
 function Conferences() {
 
-  const conferences = [
-    {
-      id: 1,
-      title: "Architecture Microservices",
-      teacher: "M. Kouassi",
-      date: "12 Juin 2026",
-      time: "14:00",
-      participants: 45,
-      status: "En cours"
-    },
-    {
-      id: 2,
-      title: "Cybersécurité Moderne",
-      teacher: "Mme Yao",
-      date: "15 Juin 2026",
-      time: "10:00",
-      participants: 28,
-      status: "À venir"
-    },
-    {
-      id: 3,
-      title: "Développement React Avancé",
-      teacher: "M. Konan",
-      date: "18 Juin 2026",
-      time: "16:00",
-      participants: 52,
-      status: "À venir"
-    }
-  ]
+  const navigate = useNavigate();
 
-  return (
+  const [loading, setLoading] = useState(true);
+  
+    const [liveConferences, setLiveConferences] = useState([]);
+    const [upcomingConferences, setUpcomingConferences] = useState([]);
+    const [historyConferences, setHistoryConferences] = useState([]);
+  
+    const [search, setSearch] = useState("");
+    const loadConferences = async () => {
 
-    <DashboardLayout>
+      try {
+  
+          setLoading(true);
+  
+          const [
+  
+              live,
+  
+              upcoming,
+  
+              history
+  
+          ] = await Promise.all([
+  
+              conferenceService.getLiveConferences(),
+  
+              conferenceService.getUpcomingConferences(),
+  
+              conferenceService.getHistoryConferences()
+  
+          ]);
+  
+          setLiveConferences(
+  
+              live.conferences || []
+  
+          );
+  
+          setUpcomingConferences(
+  
+              upcoming.conferences || []
+  
+          );
+  
+          setHistoryConferences(
+  
+              history.conferences || []
+  
+          );
+  
+      }
+  
+      catch (error) {
+  
+          console.error(error);
+  
+          errorToast(
+  
+              "Erreur",
+  
+              "Impossible de charger les conférences."
+  
+          );
+      }
+  
+      finally {
+  
+          setLoading(false);
+  
+      }
+  };
+  
+  useEffect(() => {
+      loadConferences();
+  }, []);
 
-      <h1 className="text-5xl font-bold text-gray-900">
-        Conférences
-      </h1>
 
-      <p className="text-gray-500 mt-3">
-        Participez aux conférences en direct
-      </p>
+  useEffect(() => {
+    // =====================================================
+    // CONFERENCE DEMARREE
+    // =====================================================
+    socket.on(
 
-      <div className="grid lg:grid-cols-2 gap-8 mt-10">
+        "conference:started",
 
-        {conferences.map((conference) => (
+        () => {
 
-          <div
-            key={conference.id}
-            className="bg-white rounded-3xl shadow p-6"
-          >
+            loadConferences();
 
-            <div className="flex justify-between items-center">
+        }
 
-              <h2 className="text-2xl font-bold">
-                {conference.title}
-              </h2>
+    );
 
-              <FaVideo className="text-purple-600 text-3xl" />
+    // =====================================================
+    // CONFERENCE TERMINEE
+    // =====================================================
+    socket.on(
 
-            </div>
+        "conference:ended",
 
-            <p className="text-gray-500 mt-3">
-              {conference.teacher}
-            </p>
+        () => {
 
-            <div className="mt-6 space-y-3">
+            loadConferences();
 
-              <div className="flex items-center gap-3">
-                <FaCalendarAlt />
-                <span>{conference.date}</span>
-              </div>
+        }
 
-              <div className="flex items-center gap-3">
-                <FaClock />
-                <span>{conference.time}</span>
-              </div>
+    );
 
-              <div className="flex items-center gap-3">
-                <FaUsers />
-                <span>
-                  {conference.participants} participants
-                </span>
-              </div>
+    return () => {
 
-            </div>
+        socket.off("conference:started");
 
-            <div className="mt-6 flex justify-between items-center">
+        socket.off("conference:ended");
 
-              <span
-                className={`px-4 py-2 rounded-full text-sm ${
-                  conference.status === "En cours"
-                    ? "bg-green-100 text-green-600"
-                    : "bg-yellow-100 text-yellow-600"
-                }`}
-              >
-                {conference.status}
-              </span>
+    };
+}, []);
 
-              <button className="bg-purple-600 hover:bg-purple-700 transition text-white px-5 py-3 rounded-xl">
 
-                Rejoindre
+// =====================================================
+// TOUTES LES CONFERENCES
+// =====================================================
+const conferences = [
 
-              </button>
+  ...liveConferences,
 
-            </div>
+  ...upcomingConferences,
 
-          </div>
+  ...historyConferences
 
-        ))}
+];
+
+
+// =====================================================
+// FILTRAGE
+// =====================================================
+const filterConferences = (list) => {
+
+  return list.filter(conference =>
+
+      conference.title
+          .toLowerCase()
+          .includes(search.toLowerCase())
+
+  );
+
+};
+
+const live = filterConferences(liveConferences);
+const upcoming = filterConferences(upcomingConferences);
+const history = filterConferences(historyConferences);
+
+const renderSection = (title, list) => (
+
+  <div className="space-y-6">
+
+      <div className="flex items-center justify-between">
+
+          <h2 className="text-3xl font-bold">
+
+              {title}
+
+          </h2>
+
+          <span className="text-gray-500">
+
+              {list.length} conférence(s)
+
+          </span>
 
       </div>
 
+      {
+
+          list.length === 0
+
+          ?
+
+          (
+
+              <div className="bg-white rounded-2xl p-10 text-center text-gray-400 shadow">
+
+                  Aucune conférence.
+
+              </div>
+
+          )
+
+          :
+
+          (
+
+              <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8">
+
+                  {
+
+                      list.map(conference => (
+
+                          <StudentConferenceCard
+
+                              key={conference._id}
+
+                              conference={conference}
+
+                              onJoin={() =>
+
+                                  navigate(
+
+                                      `/conference-live/${conference._id}`
+
+                                  )
+
+                              }
+
+                          />
+
+                      ))
+
+                  }
+
+              </div>
+
+          )
+
+      }
+
+  </div>
+
+);
+
+
+return (
+
+    <DashboardLayout>
+
+        <div className="space-y-8">
+
+            {/* HERO */}
+
+            <div className="bg-gradient-to-r from-indigo-700 via-purple-700 to-pink-600 rounded-3xl p-10 text-white shadow-2xl">
+
+                <h1 className="text-5xl font-bold flex items-center gap-4">
+
+                    <FaVideo />
+
+                    Conférences
+
+                </h1>
+
+                <p className="mt-4 text-lg text-white/90">
+
+                    Participez aux conférences organisées par vos enseignants.
+
+                </p>
+
+            </div>
+
+            {/* STATISTIQUES */}
+
+            <div className="grid md:grid-cols-3 gap-6">
+
+                <div className="bg-red-500 text-white rounded-3xl p-6 text-center shadow-lg">
+
+                    <FaVideo className="mx-auto text-3xl" />
+
+                    <h2 className="text-4xl font-bold mt-3">
+
+                        {live.length}
+
+                    </h2>
+
+                    <p>En direct</p>
+
+                </div>
+
+                <div className="bg-blue-500 text-white rounded-3xl p-6 text-center shadow-lg">
+
+                    <FaCalendarAlt className="mx-auto text-3xl" />
+
+                    <h2 className="text-4xl font-bold mt-3">
+
+                        {upcoming.length}
+
+                    </h2>
+
+                    <p>À venir</p>
+
+                </div>
+
+                <div className="bg-green-500 text-white rounded-3xl p-6 text-center shadow-lg">
+
+                    <FaClock className="mx-auto text-3xl" />
+
+                    <h2 className="text-4xl font-bold mt-3">
+
+                        {history.length}
+
+                    </h2>
+
+                    <p>Historique</p>
+
+                </div>
+
+            </div>
+
+            {/* RECHERCHE */}
+
+            <input
+
+                type="text"
+
+                placeholder="Rechercher une conférence..."
+
+                value={search}
+
+                onChange={(e) => setSearch(e.target.value)}
+
+                className="w-full bg-white rounded-2xl border border-gray-200 px-5 py-4 shadow-md outline-none focus:border-purple-500"
+
+            />
+
+            {
+
+                loading
+
+                ?
+
+                (
+
+                    <div className="text-center py-20 text-xl">
+
+                        Chargement des conférences...
+
+                    </div>
+
+                )
+
+                :
+
+                (
+
+                    <div className="space-y-16">
+
+                        {renderSection(
+
+                            "🔴 Conférences en direct",
+
+                            live
+
+                        )}
+
+                        {renderSection(
+
+                            "📅 Conférences à venir",
+
+                            upcoming
+
+                        )}
+
+                        {renderSection(
+
+                            "✔ Historique",
+
+                            history
+
+                        )}
+
+                    </div>
+
+                )
+
+            }
+
+        </div>
+
     </DashboardLayout>
 
-  )
+);
 
 }
 

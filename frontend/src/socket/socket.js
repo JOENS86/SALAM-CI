@@ -1,0 +1,21 @@
+import { io } from "socket.io-client";
+
+// =====================================================
+// CONNEXION SOCKET.IO
+// =====================================================
+
+const socket = io(
+
+    "http://localhost:5000",
+
+    {
+
+        autoConnect: true,
+
+        transports: ["websocket"]
+
+    }
+
+);
+
+export default socket;

@@ -15,6 +15,8 @@ function ConferenceRequestDetails() {
 
     const [request, setRequest] = useState(null);
 
+    const [conference, setConference] = useState(null);
+
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -30,6 +32,40 @@ function ConferenceRequestDetails() {
             const result = await conferenceService.getRequestById(id);
 
             setRequest(result.request);
+
+// Charger la conférence créée après approbation
+if (result.request.status === "approved") {
+
+    try {
+
+        const conferences =
+            await conferenceService.getTeacherConferences();
+
+            const found = conferences.conferences.find(
+
+                (c) =>
+            
+                    c.request?._id?.toString() ===
+            
+                    result.request._id.toString()
+            
+            );
+
+        if (found) {
+
+            setConference(found);
+
+        }
+
+    }
+
+    catch (error) {
+
+        console.log(error);
+
+    }
+
+}
 
         }
 
@@ -90,6 +126,38 @@ function ConferenceRequestDetails() {
         );
 
     }
+
+// =====================================================
+// DEMARRER LA CONFERENCE
+// =====================================================
+const startConference = async () => {
+
+    try {
+
+        await conferenceService.startConference(conference._id);
+
+        navigate(`/conference-live/${conference._id}`);
+
+    }
+
+    catch (error) {
+
+        console.log(error);
+
+        errorToast(
+
+            "Erreur",
+
+            error.response?.data?.message ||
+
+            "Impossible de démarrer la conférence."
+
+        );
+
+    }
+
+};
+
 
     return (
 
@@ -308,6 +376,39 @@ function ConferenceRequestDetails() {
                         </p>
 
                     </div>
+
+                    {
+    conference &&
+    conference.status === "scheduled" && (
+
+        <div className="pt-8 border-t">
+
+            <button
+
+                onClick={startConference}
+
+                className="
+                    w-full
+                    bg-green-600
+                    hover:bg-green-700
+                    text-white
+                    py-4
+                    rounded-2xl
+                    font-bold
+                    text-lg
+                    transition
+                "
+
+            >
+
+                Démarrer la conférence
+
+            </button>
+
+        </div>
+
+    )
+}
 
                 </div>
 
