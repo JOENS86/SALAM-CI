@@ -9,6 +9,7 @@ import mongoose from "mongoose"
 import http from "http";
 import { Server } from "socket.io";
 import initializeSocket from "./socket/index.js";
+import { setIO } from "./socket/socketManager.js";
 
 // =========================
 // IMPORT ROUTES
@@ -183,6 +184,7 @@ const io = new Server(server, {
 });
 
 initializeSocket(io);
+setIO(io);
 
 // =========================
 // LANCEMENT SERVEUR

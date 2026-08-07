@@ -7,6 +7,7 @@ import meetingService from "./meetingService.js";
 import notificationService from "./notificationService.js";
 import emailService from "./emailService.js";
 import Enrollment from "../models/Enrollment.js";
+import { getIO } from "../socket/socketManager.js";
 
 class ConferenceService {
 
@@ -926,17 +927,42 @@ async startConference(teacher, conferenceId) {
 
     await conference.save();
 
-    const students = await User.find({
+    // =====================================================
+    // TEMPS REEL : CONFERENCE DEMARREE
+    // =====================================================
+    const io = getIO();
+      if (io) {
+          
+        io.emit(
+          "conference:started",
+           {
+            conference
+           }
+        );
+      }
 
-        role: "student",
+    const enrollments = await Enrollment.find({
+
+        course: conference.course
     
-        enrolledCourses: conference.course
+    }).populate(
     
-    });
+        "student",
     
-    for (const student of students) {
+        "name email"
     
-        //Notification Interne
+    );
+    
+    for (const enrollment of enrollments) {
+    
+        const student = enrollment.student;
+    
+        if (!student) continue;
+    
+        // ==========================
+        // Notification
+        // ==========================
+    
         await notificationService.create({
     
             recipient: student._id,
@@ -945,9 +971,7 @@ async startConference(teacher, conferenceId) {
     
             title: "Conférence en direct",
     
-            message:
-    
-                `${conference.title} vient de commencer.`,
+            message: `${conference.title} vient de commencer.`,
     
             type: "conference_started",
     
@@ -957,13 +981,33 @@ async startConference(teacher, conferenceId) {
     
         });
     
-        await emailService.sendConferenceStarted(
+        // ==========================
+        // Email
+        // ==========================
     
-            student,
+        try {
     
-            conference
+            await emailService.sendConferenceStarted(
     
-        );
+                student,
+    
+                conference
+    
+            );
+    
+        }
+    
+        catch (error) {
+    
+            console.error(
+    
+                "Erreur email conférence :",
+    
+                error.message
+    
+            );
+    
+        }
     
     }
     
@@ -979,7 +1023,6 @@ async startConference(teacher, conferenceId) {
    
 
 }
-
 
 // =====================================================
 // TERMINER UNE CONFERENCE
@@ -1054,6 +1097,20 @@ conference.actualDuration = Math.round(
 
 await conference.save();
 
+   // =====================================================
+   // TEMPS REEL : CONFERENCE TERMINEE
+   // =====================================================
+   const io = getIO();
+
+    if (io) {
+      io.emit(
+        "conference:ended",
+          {
+            conference
+          }
+       );
+    } 
+
     return {
 
         success: true,
@@ -1077,7 +1134,27 @@ async getTeacherConferences(teacher) {
 
     })
 
-    .populate("course", "title")
+    .populate(
+
+        "teacher",
+
+        "name email"
+
+    )
+
+    .populate(
+
+        "course",
+
+        "title"
+
+    )
+
+    .populate(
+
+        "request"
+
+    )
 
     .sort({
 
@@ -1098,17 +1175,20 @@ async getTeacherConferences(teacher) {
 // =====================================================
 // CONFERENCES DE L'ETUDIANT
 // =====================================================
+
 async getStudentConferences(student) {
 
-    const courses = await Course.find({
+    // Les cours auxquels l'étudiant est inscrit
 
-        students: student._id
+    const enrollments = await Enrollment.find({
 
-    }).select("_id");
+        student: student._id
 
-    const courseIds = courses.map(
+    }).select("course");
 
-        course => course._id
+    const courseIds = enrollments.map(
+
+        enrollment => enrollment.course
 
     );
 
@@ -1132,7 +1212,7 @@ async getStudentConferences(student) {
 
         "teacher",
 
-        "firstName lastName"
+        "name email"
 
     )
 
@@ -1169,11 +1249,8 @@ async getConferenceById(id) {
     const conference = await Conference.findById(id)
 
     .populate(
-
         "teacher",
-
-        "firstName lastName photo email"
-
+        "name email"
     )
 
     .populate(
@@ -1358,11 +1435,8 @@ async getParticipants(conferenceId) {
     })
 
     .populate(
-
         "user",
-
-        "firstName lastName photo email role"
-
+        "name email role"
     )
 
     .sort({
@@ -1687,11 +1761,25 @@ async deleteRequest(admin, requestId) {
     // ==========================================
     // SUPPRIMER LA CONFERENCE ASSOCIEE
     // ==========================================
+    try {
+    
     await Conference.deleteMany({
 
         request: request._id
 
     });
+
+       }
+
+catch (error) {
+
+    console.error(
+
+        "Erreur suppression conférence :", error.message
+
+    );
+
+}
 
     // ==========================================
     // SUPPRIMER LA DEMANDE
@@ -1703,32 +1791,6 @@ async deleteRequest(admin, requestId) {
     );
 
     // ==========================================
-    // SI UNE CONFERENCE A ETE CREEE A PARTIR
-    // DE CETTE DEMANDE, LA SUPPRIMER EGALEMENT
-    // (si ton modèle Conference possède
-    // un champ request ou conferenceRequest)
-    // ==========================================
-    try {
-
-        await Conference.deleteMany({
-
-            request: requestId
-
-        });
-
-    }
-
-    catch (error) {
-
-        console.error(
-
-            "Erreur suppression conférence :", error.message
-
-        );
-
-    }
-
-    // ==========================================
     // REPONSE
     // ==========================================
     return {
@@ -1736,6 +1798,150 @@ async deleteRequest(admin, requestId) {
         success: true,
 
         message: "Demande supprimée avec succès."
+
+    };
+
+}
+
+
+// =====================================================
+// CONFERENCES EN DIRECT
+// =====================================================
+async getLiveConferences() {
+
+    const conferences = await Conference.find({
+
+        status: "live",
+
+        isActive: true
+
+    })
+
+    .populate(
+
+        "teacher",
+
+        "name email"
+
+    )
+
+    .populate(
+
+        "course",
+
+        "title"
+
+    )
+
+    .sort({
+
+        startedAt: -1
+
+    });
+
+    return {
+
+        success: true,
+
+        total: conferences.length,
+
+        conferences
+
+    };
+
+}
+
+
+// =====================================================
+// CONFERENCES PROGRAMMEES
+// =====================================================
+async getUpcomingConferences() {
+
+    const conferences = await Conference.find({
+
+        status: "scheduled",
+
+        isActive: true
+
+    })
+
+    .populate(
+
+        "teacher",
+
+        "name email"
+
+    )
+
+    .populate(
+
+        "course",
+
+        "title"
+
+    )
+
+    .sort({
+
+        date: 1,
+
+        time: 1
+
+    });
+
+    return {
+
+        success: true,
+
+        total: conferences.length,
+
+        conferences
+
+    };
+
+}
+
+
+// =====================================================
+// HISTORIQUE DES CONFERENCES
+// =====================================================
+async getHistoryConferences() {
+
+    const conferences = await Conference.find({
+
+        status: "completed"
+
+    })
+
+    .populate(
+
+        "teacher",
+
+        "name email"
+
+    )
+
+    .populate(
+
+        "course",
+
+        "title"
+
+    )
+
+    .sort({
+
+        endedAt: -1
+
+    });
+
+    return {
+
+        success: true,
+
+        total: conferences.length,
+
+        conferences
 
     };
 

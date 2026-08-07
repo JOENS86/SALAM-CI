@@ -286,6 +286,8 @@ export const getStudentConferences = async (req, res) => {
     }
 
 };
+
+
 /* ===========================================================
    QUITTER UNE CONFERENCE
 =========================================================== */
@@ -438,3 +440,88 @@ export const testEmail = async (req, res) => {
     }
 
 };
+
+
+/* ===========================================================
+   CONFERENCES EN DIRECT
+=========================================================== */
+export const getLiveConferences = async (req, res) => {
+
+    try {
+
+        const result = await conferenceService.getLiveConferences();
+
+        res.json(result);
+
+    }
+
+    catch (error) {
+
+        res.status(400).json({
+
+            success: false,
+
+            message: error.message
+
+        });
+
+    }
+
+};
+
+/* ===========================================================
+   CONFERENCES PROGRAMMEES
+=========================================================== */
+export const getUpcomingConferences = async (req, res) => {
+
+    try {
+
+        const result = await conferenceService.getUpcomingConferences();
+
+        res.json(result);
+
+    }
+
+    catch (error) {
+
+        res.status(400).json({
+
+            success: false,
+
+            message: error.message
+
+        });
+
+    }
+
+};
+
+/* ===========================================================
+   HISTORIQUE DES CONFERENCES
+=========================================================== */
+export const getHistoryConferences = async (req, res) => {
+
+    try {
+
+        const result = await conferenceService.getHistoryConferences();
+
+        res.json(result);
+
+    }
+
+    catch (error) {
+
+        res.status(400).json({
+
+            success: false,
+
+            message: error.message
+
+        });
+
+    }
+
+};
+
+
+

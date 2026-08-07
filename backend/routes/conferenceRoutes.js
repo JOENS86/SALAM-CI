@@ -7,6 +7,10 @@ import {
     startConference,
     endConference,
     getConferenceById,
+    getAllConferences,
+    getLiveConferences,
+    getUpcomingConferences,
+    getHistoryConferences,
     getTeacherConferences,
     getStudentConferences,
     joinConference,
@@ -107,12 +111,68 @@ router.post(
 
 );
 
+
+// =====================================================
+// TOUTES LES CONFERENCES
+// =====================================================
+
+router.get(
+
+    "/",
+
+    authMiddleware,
+
+    getAllConferences
+
+);
+
+// =====================================================
+// CONFERENCES EN DIRECT
+// =====================================================
+
+router.get(
+
+    "/live",
+
+    authMiddleware,
+
+    getLiveConferences
+
+);
+
+// =====================================================
+// CONFERENCES PROGRAMMEES
+// =====================================================
+
+router.get(
+
+    "/upcoming",
+
+    authMiddleware,
+
+    getUpcomingConferences
+
+);
+
+// =====================================================
+// HISTORIQUE
+// =====================================================
+
+router.get(
+
+    "/history",
+
+    authMiddleware,
+
+    getHistoryConferences
+
+);
+
+
 // =====================================================
 // COMMUN
 // =====================================================
-
 // Détails
-
 router.get(
 
     "/:id",
