@@ -1,119 +1,60 @@
 // =====================================================
-// UTILISATEURS CONNECTES
+// SOCKET NOTIFICATIONS
 // =====================================================
-
-const onlineUsers = new Map();
 
 const notificationSocket = (io, socket) => {
 
     // =====================================================
-    // UTILISATEUR CONNECTE
+    // ENREGISTRER L'UTILISATEUR
     // =====================================================
 
     socket.on(
-
         "notification:register",
-
         (userId) => {
 
-            onlineUsers.set(
-
-                userId,
-
-                socket.id
-
-            );
-
-            console.log(
-
-                `🟢 Utilisateur connecté : ${userId}`
-
-            );
-
-        }
-
-    );
-
-    // =====================================================
-    // ENVOYER UNE NOTIFICATION
-    // =====================================================
-
-    socket.on(
-
-        "notification:send",
-
-        ({ recipientId, notification }) => {
-
-            const socketId = onlineUsers.get(
-
-                recipientId
-
-            );
-
-            if (socketId) {
-
-                io.to(socketId).emit(
-
-                    "notification:new",
-
-                    notification
-
-                );
-
+            if (!userId) {
+                return;
             }
 
-        }
+            // Chaque utilisateur possède sa propre room
+            const room = `user:${userId}`;
 
-    );
+            socket.join(room);
 
-    // =====================================================
-    // NOTIFICATION GLOBALE
-    // =====================================================
+            socket.data.notificationUserId =
+                userId.toString();
 
-    socket.on(
-
-        "notification:broadcast",
-
-        (notification) => {
-
-            io.emit(
-
-                "notification:new",
-
-                notification
-
+            console.log(
+                `🔔 Notification Socket enregistrée : ${userId}`
             );
 
         }
-
     );
+
 
     // =====================================================
     // DECONNEXION
     // =====================================================
 
     socket.on(
-
         "disconnect",
-
         () => {
 
-            for (const [userId, socketId] of onlineUsers.entries()) {
+            const userId =
+                socket.data.notificationUserId;
 
-                if (socketId === socket.id) {
+            if (userId) {
 
-                    onlineUsers.delete(userId);
-
-                    break;
-
-                }
+                console.log(
+                    `🔕 Notification Socket déconnectée : ${userId}`
+                );
 
             }
 
         }
-
     );
 
 };
+
 
 export default notificationSocket;

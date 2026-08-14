@@ -1,20 +1,24 @@
 import AdminLayout from "../../layouts/AdminLayout"
 import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import API from "../../services/api"
 import {
-    FaSearch,
-    FaEye,
-    FaBan,
-    FaTrash,
-    FaVideo,
-    FaCalendarAlt,
-    FaCheckCircle
+  FaSearch,
+  FaEye,
+  FaBan,
+  FaTrash,
+  FaVideo,
+  FaCalendarAlt,
+  FaCheckCircle,
+  FaPlus
 } from "react-icons/fa"
 
 // =========================
 // COMPOSANT
 // =========================
 function Conferences() {
+
+  const navigate = useNavigate()
 
     // =========================
     // DONNEES
@@ -75,6 +79,20 @@ function Conferences() {
     const [conferenceToDelete, setConferenceToDelete] = useState(null)
 
     const [showDeleteModal, setShowDeleteModal] = useState(false)
+
+// =========================
+// CREATION CONFERENCE
+// =========================
+const [showCreateModal, setShowCreateModal] = useState(false)
+const [creatingConference, setCreatingConference] = useState(false)
+const [newConference, setNewConference] = useState({
+    title: "",
+    date: "",
+    time: "",
+    duration: 60,
+    maxParticipants: 50,
+    description: ""
+})
 
     // =====================================================
     // RECUPERER LES DEMANDES EN ATTENTE
@@ -244,6 +262,79 @@ const deleteConference = async () => {
 
 }
 
+// =====================================================
+// CREER UNE CONFERENCE
+// =====================================================
+const createConference = async (e) => {
+
+  e.preventDefault()
+
+  const today = new Date().toISOString().split("T")[0];
+
+if (newConference.date < today) {
+
+    alert(
+        "La date de la conférence ne peut pas être antérieure à aujourd'hui."
+    );
+
+    return;
+} 
+
+  try {
+
+      setCreatingConference(true)
+
+      const res = await API.post(
+          "/conferences",
+          newConference
+      )
+
+      console.log(
+          "✅ Conférence créée :",
+          res.data
+      )
+
+      // Fermer la modal
+      setShowCreateModal(false)
+
+      // Réinitialiser le formulaire
+      setNewConference({
+          title: "",
+          date: "",
+          time: "",
+          duration: 60,
+          maxParticipants: 50,
+          description: ""
+      })
+
+      // Actualiser les données
+      await getConferences()
+
+  }
+
+  catch (error) {
+
+    console.error("❌ ERREUR COMPLETE :", error);
+    console.error("❌ RESPONSE :", error.response);
+    console.error("❌ DATA :", error.response?.data);
+
+    alert(
+        JSON.stringify(
+            error.response?.data || error.message,
+            null,
+            2
+        )
+    );
+
+}
+
+  finally {
+
+      setCreatingConference(false)
+
+  }
+
+}
 
     // =====================================================
     // FILTRE
@@ -305,19 +396,78 @@ const deleteConference = async () => {
 
     <AdminLayout>
 
-      {/* HEADER */}
+{/* HEADER */}
 
-      <div className="mb-10">
+<div className="mb-10 flex items-start justify-between">
 
-        <h1 className="text-4xl font-bold">
-          Demandes de conférences
-        </h1>
+  <div>
 
-        <p className="text-gray-500 mt-2">
-        Gérez les demandes envoyées par les enseignants.
-        </p>
+    <h1 className="text-4xl font-bold">
+      Demandes de conférences
+    </h1>
 
-      </div>
+    <p className="text-gray-500 mt-2">
+      Gérez les demandes envoyées par les enseignants.
+    </p>
+
+  </div>
+
+  {/* BOUTON CREER */}
+
+  <div className="flex items-center gap-3">
+
+{/* VOIR LES CONFERENCES */}
+
+<button
+  onClick={() => navigate("/admin-conferences/list")}
+  className="
+    bg-indigo-600
+    hover:bg-indigo-700
+    text-white
+    px-6
+    py-3
+    rounded-xl
+    flex
+    items-center
+    gap-2
+    font-semibold
+    shadow-md
+    hover:shadow-lg
+    transition
+  "
+>
+  <FaVideo />
+  Voir les conférences
+</button>
+
+
+{/* CREER UNE CONFERENCE */}
+
+<button
+  onClick={() => setShowCreateModal(true)}
+  className="
+    bg-purple-600
+    hover:bg-purple-700
+    text-white
+    px-6
+    py-3
+    rounded-xl
+    flex
+    items-center
+    gap-2
+    font-semibold
+    shadow-md
+    hover:shadow-lg
+    transition
+  "
+>
+  <FaPlus />
+  Créer une conférence
+</button>
+
+</div>
+
+</div>
 
 
       {/* STATS */}
@@ -820,6 +970,372 @@ const deleteConference = async () => {
             </div>
           )
         }
+
+{/* =====================================================
+    MODAL CREATION CONFERENCE
+===================================================== */}
+{
+    showCreateModal && (
+
+        <div className="
+            fixed
+            inset-0
+            bg-black/50
+            flex
+            items-center
+            justify-center
+            z-50
+            p-4
+        ">
+
+            <div className="
+                bg-white
+                rounded-3xl
+                p-8
+                w-full
+                max-w-2xl
+                shadow-2xl
+            ">
+
+                {/* TITRE */}
+
+                <div className="flex items-center gap-3 mb-6">
+
+                    <div className="
+                        w-12
+                        h-12
+                        rounded-2xl
+                        bg-purple-100
+                        text-purple-600
+                        flex
+                        items-center
+                        justify-center
+                    ">
+
+                        <FaVideo />
+
+                    </div>
+
+                    <div>
+
+                        <h2 className="text-2xl font-bold">
+                            Créer une conférence
+                        </h2>
+
+                        <p className="text-gray-500 text-sm">
+                            Créez directement une nouvelle conférence.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                {/* FORMULAIRE */}
+
+                <form
+                    onSubmit={createConference}
+                    className="space-y-5"
+                >
+
+                    {/* TITRE */}
+
+                    <div>
+
+                        <label className="
+                            block
+                            font-semibold
+                            mb-2
+                        ">
+                            Titre de la conférence
+                        </label>
+
+                        <input
+                            type="text"
+                            required
+                            value={newConference.title}
+                            onChange={(e) =>
+                                setNewConference({
+                                    ...newConference,
+                                    title: e.target.value
+                                })
+                            }
+                            placeholder="Ex : Introduction à l'intelligence artificielle"
+                            className="
+                                w-full
+                                border
+                                rounded-xl
+                                px-4
+                                py-3
+                                outline-none
+                                focus:ring-2
+                                focus:ring-purple-500
+                            "
+                        />
+
+                    </div>
+
+
+                    {/* DATE + HEURE */}
+
+                    <div className="grid grid-cols-2 gap-4">
+
+                        <div>
+
+                            <label className="
+                                block
+                                font-semibold
+                                mb-2
+                            ">
+                                Date
+                            </label>
+
+                            <input
+                              type="date"
+                              required
+                              min={new Date().toISOString().split("T")[0]}
+                              value={newConference.date}
+                              onChange={(e) =>
+                                setNewConference({
+                                  ...newConference,
+                                  date: e.target.value
+                                })
+                              }
+                              className="
+                                w-full
+                                border
+                                rounded-xl
+                                px-4
+                                py-3
+                                outline-none
+                                focus:ring-2
+                                focus:ring-purple-500
+                              "
+                            />
+
+                        </div>
+
+
+                        <div>
+
+                            <label className="
+                                block
+                                font-semibold
+                                mb-2
+                            ">
+                                Heure
+                            </label>
+
+                            <input
+                                type="time"
+                                required
+                                value={newConference.time}
+                                onChange={(e) =>
+                                    setNewConference({
+                                        ...newConference,
+                                        time: e.target.value
+                                    })
+                                }
+                                className="
+                                    w-full
+                                    border
+                                    rounded-xl
+                                    px-4
+                                    py-3
+                                    outline-none
+                                    focus:ring-2
+                                    focus:ring-purple-500
+                                "
+                            />
+
+                        </div>
+
+                    </div>
+
+
+                    {/* DUREE + PARTICIPANTS */}
+
+                    <div className="grid grid-cols-2 gap-4">
+
+                        <div>
+
+                            <label className="
+                                block
+                                font-semibold
+                                mb-2
+                            ">
+                                Durée (minutes)
+                            </label>
+
+                            <input
+                                type="number"
+                                min="1"
+                                required
+                                value={newConference.duration}
+                                onChange={(e) =>
+                                    setNewConference({
+                                        ...newConference,
+                                        duration: Number(e.target.value)
+                                    })
+                                }
+                                className="
+                                    w-full
+                                    border
+                                    rounded-xl
+                                    px-4
+                                    py-3
+                                    outline-none
+                                    focus:ring-2
+                                    focus:ring-purple-500
+                                "
+                            />
+
+                        </div>
+
+
+                        <div>
+
+                            <label className="
+                                block
+                                font-semibold
+                                mb-2
+                            ">
+                                Nombre maximum de participants
+                            </label>
+
+                            <input
+                                type="number"
+                                min="1"
+                                required
+                                value={newConference.maxParticipants}
+                                onChange={(e) =>
+                                    setNewConference({
+                                        ...newConference,
+                                        maxParticipants: Number(e.target.value)
+                                    })
+                                }
+                                className="
+                                    w-full
+                                    border
+                                    rounded-xl
+                                    px-4
+                                    py-3
+                                    outline-none
+                                    focus:ring-2
+                                    focus:ring-purple-500
+                                "
+                            />
+
+                        </div>
+
+                    </div>
+
+
+                    {/* DESCRIPTION */}
+
+                    <div>
+
+                        <label className="
+                            block
+                            font-semibold
+                            mb-2
+                        ">
+                            Description
+                        </label>
+
+                        <textarea
+                            rows="4"
+                            value={newConference.description}
+                            onChange={(e) =>
+                                setNewConference({
+                                    ...newConference,
+                                    description: e.target.value
+                                })
+                            }
+                            placeholder="Décrivez brièvement la conférence..."
+                            className="
+                                w-full
+                                border
+                                rounded-xl
+                                px-4
+                                py-3
+                                outline-none
+                                resize-none
+                                focus:ring-2
+                                focus:ring-purple-500
+                            "
+                        />
+
+                    </div>
+
+
+                    {/* BOUTONS */}
+
+                    <div className="
+                        flex
+                        justify-end
+                        gap-4
+                        pt-4
+                    ">
+
+                        <button
+                            type="button"
+                            onClick={() => setShowCreateModal(false)}
+                            className="
+                                px-6
+                                py-3
+                                rounded-xl
+                                border
+                                border-gray-300
+                                text-gray-700
+                                hover:bg-gray-100
+                                transition
+                            "
+                        >
+                            Annuler
+                        </button>
+
+
+                        <button
+                            type="submit"
+                            disabled={creatingConference}
+                            className="
+                                px-6
+                                py-3
+                                rounded-xl
+                                bg-purple-600
+                                text-white
+                                font-semibold
+                                hover:bg-purple-700
+                                transition
+                                disabled:opacity-50
+                                disabled:cursor-not-allowed
+                                flex
+                                items-center
+                                gap-2
+                            "
+                        >
+
+                            <FaPlus />
+
+                            {
+                                creatingConference
+                                    ? "Création..."
+                                    : "Créer la conférence"
+                            }
+
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    )
+}
 
     </AdminLayout>
 

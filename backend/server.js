@@ -28,6 +28,10 @@ import pdfRoutes from "./routes/pdfRoutes.js";
 import quizRoutes from "./routes/quizRoutes.js";
 import exerciseRoutes from "./routes/exerciseRoutes.js";
 import enrollmentRoutes from "./routes/enrollmentRoutes.js";
+//Côté admin
+import notificationRoutes from "./routes/notificationRoutes.js";
+//Communauté
+import communityRoutes from "./routes/communityRoutes.js";
 
 // =========================
 // CONFIGURATION .ENV
@@ -72,6 +76,12 @@ app.use("/api/auth", authRoutes)
 
 // USERS
 app.use("/api/users", userRoutes)
+
+// Notifications
+app.use( "/api/notifications", notificationRoutes);
+
+// COMMUNAUTE
+app.use("/api/community", communityRoutes );
 
 // COURSES
 app.use("/api/courses", courseRoutes)

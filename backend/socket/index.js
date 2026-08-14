@@ -4,6 +4,8 @@ import notificationSocket from "./notificationSocket.js";
 import participantSocket from "./participantSocket.js";
 import {removeParticipant, getParticipants, getParticipantCount} from "./roomManager.js";
 import signalingSocket from "./signalingSocket.js";
+import handSocket from "./handSocket.js";
+import controlSocket from "./controlSocket.js";
 
 const initializeSocket = (io) => {
 
@@ -20,6 +22,10 @@ const initializeSocket = (io) => {
         notificationSocket(io, socket);
 
         signalingSocket(io, socket);
+
+        handSocket(io, socket);
+
+        controlSocket(io, socket);
 
         socket.on("disconnect", () => {
 

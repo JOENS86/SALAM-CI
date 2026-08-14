@@ -65,11 +65,18 @@ const conferenceSocket = (io, socket) => {
                 {
     
                     participants: getParticipants(roomId),
-    
                     count: getParticipantCount(roomId)
     
                 }
     
+            );
+
+            io.emit(
+                "conference:participantsUpdated",
+                {
+                    roomId,
+                    count: getParticipantCount(roomId)
+                }
             );
     
         }
@@ -96,17 +103,21 @@ const conferenceSocket = (io, socket) => {
             socket.leave(roomId);
     
             io.to(roomId).emit(
-    
+
                 "conference:userLeft",
-    
+            
                 {
-    
-                    user,
-    
-                    socketId: socket.id
-    
+            
+                    participant: {
+            
+                        socketId: socket.id,
+            
+                        ...user
+            
+                    }
+            
                 }
-    
+            
             );
     
             io.to(roomId).emit(
@@ -116,11 +127,18 @@ const conferenceSocket = (io, socket) => {
                 {
     
                     participants: getParticipants(roomId),
-    
                     count: getParticipantCount(roomId)
     
                 }
     
+            );
+
+            io.emit(
+                "conference:participantsUpdated",
+                {
+                    roomId,
+                    count: getParticipantCount(roomId)
+                }
             );
     
         }
@@ -132,21 +150,58 @@ const conferenceSocket = (io, socket) => {
     // =====================================================
     socket.on("disconnect", () => {
 
-        if (socket.data.roomId && socket.data.user) {
+        if (!socket.data.roomId || !socket.data.user) return;
     
-            removeParticipant(
-                socket.data.roomId,
-                socket.id
-            );
+          const roomId = socket.data.roomId;
     
-            io.to(socket.data.roomId).emit(
-                "conference:participants",
-                {
-                    participants: getParticipants(socket.data.roomId),
-                    count: getParticipantCount(socket.data.roomId)
-                }
-            );
-        }
+          const participant = {
+    
+            socketId: socket.id,
+    
+            ...socket.data.user
+    
+        };
+    
+        removeParticipant(
+    
+            roomId,
+    
+            socket.id
+    
+        );
+    
+        io.to(roomId).emit(
+    
+            "conference:userLeft",
+    
+            {
+    
+                participant
+    
+            }
+    
+        );
+    
+        io.to(roomId).emit(
+    
+            "conference:participants",
+    
+            {
+    
+                participants: getParticipants(roomId),  
+                count: getParticipantCount(roomId)
+    
+            }
+    
+        );
+
+        io.emit(
+            "conference:participantsUpdated",
+            {
+                roomId,
+                count: getParticipantCount(roomId)
+            }
+        );
     
     });
 
@@ -174,90 +229,6 @@ const conferenceSocket = (io, socket) => {
         }
 
     );
-
-// =====================================================
-// WEBRTC - OFFER
-// =====================================================
-socket.on(
-
-    "webrtc:offer",
-
-    ({ roomId, sender, target, offer }) => {
-
-        io.to(roomId).emit(
-
-            "webrtc:offer",
-
-            {
-
-                sender,
-
-                target,
-
-                offer
-
-            }
-
-        );
-
-    }
-);
-
-// =====================================================
-// WEBRTC - ANSWER
-// =====================================================
-socket.on(
-
-    "webrtc:answer",
-
-    ({ roomId, sender, target, answer }) => {
-
-        io.to(roomId).emit(
-
-            "webrtc:answer",
-
-            {
-
-                sender,
-
-                target,
-
-                answer
-
-            }
-
-        );
-
-    }
-);
-
-// =====================================================
-// WEBRTC - ICE CANDIDATE
-// =====================================================
-socket.on(
-
-    "webrtc:iceCandidate",
-
-    ({ roomId, sender, target, candidate }) => {
-
-        io.to(roomId).emit(
-
-            "webrtc:iceCandidate",
-
-            {
-
-                sender,
-
-                target,
-
-                candidate
-
-            }
-
-        );
-
-    }
-);
 
     // =====================================================
     // FIN CONFERENCE

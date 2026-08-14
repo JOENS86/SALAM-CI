@@ -400,8 +400,7 @@ function ConferenceRoom() {
 
           ))}
 
-        {liveConferences.length === 0 && (
-          <div className="col-span-full text-center py-20">
+        {activeTab === "live" && liveConferences.length === 0 && (          <div className="col-span-full text-center py-20">
 
             <h2 className="text-2xl font-bold text-gray-500">
               Aucune conférence en direct.
@@ -453,8 +452,8 @@ function ConferenceRoom() {
 
           ))}
 
-        {upcomingConferences.length === 0 && (
-          <div className="col-span-full text-center py-20">
+          {activeTab === "upcoming" && upcomingConferences.length === 0 && ( 
+          <div className="col-span-full text-center py-20">   
             
             <h2 className="text-2xl font-bold text-gray-500">
               Aucune conférence à Venir.
@@ -512,7 +511,7 @@ function ConferenceRoom() {
 
           ))}
 
-        {historyConferences.length === 0 && (
+          {activeTab === "history" && historyConferences.length === 0 && (
           <div className="col-span-full text-center py-20">
             
             <h2 className="text-2xl font-bold text-gray-500">

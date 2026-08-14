@@ -56,6 +56,7 @@ import Users from "./pages/admin/Users"
 import CreateUser from "./pages/admin/CreateUser"
 import CoursesAdmin from "./pages/admin/Courses"
 import ConferencesAdmin from "./pages/admin/Conferences"
+import ConferenceListAdmin from "./pages/admin/ConferenceList"
 import CategoriesAdmin from "./pages/admin/Categories"
 import CategoryDetails from "./pages/admin/CategoryDetails"
 import CourseDetails from "./pages/admin/CourseDetails"
@@ -174,6 +175,15 @@ function App() {
         element={
           <ProtectedRoute>
             <ConferencesAdmin />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin-conferences/list"
+        element={
+          <ProtectedRoute>
+            <ConferenceListAdmin />
           </ProtectedRoute>
         }
       />
@@ -360,7 +370,7 @@ function App() {
 
 
       {/* STUDENT */}
-      <Route
+<Route
   path="/student-dashboard"
   element={
     <ProtectedRoute>

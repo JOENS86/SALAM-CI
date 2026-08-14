@@ -1,5 +1,6 @@
 import { io } from "socket.io-client";
 
+
 class SocketService {
 
     constructor() {
@@ -8,27 +9,51 @@ class SocketService {
 
     }
 
+
     // =====================================================
     // CONNEXION
     // =====================================================
 
     connect() {
 
+        // Si déjà connecté, on réutilise le socket
         if (this.socket) {
 
             return this.socket;
 
         }
 
+
+        // =====================================================
+        // URL DE L'API
+        // =====================================================
+
+        const apiUrl =
+            import.meta.env.VITE_API_URL
+            || "http://localhost:5000/api";
+
+
+        // =====================================================
+        // URL DU SERVEUR SOCKET.IO
+        // =====================================================
+
+        const socketUrl =
+            apiUrl.replace("/api", "");
+
+
+        console.log(
+            "🔌 Connexion Socket.IO :",
+            socketUrl
+        );
+
+
+        // =====================================================
+        // CREER LA CONNEXION
+        // =====================================================
+
         this.socket = io(
 
-            import.meta.env.VITE_API_URL.replace(
-
-                "/api",
-
-                ""
-
-            ),
+            socketUrl,
 
             {
 
@@ -44,9 +69,71 @@ class SocketService {
 
         );
 
+
+        // =====================================================
+        // CONNEXION REUSSIE
+        // =====================================================
+
+        this.socket.on(
+
+            "connect",
+
+            () => {
+
+                console.log(
+                    "🟢 Socket.IO connecté :",
+                    this.socket.id
+                );
+
+            }
+
+        );
+
+
+        // =====================================================
+        // ERREUR DE CONNEXION
+        // =====================================================
+
+        this.socket.on(
+
+            "connect_error",
+
+            (error) => {
+
+                console.error(
+                    "❌ Erreur Socket.IO :",
+                    error.message
+                );
+
+            }
+
+        );
+
+
+        // =====================================================
+        // DECONNEXION
+        // =====================================================
+
+        this.socket.on(
+
+            "disconnect",
+
+            (reason) => {
+
+                console.log(
+                    "🔴 Socket.IO déconnecté :",
+                    reason
+                );
+
+            }
+
+        );
+
+
         return this.socket;
 
     }
+
 
     // =====================================================
     // DECONNEXION
@@ -64,6 +151,7 @@ class SocketService {
 
     }
 
+
     // =====================================================
     // SOCKET
     // =====================================================
@@ -73,6 +161,7 @@ class SocketService {
         return this.socket;
 
     }
+
 
     // =====================================================
     // EMIT
@@ -100,6 +189,7 @@ class SocketService {
 
     }
 
+
     // =====================================================
     // LISTENER
     // =====================================================
@@ -125,6 +215,7 @@ class SocketService {
         }
 
     }
+
 
     // =====================================================
     // SUPPRIMER LISTENER
@@ -153,5 +244,6 @@ class SocketService {
     }
 
 }
+
 
 export default new SocketService();

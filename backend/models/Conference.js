@@ -15,11 +15,11 @@ const conferenceSchema = new mongoose.Schema(
         request: {
 
             type: mongoose.Schema.Types.ObjectId,
-
+        
             ref: "ConferenceRequest",
-
-            required: true
-
+        
+            default: null
+        
         },
 
         // =====================================================
@@ -35,20 +35,32 @@ const conferenceSchema = new mongoose.Schema(
            default: null
 
         },
+
+        // =====================================================
+        // UTILISATEUR AYANT CREE LA CONFERENCE
+        // =====================================================
+        createdBy: {
+
+          type: mongoose.Schema.Types.ObjectId,
+
+          ref: "User",
+
+          default: null
+
+        },
         
-// =====================================================
-// ENSEIGNANT AYANT LANCE LA CONFERENCE
-// =====================================================
+        // =====================================================
+        // ENSEIGNANT AYANT LANCE LA CONFERENCE
+        // =====================================================
+        startedBy: {
 
-startedBy: {
+          type: mongoose.Schema.Types.ObjectId,
 
-    type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
 
-    ref: "User",
+          default: null
 
-    default: null
-
-},
+        },
 
 // =====================================================
 // ENSEIGNANT AYANT TERMINE LA CONFERENCE
@@ -83,11 +95,11 @@ endedBy: {
         teacher: {
 
             type: mongoose.Schema.Types.ObjectId,
-
+        
             ref: "User",
-
-            required: true
-
+        
+            default: null
+        
         },
 
         // =====================================================
@@ -121,11 +133,11 @@ endedBy: {
         course: {
 
             type: mongoose.Schema.Types.ObjectId,
-
+        
             ref: "Course",
-
-            required: true
-
+        
+            default: null
+        
         },
 
         // =====================================================

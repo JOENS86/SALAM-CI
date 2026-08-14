@@ -10,25 +10,19 @@ const signalingSocket = (io, socket) => {
     socket.on(
 
         "webrtc:offer",
-
-        ({ roomId, offer, sender }) => {
-
-            socket.to(roomId).emit(
-
+    
+        ({target, offer, sender}) => {
+    
+            io.to(target).emit(
+    
                 "webrtc:offer",
-
-                {
-
-                    offer,
-
-                    sender
-
-                }
-
+    
+                {sender, offer}
+    
             );
-
+    
         }
-
+    
     );
 
     // =====================================================
@@ -37,25 +31,19 @@ const signalingSocket = (io, socket) => {
     socket.on(
 
         "webrtc:answer",
-
-        ({ roomId, answer, sender }) => {
-
-            socket.to(roomId).emit(
-
+    
+        ({target, answer, sender}) => {
+    
+            io.to(target).emit(
+    
                 "webrtc:answer",
-
-                {
-
-                    answer,
-
-                    sender
-
-                }
-
+    
+                {sender, answer}
+    
             );
-
+    
         }
-
+    
     );
 
     // =====================================================
@@ -64,25 +52,19 @@ const signalingSocket = (io, socket) => {
     socket.on(
 
         "webrtc:iceCandidate",
-
-        ({ roomId, candidate, sender }) => {
-
-            socket.to(roomId).emit(
-
+    
+        ({target, candidate, sender}) => {
+    
+            io.to(target).emit(
+    
                 "webrtc:iceCandidate",
-
-                {
-
-                    candidate,
-
-                    sender
-
-                }
-
+    
+                {sender, candidate}
+    
             );
-
+    
         }
-
+    
     );
 
 };

@@ -5,17 +5,24 @@
 
 const chats = {};
 
+const MAX_HISTORY = 200;
+
 const chatSocket = (io, socket) => {
 
     // =====================================================
     // ENVOYER UN MESSAGE
     // =====================================================
-
     socket.on(
 
         "chat:send",
 
         ({ roomId, user, message }) => {
+
+            if (!roomId || !user || !message) return;
+
+            const text = message.trim();
+
+            if (text.length === 0) return;
 
             if (!chats[roomId]) {
 
@@ -35,19 +42,26 @@ const chatSocket = (io, socket) => {
 
                     lastName: user.lastName,
 
-                    photo: user.photo,
+                    photo: user.photo || "",
 
                     role: user.role
 
                 },
 
-                message,
+                message: text,
 
                 createdAt: new Date()
 
             };
 
             chats[roomId].push(newMessage);
+
+            // Garder uniquement les derniers messages
+            if (chats[roomId].length > MAX_HISTORY) {
+
+                chats[roomId].shift();
+
+            }
 
             io.to(roomId).emit(
 
@@ -64,7 +78,6 @@ const chatSocket = (io, socket) => {
     // =====================================================
     // HISTORIQUE
     // =====================================================
-
     socket.on(
 
         "chat:getHistory",
@@ -86,12 +99,13 @@ const chatSocket = (io, socket) => {
     // =====================================================
     // UTILISATEUR EN TRAIN D'ECRIRE
     // =====================================================
-
     socket.on(
 
         "chat:typing",
 
         ({ roomId, user }) => {
+
+            if (!roomId || !user) return;
 
             socket.to(roomId).emit(
 
@@ -112,12 +126,13 @@ const chatSocket = (io, socket) => {
     // =====================================================
     // FIN D'ECRITURE
     // =====================================================
-
     socket.on(
 
         "chat:stopTyping",
 
         ({ roomId, user }) => {
+
+            if (!roomId || !user) return;
 
             socket.to(roomId).emit(
 
@@ -137,14 +152,16 @@ const chatSocket = (io, socket) => {
 
     // =====================================================
     // SUPPRIMER UN MESSAGE
-    // (Prof/Admin)
     // =====================================================
-
     socket.on(
 
         "chat:delete",
 
         ({ roomId, messageId }) => {
+
+            if (!roomId) return;
+
+            if (!messageId) return;
 
             if (!chats[roomId]) return;
 

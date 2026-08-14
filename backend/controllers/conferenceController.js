@@ -1,4 +1,5 @@
 import conferenceService from "../services/conferenceService.js";
+import emailService from "../services/emailService.js";
 
 /* ===========================================================
    CREER UNE CONFERENCE
@@ -73,7 +74,12 @@ export const getAllConferences = async (req, res) => {
 
     try {
 
-        const result = await conferenceService.getAllConferences();
+        const result =
+            await conferenceService.getAllConferences(
+
+                req.user
+
+            );
 
         res.json(result);
 
@@ -385,7 +391,6 @@ export const deleteConference = async (req, res) => {
 
 };
 
-import emailService from "../services/emailService.js";
 
 /* ===========================================================
    TEST EMAIL

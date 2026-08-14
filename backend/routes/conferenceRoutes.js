@@ -3,7 +3,7 @@ import express from "express";
 import authMiddleware from "../middleware/authMiddleware.js";
 
 import {
-
+    createConference,
     startConference,
     endConference,
     getConferenceById,
@@ -16,6 +16,7 @@ import {
     joinConference,
     leaveConference,
     getParticipants,
+    deleteConference,
     testEmail
 
 } from "../controllers/conferenceController.js";
@@ -111,11 +112,27 @@ router.post(
 
 );
 
+// =====================================================
+// CREATION DIRECTE PAR L'ADMIN
+// =====================================================
+router.post(
+    "/",
+    authMiddleware,
+    createConference
+);
+
+// =====================================================
+// SUPPRIMER UNE CONFERENCE
+// =====================================================
+router.delete(
+    "/:id",
+    authMiddleware,
+    deleteConference
+);
 
 // =====================================================
 // TOUTES LES CONFERENCES
 // =====================================================
-
 router.get(
 
     "/",

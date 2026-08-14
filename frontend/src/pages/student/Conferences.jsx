@@ -91,8 +91,66 @@ function Conferences() {
   };
   
   useEffect(() => {
-      loadConferences();
-  }, []);
+    loadConferences();
+
+    const handleParticipantsUpdated = ({
+        roomId,
+        count
+    }) => {
+
+        console.log(
+            "👥 Mise à jour participants :",
+            roomId,
+            count
+        );
+
+        const updateConferenceCount = (list) => {
+
+            return list.map(conference => {
+
+                if (conference._id === roomId) {
+
+                    return {
+                        ...conference,
+                        currentParticipants: count
+                    };
+
+                }
+
+                return conference;
+
+            });
+
+        };
+
+        setLiveConferences(prev =>
+            updateConferenceCount(prev)
+        );
+
+        setUpcomingConferences(prev =>
+            updateConferenceCount(prev)
+        );
+
+        setHistoryConferences(prev =>
+            updateConferenceCount(prev)
+        );
+
+    };
+
+    socket.on(
+        "conference:participantsUpdated",
+        handleParticipantsUpdated
+    );
+
+    return () => {
+
+        socket.off(
+            "conference:participantsUpdated",
+            handleParticipantsUpdated
+        );
+
+    };
+}, []);
 
 
   useEffect(() => {

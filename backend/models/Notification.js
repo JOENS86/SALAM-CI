@@ -5,7 +5,6 @@ import mongoose from "mongoose";
 // =====================================================
 
 const notificationSchema = new mongoose.Schema(
-
     {
 
         // =====================================================
@@ -22,6 +21,7 @@ const notificationSchema = new mongoose.Schema(
 
         },
 
+
         // =====================================================
         // EXPEDITEUR
         // =====================================================
@@ -36,6 +36,7 @@ const notificationSchema = new mongoose.Schema(
 
         },
 
+
         // =====================================================
         // TITRE
         // =====================================================
@@ -46,9 +47,12 @@ const notificationSchema = new mongoose.Schema(
 
             required: true,
 
-            trim: true
+            trim: true,
+
+            maxlength: 200
 
         },
+
 
         // =====================================================
         // MESSAGE
@@ -60,9 +64,12 @@ const notificationSchema = new mongoose.Schema(
 
             required: true,
 
-            trim: true
+            trim: true,
+
+            maxlength: 1000
 
         },
+
 
         // =====================================================
         // TYPE DE NOTIFICATION
@@ -73,6 +80,10 @@ const notificationSchema = new mongoose.Schema(
             type: String,
 
             enum: [
+
+                // ---------------------------------------------
+                // CONFERENCES
+                // ---------------------------------------------
 
                 "conference_request",
 
@@ -86,6 +97,28 @@ const notificationSchema = new mongoose.Schema(
 
                 "conference_completed",
 
+                "conference_cancelled",
+
+
+                // ---------------------------------------------
+                // COMMUNAUTE
+                // ---------------------------------------------
+
+                "community_post",
+
+                "community_comment",
+
+                "community_like",
+
+                "community_mention",
+
+                "community_share",
+
+
+                // ---------------------------------------------
+                // FORMATION
+                // ---------------------------------------------
+
                 "course",
 
                 "quiz",
@@ -94,7 +127,17 @@ const notificationSchema = new mongoose.Schema(
 
                 "certificate",
 
+
+                // ---------------------------------------------
+                // COMMUNICATION
+                // ---------------------------------------------
+
                 "message",
+
+
+                // ---------------------------------------------
+                // SYSTEME
+                // ---------------------------------------------
 
                 "system"
 
@@ -103,6 +146,7 @@ const notificationSchema = new mongoose.Schema(
             required: true
 
         },
+
 
         // =====================================================
         // TYPE D'OBJET CONCERNE
@@ -126,13 +170,18 @@ const notificationSchema = new mongoose.Schema(
 
                 "certificate",
 
-                "message"
+                "message",
+
+                "communityPost",
+
+                "communityComment"
 
             ],
 
             default: null
 
         },
+
 
         // =====================================================
         // IDENTIFIANT DE L'OBJET
@@ -146,6 +195,7 @@ const notificationSchema = new mongoose.Schema(
 
         },
 
+
         // =====================================================
         // EMAIL ENVOYE ?
         // =====================================================
@@ -158,8 +208,9 @@ const notificationSchema = new mongoose.Schema(
 
         },
 
+
         // =====================================================
-        // LUE ?
+        // NOTIFICATION LUE ?
         // =====================================================
 
         isRead: {
@@ -172,6 +223,11 @@ const notificationSchema = new mongoose.Schema(
 
     },
 
+
+    // =====================================================
+    // TIMESTAMPS
+    // =====================================================
+
     {
 
         timestamps: true
@@ -179,6 +235,39 @@ const notificationSchema = new mongoose.Schema(
     }
 
 );
+
+
+// =====================================================
+// INDEX
+// =====================================================
+
+// Permet de récupérer rapidement les notifications
+// d'un utilisateur dans l'ordre chronologique.
+
+notificationSchema.index({
+
+    recipient: 1,
+
+    createdAt: -1
+
+});
+
+
+// Permet de récupérer rapidement les notifications
+// non lues.
+
+notificationSchema.index({
+
+    recipient: 1,
+
+    isRead: 1
+
+});
+
+
+// =====================================================
+// EXPORT
+// =====================================================
 
 export default mongoose.model(
 

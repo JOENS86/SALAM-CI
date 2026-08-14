@@ -194,6 +194,203 @@ async createRequest(teacher, data) {
 
 }
 
+// =====================================================
+// CREER DIRECTEMENT UNE CONFERENCE - ADMIN
+// =====================================================
+async createConference(admin, data) {
+
+    // ==========================================
+    // VERIFIER LE ROLE
+    // ==========================================
+    if (admin.role !== "admin") {
+
+        throw new Error(
+            "Seuls les administrateurs peuvent créer directement une conférence."
+        );
+
+    }
+
+    const {
+
+        title,
+        description,
+        image,
+        date,
+        time,
+        duration,
+        maxParticipants
+
+    } = data;
+
+    // ==========================================
+    // VALIDATION
+    // ==========================================
+    if (!title) {
+
+        throw new Error(
+            "Le titre de la conférence est obligatoire."
+        );
+
+    }
+
+    if (!date) {
+
+        throw new Error(
+            "La date de la conférence est obligatoire."
+        );
+
+    }
+
+    if (!time) {
+
+        throw new Error(
+            "L'heure de la conférence est obligatoire."
+        );
+
+    }
+
+    // ==========================================
+    // VERIFIER LA DATE
+    // ==========================================
+    const selectedDate = new Date(date);
+
+    const today = new Date();
+
+    today.setHours(
+        0,
+        0,
+        0,
+        0
+    );
+
+    selectedDate.setHours(
+        0,
+        0,
+        0,
+        0
+    );
+
+    if (selectedDate < today) {
+
+        throw new Error(
+            "La date de la conférence ne peut pas être antérieure à aujourd'hui."
+        );
+
+    }
+
+    // ==========================================
+    // EVITER LES DOUBLONS
+    // ==========================================
+    const existingConference =
+        await Conference.findOne({
+
+            date: selectedDate,
+
+            time,
+
+            status: {
+                $ne: "cancelled"
+            }
+
+        });
+
+    if (existingConference) {
+
+        throw new Error(
+            "Une conférence est déjà programmée à cette date et cette heure."
+        );
+
+    }
+
+    // ==========================================
+    // GENERER LA SALLE
+    // ==========================================
+    const roomId =
+        meetingService.generateRoomId();
+
+    const meetingCode =
+        meetingService.generateMeetingCode();
+
+    const meetingLink =
+        meetingService.generateMeetingLink(
+            roomId
+        );
+
+    // ==========================================
+    // DATE COMPLETE
+    // ==========================================
+    const [hours, minutes] = time.split(":").map(Number);
+
+    const scheduledAt = new Date(selectedDate);
+    
+    scheduledAt.setHours(
+        hours,
+        minutes,
+        0,
+        0
+    );
+
+    // ==========================================
+    // CREER LA CONFERENCE
+    // ==========================================
+    const conference =
+        await Conference.create({
+
+            createdBy: admin._id,
+
+            request: null,
+
+            teacher: null,
+
+            course: null,
+
+            title,
+
+            description: description || "",
+
+            image: image || "",
+
+            date: selectedDate,
+
+            time,
+
+            duration:
+                duration || 60,
+
+            maxParticipants:
+                maxParticipants || 100,
+
+            roomId,
+
+            meetingCode,
+
+            meetingLink,
+
+            scheduledAt,
+
+            isPublic: true,
+
+            isActive: true,
+
+            status: "scheduled"
+
+        });
+
+    // ==========================================
+    // REPONSE
+    // ==========================================
+    return {
+
+        success: true,
+
+        message:
+            "Conférence créée avec succès.",
+
+        conference
+
+    };
+
+}
 
 // =====================================================
 // APPROUVER UNE DEMANDE
@@ -412,7 +609,6 @@ catch (error) {
 // ==========================================
 // ETUDIANTS INSCRITS
 // ==========================================
-
 const enrollments = await Enrollment.find({
 
     course: request.course._id
@@ -447,7 +643,7 @@ for (const enrollment of enrollments) {
 
             message: `Une conférence "${conference.title}" est disponible.`,
 
-            type: "conference",
+            type: "conference_scheduled",
 
             entityType: "conference",
 
@@ -828,34 +1024,66 @@ async getPendingRequests() {
 
 
 // =====================================================
-// TOUTES LES CONFERENCES (ADMIN)
+// CONFERENCES CREEES DIRECTEMENT PAR L'ADMIN
 // =====================================================
+async getAllConferences(admin) {
 
-async getAllConferences() {
+    // ==========================================
+    // VERIFIER LE ROLE
+    // ==========================================
 
-    const conferences = await Conference.find()
+    if (admin.role !== "admin") {
 
-        .populate(
+        throw new Error(
+            "Accès réservé aux administrateurs."
+        );
 
-            "teacher",
+    }
 
-            "name email"
+    // ==========================================
+    // RECUPERER UNIQUEMENT
+    // LES CONFERENCES CREEES PAR CET ADMIN
+    // ==========================================
 
-        )
+    const conferences = await Conference.find({
 
-        .populate(
+        createdBy: admin._id
 
-            "course",
+    })
 
-            "title"
+    .populate(
 
-        )
+        "createdBy",
 
-        .sort({
+        "name email"
 
-            createdAt: -1
+    )
 
-        });
+    .populate(
+
+        "teacher",
+
+        "name email"
+
+    )
+
+    .populate(
+
+        "course",
+
+        "title"
+
+    )
+
+    .sort({
+
+        createdAt: -1
+
+    });
+
+    // ==========================================
+    // REPONSE
+    // ==========================================
 
     return {
 
@@ -872,28 +1100,83 @@ async getAllConferences() {
 // =====================================================
 // DEMARRER UNE CONFERENCE
 // =====================================================
+async startConference(user, conferenceId) {
 
-async startConference(teacher, conferenceId) {
+    const conference =
+        await Conference.findById(conferenceId);
 
-    const conference = await Conference.findById(conferenceId);
-
-    // Vérifie que la conférence existe
+    // =====================================================
+    // VERIFIER L'EXISTENCE
+    // =====================================================
     if (!conference) {
 
-        throw new Error("Conférence introuvable.");
-
-    }
-
-    // Vérifie que l'enseignant est le propriétaire
-    if (conference.teacher.toString() !== teacher._id.toString()) {
-
         throw new Error(
-            "Vous n'êtes pas autorisé à lancer cette conférence."
+            "Conférence introuvable."
         );
 
     }
 
-    // Vérifie le statut
+    // =====================================================
+    // VERIFIER L'AUTORISATION
+    // =====================================================
+
+    // -----------------------------------------
+    // CONFERENCE CREEE PAR L'ADMIN
+    // -----------------------------------------
+    if (conference.createdBy) {
+
+        if (user.role !== "admin") {
+
+            throw new Error(
+                "Seul l'administrateur créateur peut lancer cette conférence."
+            );
+
+        }
+
+        if (
+            conference.createdBy.toString()
+            !==
+            user._id.toString()
+        ) {
+
+            throw new Error(
+                "Vous n'êtes pas autorisé à lancer cette conférence."
+            );
+
+        }
+
+    }
+
+    // -----------------------------------------
+    // CONFERENCE CREEE PAR UN ENSEIGNANT
+    // -----------------------------------------
+    else {
+
+        if (!conference.teacher) {
+
+            throw new Error(
+                "Cette conférence n'a aucun organisateur."
+            );
+
+        }
+
+        if (
+            conference.teacher.toString()
+            !==
+            user._id.toString()
+        ) {
+
+            throw new Error(
+                "Vous n'êtes pas autorisé à lancer cette conférence."
+            );
+
+        }
+
+    }
+
+    // =====================================================
+    // VERIFIER LE STATUT
+    // =====================================================
     if (conference.status === "live") {
 
         throw new Error(
@@ -919,7 +1202,7 @@ async startConference(teacher, conferenceId) {
     }
 
     // Mise à jour
-    conference.startedBy = teacher._id;
+    conference.startedBy = user._id;
 
     conference.status = "live";
 
@@ -941,75 +1224,126 @@ async startConference(teacher, conferenceId) {
         );
       }
 
+// =====================================================
+// NOTIFIER LES ETUDIANTS
+// =====================================================
+
+let students = [];
+
+// =====================================================
+// CONFERENCE CREEE PAR L'ADMIN
+// =====================================================
+
+if (conference.createdBy && !conference.course) {
+
+    students = await User.find({
+
+        role: "student"
+
+    });
+
+}
+
+// =====================================================
+// CONFERENCE LIEE A UN COURS
+// =====================================================
+
+else if (conference.course) {
+
     const enrollments = await Enrollment.find({
 
         course: conference.course
-    
+
     }).populate(
-    
+
         "student",
-    
+
         "name email"
-    
+
     );
-    
-    for (const enrollment of enrollments) {
-    
-        const student = enrollment.student;
-    
-        if (!student) continue;
-    
-        // ==========================
-        // Notification
-        // ==========================
-    
+
+    students = enrollments
+
+        .map(enrollment => enrollment.student)
+
+        .filter(Boolean);
+
+}
+
+// =====================================================
+// ENVOYER NOTIFICATIONS + EMAILS
+// =====================================================
+
+for (const student of students) {
+
+    // ==========================
+    // Notification
+    // ==========================
+
+    try {
+
         await notificationService.create({
-    
+
             recipient: student._id,
-    
-            sender: teacher._id,
-    
+
+            sender: user._id,
+
             title: "Conférence en direct",
-    
-            message: `${conference.title} vient de commencer.`,
-    
+
+            message:
+                `${conference.title} vient de commencer.`,
+
             type: "conference_started",
-    
+
             entityType: "conference",
-    
+
             entityId: conference._id
-    
+
         });
-    
-        // ==========================
-        // Email
-        // ==========================
-    
-        try {
-    
-            await emailService.sendConferenceStarted(
-    
-                student,
-    
-                conference
-    
-            );
-    
-        }
-    
-        catch (error) {
-    
-            console.error(
-    
-                "Erreur email conférence :",
-    
-                error.message
-    
-            );
-    
-        }
-    
+
     }
+
+    catch (error) {
+
+        console.error(
+
+            "Erreur notification étudiant :",
+
+            error.message
+
+        );
+
+    }
+
+    // ==========================
+    // Email
+    // ==========================
+
+    try {
+
+        await emailService.sendConferenceStarted(
+
+            student,
+
+            conference
+
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(
+
+            "Erreur email conférence :",
+
+            error.message
+
+        );
+
+    }
+
+}
     
     return {
 
@@ -1027,95 +1361,234 @@ async startConference(teacher, conferenceId) {
 // =====================================================
 // TERMINER UNE CONFERENCE
 // =====================================================
-async endConference(teacher, conferenceId) {
+async endConference(user, conferenceId) {
 
     const conference = await Conference.findById(conferenceId);
 
+    // =====================================================
+    // CONFERENCE INTROUVABLE
+    // =====================================================
     if (!conference) {
 
-        throw new Error("Conférence introuvable.");
+        throw new Error(
+            "Conférence introuvable."
+        );
 
     }
 
-    if (conference.teacher.toString() !== teacher._id.toString()) {
+// =====================================================
+// VERIFIER L'AUTORISATION
+// =====================================================
+// -----------------------------------------
+// CONFERENCE CREEE PAR L'ADMIN
+// -----------------------------------------
+if (conference.createdBy) {
 
-        throw new Error("Vous n'êtes pas autorisé à terminer cette conférence.");
+    if (user.role !== "admin") {
+
+        throw new Error(
+            "Seul l'administrateur créateur peut terminer cette conférence."
+        );
 
     }
 
-    if (conference.status === "completed") {
+    if (
+        conference.createdBy.toString()
+        !==
+        user._id.toString()
+    ) {
 
-        throw new Error("Cette conférence est déjà terminée.");
+        throw new Error(
+            "Vous n'êtes pas autorisé à terminer cette conférence."
+        );
 
     }
 
-conference.status = "completed";
+}
 
-conference.endedAt = new Date();
+// -----------------------------------------
+// CONFERENCE CREEE PAR UN ENSEIGNANT
+// -----------------------------------------
+else {
 
-conference.currentParticipants = 0;
+    if (!conference.teacher) {
 
-conference.endedBy = teacher._id;
+        throw new Error(
+            "Cette conférence n'a aucun organisateur."
+        );
 
-conference.attendanceRate = Math.min(
+    }
 
-    100,
+    if (
+        conference.teacher.toString()
+        !==
+        user._id.toString()
+    ) {
 
-    Number(
+        throw new Error(
+            "Vous n'êtes pas autorisé à terminer cette conférence."
+        );
 
-        (
+    }
 
-            conference.totalParticipants
+}
 
-            /
+    // =====================================================
+    // VERIFIER QUE LA CONFERENCE EST EN DIRECT
+    // =====================================================
+    if (conference.status !== "live") {
 
-            conference.maxParticipants
+        throw new Error(
+            "Seule une conférence en direct peut être terminée."
+        );
 
-            *
+    }
 
-            100
+    // =====================================================
+    // DATE DE FIN
+    // =====================================================
+    const endedAt = new Date();
 
-        ).toFixed(2)
+    // =====================================================
+    // CALCUL DE LA DUREE REELLE
+    // =====================================================
+    let actualDuration = 0;
 
-    )
+    if (conference.startedAt) {
 
-);
+        actualDuration = Math.max(
 
-conference.actualDuration = Math.round(
+            0,
 
-    (
+            Math.round(
 
-        conference.endedAt -
+                (
+                    endedAt -
+                    conference.startedAt
+                ) / 60000
 
-        conference.startedAt
+            )
 
-    )
+        );
 
-    /60000
+    }
 
-);
+    // =====================================================
+    // CALCUL DU TAUX DE PRESENCE
+    // =====================================================
+    let attendanceRate = 0;
 
-await conference.save();
+    if (conference.maxParticipants > 0) {
 
-   // =====================================================
-   // TEMPS REEL : CONFERENCE TERMINEE
-   // =====================================================
-   const io = getIO();
+        attendanceRate = Math.min(
+
+            100,
+
+            Number(
+
+                (
+                    conference.totalParticipants
+                    /
+                    conference.maxParticipants
+                    *
+                    100
+
+                ).toFixed(2)
+
+            )
+
+        );
+
+    }
+
+    // =====================================================
+    // MISE A JOUR DE LA CONFERENCE
+    // =====================================================
+
+    conference.status = "completed";
+
+    conference.isActive = false;
+
+    conference.endedAt = endedAt;
+
+    conference.endedBy = user._id;
+
+    conference.currentParticipants = 0;
+
+    conference.actualDuration = actualDuration;
+
+    conference.attendanceRate = attendanceRate;
+
+    await conference.save();
+
+    console.log(
+        "================================================="
+    );
+
+    console.log(
+        "🔴 CONFERENCE TERMINEE"
+    );
+
+    console.log(
+        "Conference :",
+        conference._id.toString()
+    );
+
+    console.log(
+        "Terminee par :",
+        user.name
+    );
+
+    console.log(
+        "Statut :",
+        conference.status
+    );
+
+    console.log(
+        "isActive :",
+        conference.isActive
+    );
+
+    console.log(
+        "Duree reelle :",
+        conference.actualDuration,
+        "minutes"
+    );
+
+    console.log(
+        "================================================="
+    );
+
+    // =====================================================
+    // TEMPS REEL : PREVENIR TOUS LES UTILISATEURS
+    // =====================================================
+    const io = getIO();
 
     if (io) {
-      io.emit(
-        "conference:ended",
-          {
-            conference
-          }
-       );
-    } 
 
+        io.emit(
+
+            "conference:ended",
+
+            {
+
+                conference
+
+            }
+
+        );
+
+    }
+
+    // =====================================================
+    // REPONSE
+    // =====================================================
     return {
 
         success: true,
 
-        message: "La conférence est terminée.",
+        message:
+            "La conférence est terminée.",
 
         conference
 
@@ -1656,70 +2129,196 @@ async updateConference(
 }
 
 // =====================================================
-// SUPPRIMER UNE CONFERENCE
+// ANNULER / SUPPRIMER UNE CONFERENCE
 // =====================================================
-async deleteConference(
-
-    teacher,
-
-    conferenceId
-
-) {
+async deleteConference(user, conferenceId) {
 
     const conference = await Conference.findById(
-
         conferenceId
-
     );
 
+    // =====================================================
+    // CONFERENCE INTROUVABLE
+    // =====================================================
     if (!conference) {
 
         throw new Error(
-
             "Conférence introuvable."
-
         );
 
     }
 
-    if (
+    // =====================================================
+    // CONFERENCE CREEE PAR L'ADMIN
+    // =====================================================
+    if (conference.createdBy) {
 
-        conference.teacher.toString()
+        // ---------------------------------------------
+        // VERIFIER QUE C'EST BIEN UN ADMIN
+        // ---------------------------------------------
+        if (user.role !== "admin") {
 
-        !==
+            throw new Error(
+                "Seul l'administrateur peut gérer cette conférence."
+            );
 
-        teacher._id.toString()
+        }
 
-    ) {
+        // ---------------------------------------------
+        // VERIFIER QUE C'EST BIEN SON ADMINISTRATEUR
+        // ---------------------------------------------
+        if (
+            conference.createdBy.toString()
+            !==
+            user._id.toString()
+        ) {
 
-        throw new Error(
+            throw new Error(
+                "Vous n'êtes pas autorisé à gérer cette conférence."
+            );
 
-            "Action non autorisée."
+        }
 
-        );
+        // =================================================
+        // CONFERENCE A VENIR
+        // =================================================
+        if (conference.status === "scheduled") {
+
+            conference.status = "cancelled";
+
+            conference.isActive = false;
+
+            conference.cancelReason =
+                "Conférence annulée par l'administrateur.";
+
+            await conference.save();
+
+            return {
+
+                success: true,
+
+                action: "cancelled",
+
+                message:
+                    "La conférence a été annulée.",
+
+                conference
+
+            };
+
+        }
+
+        // =================================================
+        // CONFERENCE EN DIRECT
+        // =================================================
+        if (conference.status === "live") {
+
+            throw new Error(
+                "Impossible de supprimer une conférence en direct. Veuillez d'abord terminer la conférence."
+            );
+
+        }
+
+        // =================================================
+        // CONFERENCE ANNULEE OU TERMINEE
+        // =================================================
+        if (
+            conference.status === "cancelled"
+            ||
+            conference.status === "completed"
+        ) {
+
+            await Conference.findByIdAndDelete(
+                conferenceId
+            );
+
+            return {
+
+                success: true,
+
+                action: "deleted",
+
+                message:
+                    "La conférence a été supprimée définitivement."
+
+            };
+
+        }
 
     }
 
-    conference.isActive = false;
+    // =====================================================
+    // CONFERENCE CREEE PAR UN ENSEIGNANT
+    // =====================================================
+    if (conference.teacher) {
 
-    conference.status = "cancelled";
+        if (user.role !== "teacher") {
 
-    conference.cancelReason = "Conférence supprimée par l'enseignant.";
+            throw new Error(
+                "Action non autorisée."
+            );
 
-    await conference.save();
+        }
 
-    return {
+        if (
+            conference.teacher.toString()
+            !==
+            user._id.toString()
+        ) {
 
-        success: true,
+            throw new Error(
+                "Vous n'êtes pas autorisé à gérer cette conférence."
+            );
 
-        message:
+        }
 
-            "Conférence supprimée avec succès."
+        if (conference.status === "completed") {
 
-    };
+            throw new Error(
+                "Cette conférence est déjà terminée."
+            );
 
+        }
+
+        if (conference.status === "live") {
+
+            throw new Error(
+                "Impossible de supprimer une conférence en direct."
+            );
+
+        }
+
+        conference.status = "cancelled";
+
+        conference.isActive = false;
+
+        conference.cancelReason =
+            "Conférence annulée par l'enseignant.";
+
+        await conference.save();
+
+        return {
+
+            success: true,
+
+            action: "cancelled",
+
+            message:
+                "La conférence a été annulée.",
+
+            conference
+
+        };
+
+    }
+
+    // =====================================================
+    // AUCUN ORGANISATEUR
+    // =====================================================
+    throw new Error(
+        "Cette conférence n'a aucun organisateur."
+    );
 }
-
 
 // =====================================================
 // SUPPRIMER UNE DEMANDE DE CONFERENCE
