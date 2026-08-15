@@ -5,6 +5,7 @@ import mongoose from "mongoose";
 // =====================================================
 
 const notificationSchema = new mongoose.Schema(
+
     {
 
         // =====================================================
@@ -219,8 +220,31 @@ const notificationSchema = new mongoose.Schema(
 
             default: false
 
-        }
+        },
 
+
+        // =====================================================
+        // NOTIFICATION SUPPRIMEE PAR LE DESTINATAIRE ?
+        // =====================================================
+        deletedByRecipient: {
+
+          type: Boolean,
+
+          default: false
+
+        },
+
+
+        // =====================================================
+       // NOTIFICATION SUPPRIMEE DE L'HISTORIQUE ADMIN ?
+        // =====================================================
+        deletedBySender: {
+
+          type: Boolean,
+
+          default: false
+
+        }
     },
 
 
@@ -253,14 +277,28 @@ notificationSchema.index({
 });
 
 
-// Permet de récupérer rapidement les notifications
-// non lues.
+// =====================================================
+// INDEX NOTIFICATIONS NON LUES
+// =====================================================
 
 notificationSchema.index({
 
     recipient: 1,
 
     isRead: 1
+
+});
+
+
+// =====================================================
+// INDEX NOTIFICATIONS SUPPRIMEES
+// =====================================================
+
+notificationSchema.index({
+
+    recipient: 1,
+
+    deletedByRecipient: 1
 
 });
 

@@ -8,7 +8,8 @@ import {
     FaUsers,
     FaEnvelope,
     FaCheckCircle,
-    FaClock
+    FaClock,
+    FaTrash
 } from "react-icons/fa";
 
 import { toast } from "react-toastify";
@@ -44,8 +45,10 @@ function Notifications() {
     const [history, setHistory] = useState([]);
 
     const [loading, setLoading] = useState(false);
-
+    
     const [loadingHistory, setLoadingHistory] = useState(true);
+    
+    const [deletingHistory, setDeletingHistory] = useState(false);
 
 
     // =====================================================
@@ -403,6 +406,68 @@ function Notifications() {
 
     };
 
+
+// =====================================================
+// SUPPRIMER L'HISTORIQUE ADMIN
+// =====================================================
+const handleDeleteHistory = async () => {
+
+    if (history.length === 0) {
+
+        return;
+
+    }
+
+    try {
+
+        setDeletingHistory(true);
+
+        const response =
+            await notificationService.deleteAdminHistory();
+
+        if (response.success) {
+
+            setHistory([]);
+
+            toast.success(
+                "Historique des notifications supprimé."
+            );
+
+        } else {
+
+            toast.error(
+                response.message ||
+                "Impossible de supprimer l'historique."
+            );
+
+        }
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "❌ Erreur suppression historique :",
+            error
+        );
+
+        toast.error(
+
+            error.response?.data?.message ||
+
+            "Impossible de supprimer l'historique."
+
+        );
+
+    }
+
+    finally {
+
+        setDeletingHistory(false);
+
+    }
+
+};
 
     return (
 
@@ -904,46 +969,108 @@ function Notifications() {
                     h-fit
                 ">
 
-                    <div className="
-                        flex
-                        items-center
-                        justify-between
-                        mb-6
-                    ">
+<div className="
+    flex
+    items-center
+    justify-between
+    mb-6
+">
 
-                        <div className="
-                            flex
-                            items-center
-                            gap-3
-                        ">
+    <div className="
+        flex
+        items-center
+        gap-3
+    ">
 
-                            <FaClock
-                                className="text-purple-600"
-                            />
+        <FaClock
+            className="text-purple-600"
+        />
 
-                            <h2 className="text-2xl font-bold">
+        <h2 className="text-2xl font-bold">
 
-                                Historique
+            Historique
 
-                            </h2>
+        </h2>
 
-                        </div>
+    </div>
 
-                        <span className="
-                            bg-purple-100
-                            text-purple-700
-                            px-3
-                            py-1
-                            rounded-full
-                            text-sm
-                            font-semibold
-                        ">
 
-                            {history.length}
+    <div className="
+        flex
+        items-center
+        gap-3
+    ">
 
-                        </span>
+        {/* COMPTEUR */}
+        <span className="
+            bg-purple-100
+            text-purple-700
+            px-3
+            py-1
+            rounded-full
+            text-sm
+            font-semibold
+        ">
 
-                    </div>
+            {history.length}
+
+        </span>
+
+
+        {/* BOUTON SUPPRIMER */}
+        <button
+
+            type="button"
+
+            onClick={handleDeleteHistory}
+
+            disabled={
+                history.length === 0 ||
+                deletingHistory
+            }
+
+            title="Supprimer l'historique"
+
+            className="
+                w-9
+                h-9
+                rounded-xl
+                flex
+                items-center
+                justify-center
+                text-gray-400
+                hover:text-red-600
+                hover:bg-red-50
+                transition
+                disabled:opacity-30
+                disabled:cursor-not-allowed
+            "
+
+        >
+
+            {deletingHistory ? (
+
+                <span className="
+                    w-4
+                    h-4
+                    border-2
+                    border-gray-300
+                    border-t-red-500
+                    rounded-full
+                    animate-spin
+                " />
+
+            ) : (
+
+                <FaTrash />
+
+            )}
+
+        </button>
+
+    </div>
+
+</div>
 
 
                     {/* CHARGEMENT */}

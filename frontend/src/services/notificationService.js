@@ -70,6 +70,34 @@ class NotificationService {
 
     }
 
+
+    // =====================================================
+    // SUPPRIMER TOUTES LES NOTIFICATIONS
+    // =====================================================
+    async deleteAllNotifications() {
+
+        const response = await API.delete(
+            "/notifications/all"
+        );
+
+        return response.data;
+
+    }
+
+
+    // =====================================================
+    // SUPPRIMER L'HISTORIQUE DES NOTIFICATIONS ADMIN
+    // =====================================================
+    async deleteAdminHistory() {
+
+        const response = await API.delete(
+            "/notifications/admin/history"
+        );
+
+        return response.data;
+
+    }
+
 }
 
 

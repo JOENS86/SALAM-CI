@@ -27,14 +27,17 @@ export const sendNotification = async (req, res) => {
         // =====================================================
         // RECUPERER LES DONNEES
         // =====================================================
-
         const {
             title,
             message,
-            target = "all",
-            sendEmail = true,
-            sendInternal = true
+            target = "all"
         } = req.body;
+        
+        // =====================================================
+        // CONVERTIR EXPLICITEMENT LES OPTIONS D'ENVOI EN BOOLEAN
+        // =====================================================
+        const sendEmail = req.body.sendEmail === true;
+        const sendInternal = req.body.sendInternal === true;
 
         // =====================================================
         // VALIDATION
@@ -510,11 +513,25 @@ export const getAdminNotificationHistory = async (
         // RECUPERER L'HISTORIQUE
         // =====================================================
         const notifications =
-            await Notification.find({
-
-                sender: req.user._id
-
-            })
+          await Notification.find({
+    
+            sender: req.user._id,
+    
+            $or: [
+    
+                {
+                    deletedBySender: false
+                },
+    
+                {
+                    deletedBySender: {
+                        $exists: false
+                    }
+                }
+    
+            ]
+    
+          })
 
             .populate(
                 "recipient",
@@ -563,9 +580,118 @@ export const getAdminNotificationHistory = async (
 };
 
 // =====================================================
-// RECUPERER MES NOTIFICATIONS
+// SUPPRIMER L'HISTORIQUE DES NOTIFICATIONS ADMIN
 // =====================================================
 
+export const deleteAdminNotificationHistory = async (
+    req,
+    res
+) => {
+
+    try {
+
+        // =====================================================
+        // VERIFIER L'ADMIN
+        // =====================================================
+
+        if (req.user?.role !== "admin") {
+
+            return res.status(403).json({
+
+                success: false,
+
+                message:
+                    "Accès réservé aux administrateurs."
+
+            });
+
+        }
+
+
+        // =====================================================
+        // SUPPRIMER UNIQUEMENT L'HISTORIQUE DE CET ADMIN
+        //
+        // On prend en compte :
+        // - les notifications avec deletedBySender = false
+        // - les anciennes notifications qui n'ont pas encore
+        //   le champ deletedBySender
+        // =====================================================
+
+        const result =
+            await Notification.updateMany(
+
+                {
+                    sender: req.user._id,
+
+                    $or: [
+
+                        {
+                            deletedBySender: false
+                        },
+
+                        {
+                            deletedBySender: {
+                                $exists: false
+                            }
+                        }
+
+                    ]
+
+                },
+
+                {
+                    $set: {
+
+                        deletedBySender: true
+
+                    }
+
+                }
+
+            );
+
+
+        // =====================================================
+        // REPONSE
+        // =====================================================
+
+        return res.status(200).json({
+
+            success: true,
+
+            message:
+                "Historique des notifications supprimé avec succès.",
+
+            deletedCount:
+                result.modifiedCount
+
+        });
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "❌ Erreur suppression historique admin :",
+            error
+        );
+
+        return res.status(500).json({
+
+            success: false,
+
+            message:
+                "Impossible de supprimer l'historique."
+
+        });
+
+    }
+
+};
+
+// =====================================================
+// RECUPERER MES NOTIFICATIONS
+// =====================================================
 export const getMyNotifications = async (
     req,
     res
@@ -578,16 +704,37 @@ export const getMyNotifications = async (
                 req.user._id
             );
 
-        const unreadCount =
+
+        // =================================================
+        // NE GARDER QUE LES NOTIFICATIONS VISIBLES
+        // POUR L'UTILISATEUR CONNECTE
+        // =================================================
+
+        const visibleNotifications =
             notifications.filter(
-                notification => !notification.isRead
+                notification =>
+                    !notification.deletedByRecipient
+            );
+
+
+        // =================================================
+        // COMPTER UNIQUEMENT LES NOTIFICATIONS
+        // VISIBLES ET NON LUES
+        // =================================================
+
+        const unreadCount =
+            visibleNotifications.filter(
+                notification =>
+                    !notification.isRead
             ).length;
+
 
         return res.json({
 
             success: true,
 
-            notifications,
+            notifications:
+                visibleNotifications,
 
             unreadCount
 
@@ -619,7 +766,6 @@ export const getMyNotifications = async (
 // =====================================================
 // MARQUER UNE NOTIFICATION COMME LUE
 // =====================================================
-
 export const markNotificationAsRead = async (
     req,
     res
@@ -700,6 +846,68 @@ export const markNotificationAsRead = async (
 
             message:
                 "Impossible de modifier la notification."
+
+        });
+
+    }
+
+};
+
+// =====================================================
+// SUPPRIMER TOUTES MES NOTIFICATIONS
+// =====================================================
+export const deleteAllMyNotifications = async (
+    req,
+    res
+) => {
+
+    try {
+
+        const result =
+            await Notification.updateMany(
+
+                {
+                    recipient: req.user._id,
+
+                    deletedByRecipient: false
+                },
+
+                {
+                    $set: {
+                        deletedByRecipient: true
+                    }
+                }
+
+            );
+
+
+        return res.json({
+
+            success: true,
+
+            message:
+                "Toutes les notifications ont été supprimées.",
+
+            deletedCount:
+                result.modifiedCount
+
+        });
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "❌ Erreur suppression notifications :",
+            error
+        );
+
+        return res.status(500).json({
+
+            success: false,
+
+            message:
+                "Impossible de supprimer les notifications."
 
         });
 

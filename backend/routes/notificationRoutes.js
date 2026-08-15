@@ -3,17 +3,21 @@ import express from "express";
 import authMiddleware
     from "../middleware/authMiddleware.js";
 
-import {
+    import {
 
-    sendNotification,
-
-    getAdminNotificationHistory,
-
-    getMyNotifications,
-
-    markNotificationAsRead
-
-} from "../controllers/notificationController.js";
+        sendNotification,
+    
+        getAdminNotificationHistory,
+    
+        getMyNotifications,
+    
+        markNotificationAsRead,
+    
+        deleteAllMyNotifications,
+    
+        deleteAdminNotificationHistory
+    
+    } from "../controllers/notificationController.js";
 
 
 const router = express.Router();
@@ -37,7 +41,6 @@ router.post(
 // =====================================================
 // HISTORIQUE ADMIN
 // =====================================================
-
 router.get(
 
     "/admin/history",
@@ -48,6 +51,18 @@ router.get(
 
 );
 
+// =====================================================
+// SUPPRIMER L'HISTORIQUE ADMIN
+// =====================================================
+router.delete(
+
+    "/admin/history",
+
+    authMiddleware,
+
+    deleteAdminNotificationHistory
+
+);
 
 // =====================================================
 // MES NOTIFICATIONS
@@ -61,6 +76,16 @@ router.get(
 
     getMyNotifications
 
+);
+
+// =====================================================
+// SUPPRIMER TOUTES MES NOTIFICATIONS
+// =====================================================
+
+router.delete(
+    "/all",
+    authMiddleware,
+    deleteAllMyNotifications
 );
 
 

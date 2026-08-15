@@ -8,14 +8,13 @@ import {
     FaComment,
     FaHeart,
     FaCheckCircle,
-    FaInfoCircle
+    FaInfoCircle,
+    FaTrash
 } from "react-icons/fa";
 
-import notificationService
-    from "../services/notificationService";
-
-import socketService
-    from "../services/socketService";
+import notificationService from "../services/notificationService";
+import socketService from "../services/socketService";
+import { successToast, errorToast } from "../utils/toast";
 
 
 // =====================================================
@@ -95,6 +94,12 @@ function NotificationBell() {
         useState(0);
 
     const [open, setOpen] =
+        useState(false);
+
+    const [showDeleteModal, setShowDeleteModal] =
+        useState(false);
+    
+    const [deleting, setDeleting] =
         useState(false);
 
     const containerRef =
@@ -271,10 +276,7 @@ function NotificationBell() {
     // =====================================================
     // CLIQUER SUR UNE NOTIFICATION
     // =====================================================
-
-    const handleNotificationClick = async (
-        notification
-    ) => {
+    const handleNotificationClick = async (notification) => {
 
         try {
 
@@ -316,6 +318,89 @@ function NotificationBell() {
 
     };
 
+// =====================================================
+// SUPPRIMER TOUTES LES NOTIFICATIONS
+// =====================================================
+          // Ouvrir le popup de suppresion
+const handleDeleteAllNotifications = () => {
+
+    if (notifications.length === 0) {
+        return;
+    }
+
+    setShowDeleteModal(true);
+
+};
+
+
+// =====================================================
+// FERMER POPUP SUPPRESSION
+// =====================================================
+
+const closeDeleteModal = () => {
+
+    if (deleting) {
+        return;
+    }
+
+    setShowDeleteModal(false);
+
+};
+
+
+// =====================================================
+// CONFIRMER SUPPRESSION
+// =====================================================
+
+const confirmDeleteAllNotifications = async () => {
+
+    try {
+
+        setDeleting(true);
+
+        const data =
+            await notificationService
+                .deleteAllNotifications();
+
+        if (data.success) {
+
+            setNotifications([]);
+
+            setUnreadCount(0);
+
+            setShowDeleteModal(false);
+
+            successToast(
+                "Notifications supprimées",
+                "Toutes vos notifications ont été supprimées."
+            );
+
+        }
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Erreur suppression notifications :",
+            error
+        );
+
+        errorToast(
+            "Suppression impossible",
+            error.response?.data?.message ||
+            "Impossible de supprimer vos notifications."
+        );
+
+    }
+
+    finally {
+
+        setDeleting(false);
+
+    }
+
+};
 
     // =====================================================
     // DATE
@@ -451,26 +536,69 @@ function NotificationBell() {
                         </div>
 
 
-                        {unreadCount > 0 && (
+<div
+    className="
+        flex
+        items-center
+        gap-2
+    "
+>
 
-                            <span
-                                className="
-                                    bg-purple-100
-                                    text-purple-700
-                                    text-xs
-                                    font-semibold
-                                    px-2
-                                    py-1
-                                    rounded-full
-                                "
-                            >
+    {unreadCount > 0 && (
 
-                                {unreadCount} non lue
-                                {unreadCount > 1 ? "s" : ""}
+        <span
+            className="
+                bg-purple-100
+                text-purple-700
+                text-xs
+                font-semibold
+                px-2
+                py-1
+                rounded-full
+            "
+        >
 
-                            </span>
+            {unreadCount} non lue
+            {unreadCount > 1 ? "s" : ""}
 
-                        )}
+        </span>
+
+    )}
+
+    <button
+
+        onClick={handleDeleteAllNotifications}
+
+        disabled={notifications.length === 0}
+
+        title={
+            notifications.length === 0
+                ? "Aucune notification à supprimer"
+                : "Supprimer toutes les notifications"
+        }
+
+        className="
+            w-8
+            h-8
+            rounded-lg
+            flex
+            items-center
+            justify-center
+            text-gray-400
+            hover:text-red-500
+            hover:bg-red-50
+            transition
+            disabled:opacity-30
+            disabled:cursor-default
+        "
+
+    >
+
+        <FaTrash />
+
+    </button>
+
+</div>
 
                     </div>
 
@@ -671,6 +799,237 @@ function NotificationBell() {
                 </div>
 
             )}
+
+{/* =====================================================
+    POPUP CONFIRMATION SUPPRESSION NOTIFICATIONS
+===================================================== */}
+{showDeleteModal && (
+
+<div
+    className="
+        fixed
+        inset-0
+        z-[100]
+        bg-black/50
+        backdrop-blur-sm
+        flex
+        items-center
+        justify-center
+        p-4
+    "
+    onClick={closeDeleteModal}
+>
+
+    <div
+        className="
+            w-full
+            max-w-md
+            bg-white
+            rounded-2xl
+            shadow-2xl
+            p-6
+            text-center
+        "
+        onClick={(event) =>
+            event.stopPropagation()
+        }
+    >
+
+        {/* =================================================
+            ICONE
+        ================================================= */}
+
+        <div className="
+            flex
+            justify-center
+            mb-4
+        ">
+
+            <div className="
+                w-16
+                h-16
+                rounded-full
+                bg-red-50
+                flex
+                items-center
+                justify-center
+            ">
+
+                <FaTrash
+                    className="
+                        text-2xl
+                        text-red-500
+                    "
+                />
+
+            </div>
+
+        </div>
+
+
+        {/* =================================================
+            TITRE
+        ================================================= */}
+
+        <h2 className="
+            text-xl
+            font-bold
+            text-gray-900
+            mb-3
+        ">
+
+            Supprimer les notifications
+
+        </h2>
+
+
+        {/* =================================================
+            MESSAGE
+        ================================================= */}
+
+        <p className="
+            text-gray-600
+            text-sm
+            leading-relaxed
+        ">
+
+            Voulez-vous vraiment supprimer
+            toutes vos notifications ?
+
+        </p>
+
+
+        {/* =================================================
+            NOMBRE
+        ================================================= */}
+
+        <div className="
+            mt-4
+            bg-slate-50
+            rounded-xl
+            px-4
+            py-3
+        ">
+
+            <p className="
+                text-sm
+                text-gray-600
+            ">
+
+                <span className="
+                    font-bold
+                    text-gray-900
+                ">
+
+                    {notifications.length}
+
+                </span>
+
+                {" "}
+                notification
+                {notifications.length > 1
+                    ? "s"
+                    : ""
+                }
+                {" "}
+                seront supprimées.
+
+            </p>
+
+        </div>
+
+
+        {/* =================================================
+            AVERTISSEMENT
+        ================================================= */}
+
+        <p className="
+            text-red-500
+            text-sm
+            font-medium
+            mt-4
+        ">
+
+            Cette action est irréversible.
+
+        </p>
+
+
+        {/* =================================================
+            BOUTONS
+        ================================================= */}
+
+        <div className="
+            flex
+            justify-center
+            gap-3
+            mt-6
+        ">
+
+            <button
+
+                onClick={closeDeleteModal}
+
+                disabled={deleting}
+
+                className="
+                    px-5
+                    py-2.5
+                    rounded-xl
+                    border
+                    border-gray-300
+                    bg-white
+                    text-gray-700
+                    font-medium
+                    hover:bg-gray-50
+                    transition
+                    disabled:opacity-50
+                "
+
+            >
+
+                Annuler
+
+            </button>
+
+
+            <button
+
+                onClick={
+                    confirmDeleteAllNotifications
+                }
+
+                disabled={deleting}
+
+                className="
+                    px-5
+                    py-2.5
+                    rounded-xl
+                    bg-red-600
+                    text-white
+                    font-medium
+                    hover:bg-red-700
+                    transition
+                    disabled:opacity-50
+                    disabled:cursor-not-allowed
+                "
+
+            >
+
+                {deleting
+                    ? "Suppression..."
+                    : "Supprimer"
+                }
+
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+)}
 
         </div>
 
