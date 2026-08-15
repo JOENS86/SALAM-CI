@@ -24,11 +24,24 @@ export const getCommunityPosts = async (req, res) => {
         // Recherche dans le contenu
         if (search.trim()) {
 
-            filter.content = {
-                $regex: search.trim(),
-                $options: "i"
-            };
-
+            filter.$or = [
+        
+                {
+                    content: {
+                        $regex: search.trim(),
+                        $options: "i"
+                    }
+                },
+        
+                {
+                    category: {
+                        $regex: search.trim(),
+                        $options: "i"
+                    }
+                }
+        
+            ];
+        
         }
 
         // Filtre catégorie
@@ -439,7 +452,6 @@ export const toggleLike = async (req, res) => {
 // =====================================================
 // AJOUTER UN COMMENTAIRE
 // =====================================================
-
 export const addComment = async (req, res) => {
 
     try {
@@ -613,7 +625,6 @@ export const addComment = async (req, res) => {
 // =====================================================
 // SUPPRIMER UN COMMENTAIRE
 // =====================================================
-
 export const deleteComment = async (req, res) => {
 
     try {
@@ -741,7 +752,6 @@ export const deleteComment = async (req, res) => {
 // =====================================================
 // SUPPRIMER UNE PUBLICATION
 // =====================================================
-
 export const deleteCommunityPost = async (req, res) => {
 
     try {
@@ -832,7 +842,6 @@ export const deleteCommunityPost = async (req, res) => {
 // =====================================================
 // STATISTIQUES COMMUNAUTE
 // =====================================================
-
 export const getCommunityStats = async (req, res) => {
 
     try {
@@ -844,6 +853,7 @@ export const getCommunityStats = async (req, res) => {
         const postsCount =
             await CommunityPost.countDocuments();
 
+
         // =================================================
         // NOMBRE D'UTILISATEURS
         // =================================================
@@ -854,6 +864,7 @@ export const getCommunityStats = async (req, res) => {
                 isActive: true
 
             });
+
 
         // =================================================
         // MEMBRES EN LIGNE
@@ -867,6 +878,59 @@ export const getCommunityStats = async (req, res) => {
                 isOnline: true
 
             });
+
+
+        // =================================================
+        // TENDANCES
+        // Nombre de publications par catégorie
+        // =================================================
+
+        const trends =
+            await CommunityPost.aggregate([
+
+                {
+                    $group: {
+
+                        _id: "$category",
+
+                        count: {
+                            $sum: 1
+                        }
+
+                    }
+
+                },
+
+                {
+                    $sort: {
+
+                        count: -1
+
+                    }
+
+                },
+
+                {
+                    $limit: 6
+
+                }
+
+            ]);
+
+
+        // =================================================
+        // FORMAT DES TENDANCES
+        // =================================================
+
+        const formattedTrends =
+            trends.map(trend => ({
+
+                name: trend._id,
+
+                count: trend.count
+
+            }));
+
 
         // =================================================
         // REPONSE
@@ -882,7 +946,9 @@ export const getCommunityStats = async (req, res) => {
 
                 members: membersCount,
 
-                onlineMembers: onlineMembersCount
+                onlineMembers: onlineMembersCount,
+
+                trends: formattedTrends
 
             }
 
@@ -903,6 +969,129 @@ export const getCommunityStats = async (req, res) => {
 
             message:
                 "Impossible de récupérer les statistiques."
+
+        });
+
+    }
+
+};
+
+// =====================================================
+// PARTAGER UNE PUBLICATION
+// =====================================================
+export const shareCommunityPost = async (req, res) => {
+
+    try {
+
+        const { id } = req.params;
+
+        // =================================================
+        // RECHERCHER LA PUBLICATION
+        // =================================================
+
+        const post =
+            await CommunityPost.findById(id);
+
+        if (!post) {
+
+            return res.status(404).json({
+
+                success: false,
+
+                message:
+                    "Publication introuvable."
+
+            });
+
+        }
+
+        // =================================================
+        // INCREMENTER LE NOMBRE DE PARTAGES
+        // =================================================
+
+        post.shares =
+            (post.shares || 0) + 1;
+
+        await post.save();
+
+        // =================================================
+        // NOTIFICATION DE PARTAGE
+        // =================================================
+
+        if (
+            post.author.toString()
+            !==
+            req.user._id.toString()
+        ) {
+
+            try {
+
+                await notificationService.create({
+
+                    recipient: post.author,
+
+                    sender: req.user._id,
+
+                    title: "Publication partagée",
+
+                    message:
+                        `${req.user.name} a partagé votre publication.`,
+
+                    type: "community_share",
+
+                    entityType: "communityPost",
+
+                    entityId: post._id
+
+                });
+
+            }
+
+            catch (notificationError) {
+
+                console.error(
+                    "❌ Erreur notification partage :",
+                    notificationError.message
+                );
+
+            }
+
+        }
+
+        // =================================================
+        // REPONSE
+        // =================================================
+
+        return res.json({
+
+            success: true,
+
+            message:
+                "Publication partagée avec succès.",
+
+            sharesCount:
+                post.shares,
+
+            postId:
+                post._id
+
+        });
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "❌ Erreur partage publication :",
+            error
+        );
+
+        return res.status(500).json({
+
+            success: false,
+
+            message:
+                "Impossible de partager la publication."
 
         });
 

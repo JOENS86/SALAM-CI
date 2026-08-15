@@ -15,7 +15,10 @@ import {
 
 import API from "../../services/api";
 import socketService from "../../services/socketService";
-
+import {
+    errorToast,
+    successToast
+} from "../../utils/toast";
 import NotificationBell from "../../components/NotificationBell";
 
 
@@ -68,13 +71,33 @@ function Community() {
     const [stats, setStats] = useState({
 
         posts: 0,
-
+        
         members: 0,
-
-        onlineMembers: 0
-
+        
+        onlineMembers: 0,
+        
+        trends: []
+        
     });
 
+    // =====================================================
+    // PARTAGE
+    // =====================================================
+    const [sharePost, setSharePost] = useState(null);
+    const [showShareMenu, setShowShareMenu] = useState(false);
+
+// =====================================================
+// POPUP DE CONFIRMATION DE SUPPRESSION
+// =====================================================
+const [deleteModal, setDeleteModal] = useState({
+    open: false,
+    type: null, // "post" ou "comment"
+    postId: null,
+    commentId: null,
+    title: "",
+    content: ""
+});
+const [deleting, setDeleting] = useState(false);
 
     // =====================================================
     // CATEGORIES
@@ -82,6 +105,64 @@ function Community() {
 
     const [categories, setCategories] = useState([]);
     const [categoriesLoading, setCategoriesLoading] = useState(true);
+
+// =====================================================
+// OUVRIR LE POPUP DE SUPPRESSION
+// =====================================================
+const openDeleteModal = ({
+    type,
+    postId,
+    commentId = null,
+    content = ""
+}) => {
+
+    setDeleteModal({
+
+        open: true,
+
+        type,
+
+        postId,
+
+        commentId,
+
+        title:
+            type === "comment"
+                ? "Supprimer le commentaire"
+                : "Supprimer la publication",
+
+        content
+
+    });
+
+};
+
+// =====================================================
+// FERMER LE POPUP
+// =====================================================
+const closeDeleteModal = () => {
+
+    if (deleting) {
+        return;
+    }
+
+    setDeleteModal({
+
+        open: false,
+
+        type: null,
+
+        postId: null,
+
+        commentId: null,
+
+        title: "",
+
+        content: ""
+
+    });
+
+};
 
     // =====================================================
     // RECUPERER LES PUBLICATIONS
@@ -628,9 +709,7 @@ function Community() {
     // =====================================================
     // COMMENTAIRE
     // =====================================================
-
-    const handleComment =
-        async (postId) => {
+    const handleComment = async (postId) => {
 
             if (!commentText.trim()) {
 
@@ -716,74 +795,427 @@ function Community() {
 
         };
 
+// =====================================================
+// SUPPRIMER UN COMMENTAIRE
+// =====================================================
+const handleDeleteComment = async (postId, commentId) => {
+
+    try {
+
+        await API.delete(
+            `/community/${postId}/comments/${commentId}`
+        );
+
+        setPosts(previousPosts =>
+            previousPosts.map(post => {
+
+                if (post._id !== postId) {
+                    return post;
+                }
+
+                return {
+                    ...post,
+                    comments: (post.comments || []).filter(
+                        comment =>
+                            comment._id !== commentId
+                    )
+                };
+
+            })
+        );
+
+        successToast(
+            "Commentaire supprimé",
+            "Le commentaire a été supprimé avec succès."
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "❌ Erreur suppression commentaire :",
+            error
+        );
+
+        errorToast(
+            "Suppression impossible",
+            error.response?.data?.message ||
+            "Impossible de supprimer le commentaire."
+        );
+
+    }
+
+};
+
+// =====================================================
+// CONFIRMER LA SUPPRESSION
+// =====================================================
+const confirmDelete = async () => {
+
+    if (!deleteModal.open) {
+        return;
+    }
+
+    try {
+
+        setDeleting(true);
+
+        // =================================================
+        // SUPPRESSION COMMENTAIRE
+        // =================================================
+
+        if (
+            deleteModal.type === "comment"
+        ) {
+
+            await API.delete(
+
+                `/community/${deleteModal.postId}/comments/${deleteModal.commentId}`
+
+            );
+
+            setPosts(
+
+                previousPosts =>
+
+                    previousPosts.map(post => {
+
+                        if (
+                            post._id !==
+                            deleteModal.postId
+                        ) {
+
+                            return post;
+
+                        }
+
+                        return {
+
+                            ...post,
+
+                            comments:
+                                (post.comments || [])
+                                    .filter(
+                                        comment =>
+                                            comment._id !==
+                                            deleteModal.commentId
+                                    )
+
+                        };
+
+                    })
+
+            );
+
+            successToast(
+
+                "Commentaire supprimé",
+
+                "Le commentaire a été supprimé avec succès."
+
+            );
+
+        }
+
+        // =================================================
+        // SUPPRESSION PUBLICATION
+        // =================================================
+
+        else if (
+            deleteModal.type === "post"
+        ) {
+
+            await API.delete(
+
+                `/community/${deleteModal.postId}`
+
+            );
+
+            setPosts(
+
+                previousPosts =>
+
+                    previousPosts.filter(
+
+                        post =>
+                            post._id !==
+                            deleteModal.postId
+
+                    )
+
+            );
+
+            setStats(
+
+                previous => ({
+
+                    ...previous,
+
+                    posts:
+                        Math.max(
+                            0,
+                            previous.posts - 1
+                        )
+
+                })
+
+            );
+
+            successToast(
+
+                "Publication supprimée",
+
+                "La publication a été supprimée avec succès."
+
+            );
+
+        }
+
+        closeDeleteModal();
+
+    }
+
+    catch (error) {
+
+        console.error(
+
+            "❌ Erreur suppression :",
+
+            error
+
+        );
+
+        errorToast(
+
+            "Suppression impossible",
+
+            error.response?.data?.message ||
+            "Impossible de supprimer cet élément."
+
+        );
+
+    }
+
+    finally {
+
+        setDeleting(false);
+
+    }
+
+};
+
+// =====================================================
+// OUVRIR LE MENU DE PARTAGE
+// =====================================================
+const handleShare = (post) => {
+
+    setSharePost(post);
+
+    setShowShareMenu(true);
+
+};
+
+
+// =====================================================
+// EFFECTUER UN PARTAGE
+// =====================================================
+const handleSocialShare = async (platform) => {
+
+    if (!sharePost) {
+
+        return;
+
+    }
+
+    try {
+
+        // =================================================
+        // ENREGISTRER LE PARTAGE DANS MONGODB
+        // =================================================
+
+        const response =
+            await API.patch(
+                `/community/${sharePost._id}/share`
+            );
+
+        const sharesCount =
+            response.data.sharesCount;
+
+
+        // =================================================
+        // METTRE À JOUR LE COMPTEUR
+        // =================================================
+
+        setPosts(
+            previousPosts =>
+
+                previousPosts.map(
+
+                    post =>
+
+                        post._id === sharePost._id
+
+                            ? {
+                                ...post,
+                                shares: sharesCount
+                            }
+
+                            : post
+
+                )
+
+        );
+
+
+        // =================================================
+        // URL DE LA PUBLICATION
+        // =================================================
+
+        const shareUrl =
+            `${window.location.origin}/community?post=${sharePost._id}`;
+
+
+        const text =
+            sharePost.content || "";
+
+
+        // =================================================
+        // WHATSAPP
+        // =================================================
+
+        if (platform === "whatsapp") {
+
+            const url =
+                `https://wa.me/?text=${encodeURIComponent(
+                    `${text}\n\n${shareUrl}`
+                )}`;
+
+            window.open(
+                url,
+                "_blank"
+            );
+
+        }
+
+
+        // =================================================
+        // FACEBOOK
+        // =================================================
+
+        else if (platform === "facebook") {
+
+            const url =
+                `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+                    shareUrl
+                )}`;
+
+            window.open(
+                url,
+                "_blank"
+            );
+
+        }
+
+
+        // =================================================
+        // TELEGRAM
+        // =================================================
+
+        else if (platform === "telegram") {
+
+            const url =
+                `https://t.me/share/url?url=${encodeURIComponent(
+                    shareUrl
+                )}&text=${encodeURIComponent(
+                    text
+                )}`;
+
+            window.open(
+                url,
+                "_blank"
+            );
+
+        }
+
+
+        // =================================================
+        // X
+        // =================================================
+
+        else if (platform === "x") {
+
+            const url =
+                `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+                    text
+                )}&url=${encodeURIComponent(
+                    shareUrl
+                )}`;
+
+            window.open(
+                url,
+                "_blank"
+            );
+
+        }
+
+
+        // =================================================
+        // COPIER LE LIEN
+        // =================================================
+
+        else if (platform === "copy") {
+
+            await navigator.clipboard.writeText(
+
+                `${text}\n\n${shareUrl}`
+
+            );
+
+            successToast(
+                "Lien copié",
+                "Le lien de la publication a été copié avec succès."
+            );
+        }
+
+
+        // =================================================
+        // FERMER LE MENU
+        // =================================================
+
+        setShowShareMenu(false);
+
+        setSharePost(null);
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "❌ Erreur partage :",
+            error
+        );
+
+    }
+
+};
 
     // =====================================================
     // SUPPRIMER UNE PUBLICATION
     // =====================================================
+    const handleDeletePost = (post) => {
 
-    const handleDeletePost =
-        async (postId) => {
-
-            const confirmed =
-                window.confirm(
-
-                    "Voulez-vous vraiment supprimer cette publication ?"
-
-                );
-
-            if (!confirmed) {
-
-                return;
-
-            }
-
-            try {
-
-                await API.delete(
-
-                    `/community/${postId}`
-
-                );
-
-                setPosts(
-                    previousPosts =>
-
-                        previousPosts.filter(
-
-                            post =>
-                                post._id !==
-                                postId
-
-                        )
-
-                );
-
-                setStats(
-                    previous => ({
-
-                        ...previous,
-
-                        posts:
-                            Math.max(
-                                0,
-                                previous.posts - 1
-                            )
-
-                    })
-                );
-
-            }
-
-            catch (error) {
-
-                console.error(
-                    "❌ Erreur suppression publication :",
-                    error
-                );
-
-            }
-
-        };
+        openDeleteModal({
+    
+            type: "post",
+    
+            postId: post._id,
+    
+            content: post.content
+    
+        });
+    
+    };
 
 
     // =====================================================
@@ -1516,9 +1948,7 @@ function Community() {
                                             <button
 
                                                 onClick={() =>
-                                                    handleDeletePost(
-                                                        post._id
-                                                    )
+                                                    handleDeletePost(post)
                                                 }
 
                                                 className="
@@ -1578,7 +2008,6 @@ function Community() {
 
 
                                     {/* ACTIONS */}
-
                                     <div className="
                                         flex
                                         gap-8
@@ -1590,7 +2019,6 @@ function Community() {
 
 
                                         {/* LIKE */}
-
                                         <button
 
                                             onClick={() =>
@@ -1621,7 +2049,6 @@ function Community() {
 
 
                                         {/* COMMENTAIRE */}
-
                                         <button
 
                                             onClick={() => {
@@ -1654,43 +2081,28 @@ function Community() {
 
 
                                         {/* PARTAGER */}
-
                                         <button
-
-                                            className="
-                                                flex
-                                                items-center
-                                                gap-2
-                                                hover:text-green-600
+                                          className="
+                                            flex
+                                            items-center
+                                            gap-2
+                                            hover:text-green-600
+                                            transition
                                             "
 
-                                            onClick={() => {
-
-                                                if (
-                                                    navigator
-                                                        .share
-                                                ) {
-
-                                                    navigator.share({
-
-                                                        title:
-                                                            post.author?.name,
-
-                                                        text:
-                                                            post.content
-
-                                                    });
-
-                                                }
-
-                                            }}
-
+                                          onClick={() =>
+                                            handleShare(post)
+                                          }
                                         >
+                                          <FaShare />
 
-                                            <FaShare />
-
+                                          <span>
                                             Partager
+                                           </span>
 
+                                           <span>
+                                              {post.shares || 0}
+                                            </span>
                                         </button>
 
                                     </div>
@@ -1733,44 +2145,96 @@ function Community() {
                                                             "
                                                         >
 
-                                                            <div className="
-                                                                flex
-                                                                items-center
-                                                                gap-2
-                                                            ">
+<div className="
+    flex
+    items-center
+    justify-between
+    gap-2
+">
 
-                                                                <div className="
-                                                                    w-8
-                                                                    h-8
-                                                                    rounded-full
-                                                                    bg-blue-500
-                                                                    text-white
-                                                                    flex
-                                                                    items-center
-                                                                    justify-center
-                                                                    text-sm
-                                                                    font-bold
-                                                                ">
+    <div className="
+        flex
+        items-center
+        gap-2
+    ">
 
-                                                                    {comment.author?.name
-                                                                        ?.charAt(0)
-                                                                        ?.toUpperCase()
-                                                                        ||
-                                                                        "U"
-                                                                    }
+        <div className="
+            w-8
+            h-8
+            rounded-full
+            bg-blue-500
+            text-white
+            flex
+            items-center
+            justify-center
+            text-sm
+            font-bold
+        ">
 
-                                                                </div>
+            {comment.author?.name
+                ?.charAt(0)
+                ?.toUpperCase()
+                ||
+                "U"
+            }
+
+        </div>
+
+        <span className="font-semibold text-sm">
+
+            {comment.author?.name ||
+                "Utilisateur"
+            }
+
+        </span>
+
+    </div>
 
 
-                                                                <span className="font-semibold text-sm">
+    {/* SUPPRIMER LE COMMENTAIRE */}
 
-                                                                    {comment.author?.name ||
-                                                                        "Utilisateur"
-                                                                    }
+    {(
+        comment.author?._id?.toString()
+        ===
+        user?._id?.toString()
+        ||
+        post.author?._id?.toString()
+        ===
+        user?._id?.toString()
+        ||
+        user?.role === "admin"
+    ) && (
 
-                                                                </span>
+        <button
 
-                                                            </div>
+            onClick={() =>
+              openDeleteModal({
+        
+                type: "comment",
+                postId: post._id,
+                commentId: comment._id,
+                content: comment.content
+        
+              })
+           }
+
+            className="
+                text-gray-400
+                hover:text-red-500
+                transition
+            "
+
+            title="Supprimer le commentaire"
+
+        >
+
+            <FaTrash />
+
+        </button>
+
+    )}
+
+</div>
 
 
                                                             <p className="
@@ -2047,27 +2511,586 @@ function Community() {
                         </h2>
 
 
-                        <div className="space-y-3">
+<div className="space-y-3">
 
-                            <p>#React</p>
+    {stats.trends?.length > 0 ? (
 
-                            <p>#Cybersécurité</p>
+        stats.trends.map((trend, index) => (
 
-                            <p>#Python</p>
+            <button
+                key={index}
+                onClick={() =>
+                    setSelectedCategory(trend.name)
+                }
+                className="
+                    flex
+                    items-center
+                    justify-between
+                    w-full
+                    text-left
+                    hover:text-green-600
+                    transition
+                "
+            >
 
-                            <p>#IA</p>
+                <span>
+                    #{trend.name}
+                </span>
 
-                            <p>#Réseaux</p>
+                <span className="
+                    text-xs
+                    text-gray-400
+                    bg-slate-100
+                    px-2
+                    py-1
+                    rounded-full
+                ">
+                    {trend.count}
+                </span>
 
-                            <p>#SQL</p>
+            </button>
 
-                        </div>
+        ))
+
+    ) : (
+
+        <p className="text-gray-500 text-sm">
+            Aucune tendance pour le moment.
+        </p>
+
+    )}
+
+</div>
 
                     </div>
 
                 </div>
 
             </div>
+
+{/* =====================================================
+    MENU DE PARTAGE
+===================================================== */}
+{showShareMenu && sharePost && (
+
+<div
+    className="
+        fixed
+        inset-0
+        z-50
+        flex
+        items-center
+        justify-center
+        bg-black/40
+        backdrop-blur-sm
+        p-4
+    "
+    onClick={() => {
+
+        setShowShareMenu(false);
+        setSharePost(null);
+
+    }}
+>
+
+    <div
+        className="
+            w-full
+            max-w-md
+            bg-white
+            rounded-2xl
+            shadow-2xl
+            p-6
+        "
+        onClick={(e) =>
+            e.stopPropagation()
+        }
+    >
+
+        {/* =================================================
+            EN-TÊTE
+        ================================================= */}
+
+        <div className="
+            flex
+            items-center
+            justify-between
+            mb-5
+        ">
+
+            <h2 className="
+                text-xl
+                font-bold
+                text-gray-900
+            ">
+
+                Partager la publication
+
+            </h2>
+
+
+            <button
+                onClick={() => {
+
+                    setShowShareMenu(false);
+                    setSharePost(null);
+
+                }}
+                className="
+                    w-9
+                    h-9
+                    rounded-full
+                    bg-gray-100
+                    text-gray-500
+                    flex
+                    items-center
+                    justify-center
+                    hover:bg-gray-200
+                "
+            >
+
+                <FaTimes />
+
+            </button>
+
+        </div>
+
+
+        {/* =================================================
+            APERÇU
+        ================================================= */}
+
+        <div className="
+            bg-slate-50
+            rounded-xl
+            p-4
+            mb-5
+        ">
+
+            <p className="
+                text-sm
+                text-gray-700
+                line-clamp-3
+            ">
+
+                {sharePost.content}
+
+            </p>
+
+        </div>
+
+
+        {/* =================================================
+            OPTIONS
+        ================================================= */}
+
+        <div className="
+            grid
+            grid-cols-2
+            gap-3
+        ">
+
+
+            {/* WHATSAPP */}
+
+            <button
+                onClick={() =>
+                    handleSocialShare("whatsapp")
+                }
+                className="
+                    flex
+                    items-center
+                    gap-3
+                    p-4
+                    rounded-xl
+                    border
+                    hover:bg-green-50
+                    hover:border-green-300
+                    transition
+                "
+            >
+
+                <span className="text-2xl">
+                    🟢
+                </span>
+
+                <span className="font-medium">
+                    WhatsApp
+                </span>
+
+            </button>
+
+
+            {/* FACEBOOK */}
+
+            <button
+                onClick={() =>
+                    handleSocialShare("facebook")
+                }
+                className="
+                    flex
+                    items-center
+                    gap-3
+                    p-4
+                    rounded-xl
+                    border
+                    hover:bg-blue-50
+                    hover:border-blue-300
+                    transition
+                "
+            >
+
+                <span className="text-2xl">
+                    🔵
+                </span>
+
+                <span className="font-medium">
+                    Facebook
+                </span>
+
+            </button>
+
+
+            {/* TELEGRAM */}
+
+            <button
+                onClick={() =>
+                    handleSocialShare("telegram")
+                }
+                className="
+                    flex
+                    items-center
+                    gap-3
+                    p-4
+                    rounded-xl
+                    border
+                    hover:bg-sky-50
+                    hover:border-sky-300
+                    transition
+                "
+            >
+
+                <span className="text-2xl">
+                    ✈️
+                </span>
+
+                <span className="font-medium">
+                    Telegram
+                </span>
+
+            </button>
+
+
+            {/* X */}
+
+            <button
+                onClick={() =>
+                    handleSocialShare("x")
+                }
+                className="
+                    flex
+                    items-center
+                    gap-3
+                    p-4
+                    rounded-xl
+                    border
+                    hover:bg-gray-100
+                    transition
+                "
+            >
+
+                <span className="
+                    text-xl
+                    font-bold
+                ">
+                    𝕏
+                </span>
+
+                <span className="font-medium">
+                    X
+                </span>
+
+            </button>
+
+
+            {/* COPIER */}
+
+            <button
+                onClick={() =>
+                    handleSocialShare("copy")
+                }
+                className="
+                    col-span-2
+                    flex
+                    items-center
+                    justify-center
+                    gap-3
+                    p-4
+                    rounded-xl
+                    bg-green-600
+                    text-white
+                    hover:bg-green-700
+                    transition
+                "
+            >
+
+                🔗
+
+                <span className="font-medium">
+                    Copier le lien
+                </span>
+
+            </button>
+
+        </div>
+
+
+        {/* =================================================
+            ANNULER
+        ================================================= */}
+
+        <button
+            onClick={() => {
+
+                setShowShareMenu(false);
+                setSharePost(null);
+
+            }}
+            className="
+                w-full
+                mt-4
+                py-3
+                rounded-xl
+                bg-gray-100
+                text-gray-600
+                hover:bg-gray-200
+                transition
+            "
+        >
+
+            Annuler
+
+        </button>
+
+    </div>
+
+</div>
+)}
+
+{/* =====================================================
+    POPUP CONFIRMATION SUPPRESSION
+===================================================== */}
+{deleteModal.open && (
+
+<div
+    className="
+        fixed
+        inset-0
+        z-[100]
+        flex
+        items-center
+        justify-center
+        bg-black/50
+        backdrop-blur-sm
+        p-4
+    "
+    onClick={closeDeleteModal}
+>
+
+    <div
+        className="
+            w-full
+            max-w-md
+            bg-white
+            rounded-2xl
+            shadow-2xl
+            p-6
+            text-center
+        "
+        onClick={(e) =>
+            e.stopPropagation()
+        }
+    >
+
+        {/* =================================================
+            ICONE
+        ================================================= */}
+
+        <div className="
+            flex
+            justify-center
+            mb-4
+        ">
+
+            <div className="
+                w-16
+                h-16
+                rounded-full
+                bg-red-50
+                flex
+                items-center
+                justify-center
+            ">
+
+                <FaTrash
+                    className="
+                        text-3xl
+                        text-red-500
+                    "
+                />
+
+            </div>
+
+        </div>
+
+
+        {/* =================================================
+            TITRE
+        ================================================= */}
+
+        <h2 className="
+            text-xl
+            font-bold
+            text-gray-900
+            mb-3
+        ">
+
+            {deleteModal.title}
+
+        </h2>
+
+
+        {/* =================================================
+            MESSAGE
+        ================================================= */}
+
+        <p className="
+            text-gray-600
+            text-sm
+            leading-relaxed
+        ">
+
+            Voulez-vous vraiment supprimer
+            {deleteModal.type === "comment"
+                ? " ce commentaire ?"
+                : " cette publication ?"
+            }
+
+        </p>
+
+
+        {/* =================================================
+            CONTENU
+        ================================================= */}
+
+        {deleteModal.content && (
+
+            <div className="
+                mt-4
+                bg-slate-50
+                rounded-xl
+                p-3
+                text-sm
+                text-gray-600
+                text-left
+                max-h-24
+                overflow-hidden
+            ">
+
+                {deleteModal.content}
+
+            </div>
+
+        )}
+
+
+        {/* =================================================
+            AVERTISSEMENT
+        ================================================= */}
+
+        <p className="
+            text-red-500
+            text-sm
+            font-medium
+            mt-4
+        ">
+
+            Cette action est irréversible.
+
+        </p>
+
+
+        {/* =================================================
+            BOUTONS
+        ================================================= */}
+
+        <div className="
+            flex
+            justify-center
+            gap-3
+            mt-6
+        ">
+
+            <button
+
+                onClick={closeDeleteModal}
+
+                disabled={deleting}
+
+                className="
+                    px-5
+                    py-2.5
+                    rounded-xl
+                    border
+                    border-gray-300
+                    bg-white
+                    text-gray-700
+                    hover:bg-gray-50
+                    transition
+                    disabled:opacity-50
+                "
+
+            >
+
+                Annuler
+
+            </button>
+
+
+            <button
+
+                onClick={confirmDelete}
+
+                disabled={deleting}
+
+                className="
+                    px-5
+                    py-2.5
+                    rounded-xl
+                    bg-red-600
+                    text-white
+                    hover:bg-red-700
+                    transition
+                    disabled:opacity-50
+                    disabled:cursor-not-allowed
+                "
+
+            >
+
+                {deleting
+                    ? "Suppression..."
+                    : "Supprimer"
+                }
+
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+)}
 
         </div>
 

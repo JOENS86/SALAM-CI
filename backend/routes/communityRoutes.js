@@ -9,7 +9,8 @@ import {
     addComment,
     deleteComment,
     deleteCommunityPost,
-    getCommunityStats
+    getCommunityStats,
+    shareCommunityPost
 } from "../controllers/communityController.js";
 
 const router = express.Router();
@@ -52,13 +53,20 @@ router.get(
 // =====================================================
 // LIKE
 // =====================================================
-
-// Ajouter / retirer un like
-// PATCH /api/community/:id/like
 router.patch(
     "/:id/like",
     authMiddleware,
     toggleLike
+);
+
+
+// =====================================================
+// PARTAGE
+// =====================================================
+router.patch(
+    "/:id/share",
+    authMiddleware,
+    shareCommunityPost
 );
 
 
