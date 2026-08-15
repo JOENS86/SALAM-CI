@@ -1,23 +1,23 @@
 import {
-  FaArrowLeft,
-  FaUserTie,
-  FaCalendarAlt,
-  FaClock,
-  FaUsers,
-  FaVideo
-} from "react-icons/fa";
-
-import {
-  useEffect,
-  useState
-} from "react";
-
-import {
-  useNavigate,
-  useParams
-} from "react-router-dom";
-
-import axios from "axios";
+    FaArrowLeft,
+    FaUserTie,
+    FaCalendarAlt,
+    FaClock,
+    FaUsers,
+    FaVideo
+  } from "react-icons/fa";
+  
+  import {
+    useEffect,
+    useState
+  } from "react";
+  
+  import {
+    useNavigate,
+    useParams
+  } from "react-router-dom";
+  
+  import API from "../../services/api";
 
 
 function ConferenceDetails() {
@@ -54,19 +54,9 @@ function ConferenceDetails() {
                   localStorage.getItem("token");
 
 
-              const response = await axios.get(
-
-                  `http://localhost:5000/api/conferences/${id}`,
-
-                  {
-                      headers: token
-                          ? {
-                              Authorization: `Bearer ${token}`
-                          }
-                          : {}
-                  }
-
-              );
+                const response = await API.get(
+                    `/conferences/${id}`
+                );
 
 
               console.log(
@@ -390,22 +380,10 @@ const handleStartConference = async () => {
 
       setStartingConference(true);
 
-      const token =
-          localStorage.getItem("token");
-
-      const response = await axios.put(
-
-          `http://localhost:5000/api/conferences/${conference._id}/start`,
-
-          {},
-
-          {
-              headers: {
-                  Authorization: `Bearer ${token}`
-              }
-          }
-
-      );
+        const response = await API.put(
+            `/conferences/${conference._id}/start`,
+            {}
+        );
 
       console.log(
           "✅ Conférence démarrée :",
