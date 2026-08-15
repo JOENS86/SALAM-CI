@@ -50,7 +50,7 @@ function QuizSection({ chapterId }) {
 
             const res = await axios.get(
 
-                `http://localhost:5000/api/quizzes/chapter/${chapterId}`
+                `https://salam-ci-backend.onrender.com/api/quizzes/chapter/${chapterId}`
 
             );
 
@@ -77,7 +77,7 @@ function QuizSection({ chapterId }) {
         try {
     
             await axios.delete(
-                `http://localhost:5000/api/quizzes/${id}`
+                `https://salam-ci-backend.onrender.com/api/quizzes/${id}`
             );
     
             setShowDeleteModal(false);

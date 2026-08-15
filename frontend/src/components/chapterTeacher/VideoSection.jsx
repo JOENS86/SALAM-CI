@@ -66,7 +66,7 @@ const [videoToDelete, setVideoToDelete] = useState(null);
 
             const res = await axios.get(
 
-                `http://localhost:5000/api/videos/chapter/${chapterId}`
+                `https://salam-ci-backend.onrender.com/api/videos/chapter/${chapterId}`
 
             );
 
@@ -107,7 +107,7 @@ const [videoToDelete, setVideoToDelete] = useState(null);
         try {
     
             await axios.delete(
-                `http://localhost:5000/api/videos/${id}`
+                `https://salam-ci-backend.onrender.com/api/videos/${id}`
             );
     
             toast.success(
@@ -340,7 +340,7 @@ playingVideo && (
           controls
           autoPlay
           className="w-full rounded-2xl"
-          src={`http://localhost:5000/${playingVideo.video}`}
+          src={`https://salam-ci-backend.onrender.com/${playingVideo.video}`}
         />
 
     </div>

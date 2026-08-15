@@ -103,7 +103,7 @@ function AddVideoModal({
 
                 await axios.put(
             
-                    `http://localhost:5000/api/videos/${editingVideo._id}`,
+                    `https://salam-ci-backend.onrender.com/api/videos/${editingVideo._id}`,
 
                     formData,
             
@@ -121,7 +121,7 @@ function AddVideoModal({
             
                 await axios.post(
             
-                    "http://localhost:5000/api/videos",
+                    "https://salam-ci-backend.onrender.com/api/videos",
             
                     formData,
             

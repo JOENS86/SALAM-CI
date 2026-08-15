@@ -35,7 +35,7 @@ function DeleteExerciseModal({
 
             await axios.delete(
 
-                `http://localhost:5000/api/exercises/${exercise._id}`
+                `https://salam-ci-backend.onrender.com/api/exercises/${exercise._id}`
 
             );
 

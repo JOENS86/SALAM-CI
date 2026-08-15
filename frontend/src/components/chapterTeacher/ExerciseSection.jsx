@@ -48,7 +48,7 @@ function ExerciseSection({ chapterId }) {
 
             const res = await axios.get(
 
-                `http://localhost:5000/api/exercises/chapter/${chapterId}`
+                `https://salam-ci-backend.onrender.com/api/exercises/chapter/${chapterId}`
 
             );
 
@@ -86,7 +86,7 @@ function ExerciseSection({ chapterId }) {
 
         const link = document.createElement("a");
 
-        link.href=`http://localhost:5000/${exercise.attachment}`;
+        link.href=`https://salam-ci-backend.onrender.com/${exercise.attachment}`;
 
         link.download=exercise.title;
 

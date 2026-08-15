@@ -22,7 +22,7 @@ function DeleteChapterModal({
 
             await axios.delete(
 
-                `http://localhost:5000/api/chapters/${chapter._id}`
+                `https://salam-ci-backend.onrender.com/api/chapters/${chapter._id}`
 
             );
 

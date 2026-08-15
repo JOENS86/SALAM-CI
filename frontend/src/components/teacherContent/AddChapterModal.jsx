@@ -47,7 +47,7 @@ const handleCreateChapter = async () => {
         // Envoi au backend
         await axios.post(
 
-            "http://localhost:5000/api/chapters",
+            "https://salam-ci-backend.onrender.com/api/chapters",
 
             {
 

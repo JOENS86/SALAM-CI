@@ -58,7 +58,7 @@ app.use(express.json())
 // =========================
 // Permet d'accéder aux fichiers uploadés
 // Exemple :
-// http://localhost:5000/uploads/image.png
+// https://salam-ci-backend.onrender.com/uploads/image.png
 app.use(
   "/uploads",
   express.static("uploads")

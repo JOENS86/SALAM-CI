@@ -134,7 +134,7 @@ function AddExerciseModal({
 
                 await axios.put(
 
-                    `http://localhost:5000/api/exercises/${exercise._id}`,
+                    `https://salam-ci-backend.onrender.com/api/exercises/${exercise._id}`,
 
                     formData,
 
@@ -158,7 +158,7 @@ function AddExerciseModal({
 
                 await axios.post(
 
-                    "http://localhost:5000/api/exercises",
+                    "https://salam-ci-backend.onrender.com/api/exercises",
 
                     formData,
 

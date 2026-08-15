@@ -22,7 +22,7 @@ function CourseCard({ course }) {
     console.log("Thumbnail :", course.thumbnail);
     console.log(
         "URL finale :",
-        `http://localhost:5000/${course.thumbnail}`
+        `https://salam-ci-backend.onrender.com/${course.thumbnail}`
     );
 
     return (
@@ -54,7 +54,7 @@ function CourseCard({ course }) {
                 "
                 src={
                    course.thumbnail
-                   ? `http://localhost:5000/${course.thumbnail}`
+                   ? `https://salam-ci-backend.onrender.com/${course.thumbnail}`
                    : "/images/course-placeholder.jpg"
                 }
               />

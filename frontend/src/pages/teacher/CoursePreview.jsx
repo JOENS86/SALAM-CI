@@ -212,7 +212,7 @@ if (loading) {
                         <img
                           src={
                             course.thumbnail
-                            ? `http://localhost:5000/${course.thumbnail}`
+                            ? `https://salam-ci-backend.onrender.com/${course.thumbnail}`
                             : "/images/course-placeholder.jpg"
                             }
                             alt={course.title}

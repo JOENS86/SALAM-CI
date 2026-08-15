@@ -93,7 +93,7 @@ const handleSubmit = async () => {
 
             await axios.put(
 
-                `http://localhost:5000/api/pdfs/${pdf._id}`,
+                `https://salam-ci-backend.onrender.com/api/pdfs/${pdf._id}`,
 
                 formData,
 
@@ -121,7 +121,7 @@ const handleSubmit = async () => {
 
             await axios.post(
 
-                "http://localhost:5000/api/pdfs",
+                "https://salam-ci-backend.onrender.com/api/pdfs",
 
                 formData,
 

@@ -55,7 +55,7 @@ const fetchPdfs = async () => {
 
         const res = await axios.get(
 
-            `http://localhost:5000/api/pdfs/chapter/${chapterId}`
+            `https://salam-ci-backend.onrender.com/api/pdfs/chapter/${chapterId}`
 
         );
 
@@ -93,7 +93,7 @@ const deletePdf = async (id) => {
     try {
 
         await axios.delete(
-            `http://localhost:5000/api/pdfs/${id}`
+            `https://salam-ci-backend.onrender.com/api/pdfs/${id}`
         );
 
         toast.success("Document supprimé avec succès.");
@@ -130,7 +130,7 @@ const downloadPdf = (pdf) => {
 
     const link = document.createElement("a");
 
-    link.href = `http://localhost:5000/${pdf.file}`;
+    link.href = `https://salam-ci-backend.onrender.com/${pdf.file}`;
 
     link.download = pdf.title + ".pdf";
 

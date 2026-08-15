@@ -193,7 +193,7 @@ const updatePoints = (index, value) => {
 
                 await axios.put(
 
-                    `http://localhost:5000/api/quizzes/${quiz._id}`,
+                    `https://salam-ci-backend.onrender.com/api/quizzes/${quiz._id}`,
 
                     data
 
@@ -207,7 +207,7 @@ const updatePoints = (index, value) => {
 
                 await axios.post(
 
-                    "http://localhost:5000/api/quizzes",
+                    "https://salam-ci-backend.onrender.com/api/quizzes",
 
                     data
 

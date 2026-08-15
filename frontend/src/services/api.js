@@ -1,9 +1,7 @@
 import axios from "axios";
 
 import {
-
     errorToast
-
 } from "../utils/toast";
 
 // =====================================================
@@ -13,16 +11,24 @@ import {
 let roleChangedHandled = false;
 
 // =====================================================
+// URL DU BACKEND SALAM CI
+// =====================================================
+
+// Priorité au fichier .env
+// Si VITE_API_URL n'est pas disponible,
+// on utilise directement le backend Render.
+
+const API_URL =
+    import.meta.env.VITE_API_URL ||
+    "https://salam-ci-backend.onrender.com/api";
+
+// =====================================================
 // INSTANCE AXIOS
 // =====================================================
 
 const API = axios.create({
 
-    baseURL:
-
-        import.meta.env.VITE_API_URL ||
-
-        "http://localhost:5000/api",
+    baseURL: API_URL.replace(/\/+$/, ""),
 
     timeout: 10000,
 
@@ -39,15 +45,14 @@ API.interceptors.request.use(
     (config) => {
 
         const token = localStorage.getItem(
-
             "token"
-
         );
 
         if (token) {
 
-            config.headers.Authorization =
+            config.headers = config.headers || {};
 
+            config.headers.Authorization =
                 `Bearer ${token}`;
 
         }
@@ -97,7 +102,6 @@ API.interceptors.response.use(
             error.response.status === 401 &&
 
             error.response.data?.code ===
-
                 "ROLE_CHANGED" &&
 
             !roleChangedHandled
@@ -115,29 +119,21 @@ API.interceptors.response.use(
             );
 
             localStorage.removeItem(
-
                 "token"
-
             );
 
             localStorage.removeItem(
-
                 "user"
-
             );
 
             localStorage.removeItem(
-
                 "registeredEmail"
-
             );
 
             setTimeout(() => {
 
                 window.location.replace(
-
                     "/login"
-
                 );
 
             }, 2500);
