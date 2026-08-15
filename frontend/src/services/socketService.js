@@ -1,5 +1,30 @@
 import { io } from "socket.io-client";
 
+// =====================================================
+// URL DU BACKEND SALAM CI
+// =====================================================
+
+const API_URL =
+    import.meta.env.VITE_API_URL ||
+    "https://salam-ci-backend.onrender.com/api";
+
+// =====================================================
+// URL DU SERVEUR SOCKET.IO
+// =====================================================
+
+// VITE_API_URL contient normalement :
+// https://salam-ci-backend.onrender.com/api
+//
+// Socket.IO doit utiliser :
+// https://salam-ci-backend.onrender.com
+
+const SOCKET_URL = API_URL
+    .replace(/\/api\/?$/, "")
+    .replace(/\/+$/, "");
+
+// =====================================================
+// SERVICE SOCKET.IO
+// =====================================================
 
 class SocketService {
 
@@ -8,7 +33,6 @@ class SocketService {
         this.socket = null;
 
     }
-
 
     // =====================================================
     // CONNEXION
@@ -23,29 +47,10 @@ class SocketService {
 
         }
 
-
-        // =====================================================
-        // URL DE L'API
-        // =====================================================
-
-        const apiUrl =
-            import.meta.env.VITE_API_URL
-            || "https://salam-ci-backend.onrender.com/api";
-
-
-        // =====================================================
-        // URL DU SERVEUR SOCKET.IO
-        // =====================================================
-
-        const socketUrl =
-            apiUrl.replace("/api", "");
-
-
         console.log(
             "🔌 Connexion Socket.IO :",
-            socketUrl
+            SOCKET_URL
         );
-
 
         // =====================================================
         // CREER LA CONNEXION
@@ -53,22 +58,15 @@ class SocketService {
 
         this.socket = io(
 
-            socketUrl,
+            SOCKET_URL,
 
             {
+                autoConnect: true,
 
-                transports: [
-
-                    "websocket"
-
-                ],
-
-                autoConnect: true
-
+                transports: ["websocket"]
             }
 
         );
-
 
         // =====================================================
         // CONNEXION REUSSIE
@@ -89,7 +87,6 @@ class SocketService {
 
         );
 
-
         // =====================================================
         // ERREUR DE CONNEXION
         // =====================================================
@@ -108,7 +105,6 @@ class SocketService {
             }
 
         );
-
 
         // =====================================================
         // DECONNEXION
@@ -129,11 +125,9 @@ class SocketService {
 
         );
 
-
         return this.socket;
 
     }
-
 
     // =====================================================
     // DECONNEXION
@@ -151,7 +145,6 @@ class SocketService {
 
     }
 
-
     // =====================================================
     // SOCKET
     // =====================================================
@@ -161,7 +154,6 @@ class SocketService {
         return this.socket;
 
     }
-
 
     // =====================================================
     // EMIT
@@ -189,7 +181,6 @@ class SocketService {
 
     }
 
-
     // =====================================================
     // LISTENER
     // =====================================================
@@ -215,7 +206,6 @@ class SocketService {
         }
 
     }
-
 
     // =====================================================
     // SUPPRIMER LISTENER
@@ -245,5 +235,8 @@ class SocketService {
 
 }
 
+// =====================================================
+// INSTANCE UNIQUE
+// =====================================================
 
 export default new SocketService();
