@@ -1177,6 +1177,7 @@ async startConference(user, conferenceId) {
     // =====================================================
     // VERIFIER LE STATUT
     // =====================================================
+
     if (conference.status === "live") {
 
         throw new Error(
@@ -1201,7 +1202,10 @@ async startConference(user, conferenceId) {
 
     }
 
-    // Mise à jour
+    // =====================================================
+    // DEMARRER LA CONFERENCE
+    // =====================================================
+
     conference.startedBy = user._id;
 
     conference.status = "live";
@@ -1210,151 +1214,218 @@ async startConference(user, conferenceId) {
 
     await conference.save();
 
-    // =====================================================
-    // TEMPS REEL : CONFERENCE DEMARREE
-    // =====================================================
-    const io = getIO();
-      if (io) {
-          
-        io.emit(
-          "conference:started",
-           {
-            conference
-           }
-        );
-      }
-
-// =====================================================
-// NOTIFIER LES ETUDIANTS
-// =====================================================
-
-let students = [];
-
-// =====================================================
-// CONFERENCE CREEE PAR L'ADMIN
-// =====================================================
-
-if (conference.createdBy && !conference.course) {
-
-    students = await User.find({
-
-        role: "student"
-
-    });
-
-}
-
-// =====================================================
-// CONFERENCE LIEE A UN COURS
-// =====================================================
-
-else if (conference.course) {
-
-    const enrollments = await Enrollment.find({
-
-        course: conference.course
-
-    }).populate(
-
-        "student",
-
-        "name email"
-
+    console.log(
+        "==============================================="
     );
 
-    students = enrollments
+    console.log(
+        "🟢 CONFERENCE DEMARREE"
+    );
 
-        .map(enrollment => enrollment.student)
+    console.log(
+        "Conference :",
+        conference._id.toString()
+    );
 
-        .filter(Boolean);
+    console.log(
+        "Demarree par :",
+        user.name
+    );
 
-}
+    console.log(
+        "Statut :",
+        conference.status
+    );
 
-// =====================================================
-// ENVOYER NOTIFICATIONS + EMAILS
-// =====================================================
+    console.log(
+        "StartedAt :",
+        conference.startedAt
+    );
 
-for (const student of students) {
+    console.log(
+        "==============================================="
+    );
 
-    // ==========================
-    // Notification
-    // ==========================
+    // =====================================================
+    // IMPORTANT :
+    // A PARTIR D'ICI, LA CONFERENCE EST DEJA DEMARREE.
+    // Les opérations suivantes ne doivent JAMAIS
+    // faire échouer le lancement.
+    // =====================================================
 
-    try {
-
-        await notificationService.create({
-
-            recipient: student._id,
-
-            sender: user._id,
-
-            title: "Conférence en direct",
-
-            message:
-                `${conference.title} vient de commencer.`,
-
-            type: "conference_started",
-
-            entityType: "conference",
-
-            entityId: conference._id
-
-        });
-
-    }
-
-    catch (error) {
-
-        console.error(
-
-            "Erreur notification étudiant :",
-
-            error.message
-
-        );
-
-    }
-
-    // ==========================
-    // Email
-    // ==========================
+    // =====================================================
+    // SOCKET.IO
+    // =====================================================
 
     try {
 
-        await emailService.sendConferenceStarted(
+        const io = getIO();
 
-            student,
+        if (io) {
 
-            conference
+            io.emit(
+                "conference:started",
+                {
+                    conference
+                }
+            );
 
-        );
+        }
 
     }
-
     catch (error) {
 
         console.error(
-
-            "Erreur email conférence :",
-
+            "⚠️ Erreur Socket.IO :",
             error.message
-
         );
 
     }
 
-}
-    
+    // =====================================================
+    // RECUPERER LES ETUDIANTS
+    // =====================================================
+
+    let students = [];
+
+    try {
+
+        // -----------------------------------------
+        // CONFERENCE CREEE PAR L'ADMIN
+        // -----------------------------------------
+        if (
+            conference.createdBy
+            &&
+            !conference.course
+        ) {
+
+            students = await User.find({
+
+                role: "student"
+
+            });
+
+        }
+
+        // -----------------------------------------
+        // CONFERENCE LIEE A UN COURS
+        // -----------------------------------------
+        else if (conference.course) {
+
+            const enrollments =
+                await Enrollment.find({
+
+                    course: conference.course
+
+                }).populate(
+
+                    "student",
+                    "name email"
+
+                );
+
+            students = enrollments
+
+                .map(
+                    enrollment =>
+                        enrollment.student
+                )
+
+                .filter(Boolean);
+
+        }
+
+    }
+    catch (error) {
+
+        console.error(
+            "⚠️ Erreur récupération étudiants :",
+            error.message
+        );
+
+    }
+
+    // =====================================================
+    // NOTIFICATIONS + EMAILS
+    // =====================================================
+
+    for (const student of students) {
+
+        // -----------------------------------------
+        // NOTIFICATION
+        // -----------------------------------------
+
+        try {
+
+            await notificationService.create({
+
+                recipient: student._id,
+
+                sender: user._id,
+
+                title: "Conférence en direct",
+
+                message:
+                    `${conference.title} vient de commencer.`,
+
+                type: "conference_started",
+
+                entityType: "conference",
+
+                entityId: conference._id
+
+            });
+
+        }
+        catch (error) {
+
+            console.error(
+                "⚠️ Erreur notification étudiant :",
+                error.message
+            );
+
+        }
+
+        // -----------------------------------------
+        // EMAIL
+        // -----------------------------------------
+
+        try {
+
+            await emailService.sendConferenceStarted(
+
+                student,
+
+                conference
+
+            );
+
+        }
+        catch (error) {
+
+            console.error(
+                "⚠️ Erreur email étudiant :",
+                error.message
+            );
+
+        }
+
+    }
+
+    // =====================================================
+    // REPONSE
+    // =====================================================
+
     return {
 
         success: true,
 
-        message: "La conférence a démarré.",
+        message:
+            "La conférence a démarré.",
 
         conference
 
     };
-   
 
 }
 
