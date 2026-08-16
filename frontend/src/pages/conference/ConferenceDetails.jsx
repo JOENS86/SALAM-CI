@@ -376,51 +376,163 @@ console.log("==============================");
 // =====================================================
 const handleStartConference = async () => {
 
-  try {
+    if (startingConference) return;
 
-      setStartingConference(true);
+    try {
+
+        setStartingConference(true);
+
+        console.log(
+            "🚀 Tentative de démarrage de la conférence :",
+            conference._id
+        );
 
         const response = await API.put(
             `/conferences/${conference._id}/start`,
             {}
         );
 
-      console.log(
-          "✅ Conférence démarrée :",
-          response.data
-      );
+        console.log(
+            "✅ Réponse démarrage :",
+            response.data
+        );
 
-      // Mettre immédiatement l'état à jour
-      setConference(
-          response.data.conference
-      );
+        // ==========================================
+        // VERIFIER LA REPONSE DU SERVEUR
+        // ==========================================
 
-      // Aller dans la salle
-      navigate(
-          `/conference-live/${conference._id}`
-      );
+        if (
+            response.data?.success &&
+            response.data?.conference
+        ) {
 
-  }
+            setConference(
+                response.data.conference
+            );
 
-  catch (error) {
+            console.log(
+                "✅ Conférence maintenant :",
+                response.data.conference.status
+            );
 
-      console.error(
-          "❌ Erreur lancement conférence :",
-          error.response?.data || error
-      );
+            // Si le serveur confirme LIVE
+            if (
+                response.data.conference.status === "live"
+            ) {
 
-      alert(
-          error.response?.data?.message ||
-          "Impossible de lancer la conférence."
-      );
+                navigate(
+                    `/conference-live/${conference._id}`
+                );
 
-  }
+                return;
 
-  finally {
+            }
 
-      setStartingConference(false);
+        }
 
-  }
+        // ==========================================
+        // REPONSE INATTENDUE
+        // ==========================================
+
+        console.error(
+            "❌ Réponse inattendue du serveur :",
+            response.data
+        );
+
+        alert(
+            response.data?.message ||
+            "Impossible de démarrer la conférence."
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "❌ Erreur lors du démarrage :",
+            error
+        );
+
+        console.error(
+            "Réponse serveur :",
+            error.response?.data
+        );
+
+        // ==========================================
+        // IMPORTANT :
+        // LE SERVEUR PEUT AVOIR DEMARRE LA CONFERENCE
+        // MALGRE UN TIMEOUT / PROBLEME RESEAU
+        // ==========================================
+
+        try {
+
+            console.log(
+                "🔎 Vérification de l'état réel de la conférence..."
+            );
+
+            const checkResponse = await API.get(
+                `/conferences/${conference._id}`
+            );
+
+            const currentConference =
+                checkResponse.data?.conference;
+
+            console.log(
+                "🔎 Etat réel :",
+                currentConference?.status
+            );
+
+            // ==========================================
+            // LE SERVEUR A BIEN DEMARRE LA CONFERENCE
+            // ==========================================
+
+            if (
+                currentConference?.status === "live"
+            ) {
+
+                console.log(
+                    "✅ La conférence est bien en direct malgré l'erreur initiale."
+                );
+
+                setConference(
+                    currentConference
+                );
+
+                navigate(
+                    `/conference-live/${conference._id}`
+                );
+
+                return;
+
+            }
+
+        }
+
+        catch (checkError) {
+
+            console.error(
+                "❌ Impossible de vérifier l'état de la conférence :",
+                checkError
+            );
+
+        }
+
+        // ==========================================
+        // SI ELLE N'EST PAS LIVE
+        // ==========================================
+
+        alert(
+            error.response?.data?.message ||
+            "Impossible de contacter le serveur."
+        );
+
+    }
+
+    finally {
+
+        setStartingConference(false);
+
+    }
 
 };
 
