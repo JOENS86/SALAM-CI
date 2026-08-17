@@ -43,9 +43,9 @@ const participantSocket = (io, socket) => {
 
                     role: user.role,
 
-                    microphone: true,
+                    microphone: false,
 
-                    camera: true,
+                    camera: false,
 
                     screenSharing: false,
 
@@ -88,7 +88,7 @@ socket.on(
 
         if (!participant) return;
 
-        participant.microphone = enabled;
+        participant.microphone = Boolean(enabled);
 
         io.to(roomId).emit(
 
@@ -98,14 +98,24 @@ socket.on(
 
         );
 
+        io.to(roomId).emit(
+
+            "participant:mediaState",
+
+            {
+                socketId: participant.socketId,
+                microphone: participant.microphone,
+                camera: participant.camera
+            }
+
+        );
+
     }
 
 );
-
 // =====================================================
 // CAMERA
 // =====================================================
-
 socket.on(
 
     "participant:camera",
@@ -122,13 +132,25 @@ socket.on(
 
         if (!participant) return;
 
-        participant.camera = enabled;
+        participant.camera = Boolean(enabled);
 
         io.to(roomId).emit(
 
             "participant:list",
 
             rooms[roomId]
+
+        );
+
+        io.to(roomId).emit(
+
+            "participant:mediaState",
+
+            {
+                socketId: participant.socketId,
+                microphone: participant.microphone,
+                camera: participant.camera
+            }
 
         );
 

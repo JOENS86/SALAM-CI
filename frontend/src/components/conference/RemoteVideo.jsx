@@ -1,18 +1,41 @@
 import { useEffect, useRef } from "react";
 
-function RemoteVideo({ stream, name }) {
+function RemoteVideo({
+    stream,
+    name,
+    muted = false,
+    cameraEnabled = true
+}) {
 
     const videoRef = useRef(null);
 
     useEffect(() => {
 
-        if (!videoRef.current || !stream) return;
+        if (!videoRef.current) return;
+
+        if (!stream) {
+
+            videoRef.current.srcObject = null;
+
+            return;
+
+        }
 
         videoRef.current.srcObject = stream;
 
         videoRef.current
             .play()
-            .catch(console.error);
+            .catch(() => {});
+
+        return () => {
+
+            if (videoRef.current) {
+
+                videoRef.current.srcObject = null;
+
+            }
+
+        };
 
     }, [stream]);
 
@@ -25,24 +48,71 @@ function RemoteVideo({ stream, name }) {
                 h-44
                 rounded-2xl
                 overflow-hidden
-                bg-black
-                border-4
-                border-white
+                bg-[#111827]
+                border
+                border-white/20
                 shadow-2xl
             "
         >
 
-            <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted={false}
-                className="
-                    w-full
-                    h-full
-                    object-cover
-                "
-            />
+            {cameraEnabled && stream ? (
+
+                <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted={muted}
+                    className="
+                        w-full
+                        h-full
+                        object-cover
+                    "
+                />
+
+            ) : (
+
+                <div
+                    className="
+                        w-full
+                        h-full
+                        flex
+                        flex-col
+                        items-center
+                        justify-center
+                        bg-[#111827]
+                        text-white
+                    "
+                >
+
+                    <div
+                        className="
+                            w-16
+                            h-16
+                            rounded-full
+                            bg-blue-600
+                            flex
+                            items-center
+                            justify-center
+                            text-2xl
+                            font-bold
+                        "
+                    >
+                        {(name || "P").charAt(0).toUpperCase()}
+                    </div>
+
+                    <span
+                        className="
+                            mt-3
+                            text-sm
+                            font-medium
+                        "
+                    >
+                        {name || "Participant"}
+                    </span>
+
+                </div>
+
+            )}
 
             <div
                 className="

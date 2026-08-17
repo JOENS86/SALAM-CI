@@ -10,7 +10,9 @@ import {
   FaPhoneSlash,
   FaPaperPlane,
   FaUsers,
-  FaDesktop
+  FaDesktop,
+  FaComments,
+  FaTimes
 } from "react-icons/fa";
 
 import {useNavigate, useParams} from "react-router-dom";
@@ -62,6 +64,12 @@ const [participantMediaStates, setParticipantMediaStates] = useState({});
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [endingConference, setEndingConference] = useState(false);
 
+  // =====================================================
+  // PANNEAU DISCUSSION / PARTICIPANTS
+  // Caché par défaut et affiché avec une animation latérale
+  // =====================================================
+  const [showSidebar, setShowSidebar] = useState(false);
+
 // =====================================================
 // FLUX PRINCIPAL
 // =====================================================
@@ -72,7 +80,7 @@ const [mainStream, setMainStream] = useState(null);
 // =====================================================
 const [thumbnailStreams, setThumbnailStreams] = useState([]);
 
-  
+
 // =====================================================
 // ROLE UTILISATEUR
 // =====================================================
@@ -98,12 +106,12 @@ const isHost =
 
 // =====================================================
 // PARTAGE D'ECRAN
-// =====================================================  
+// =====================================================
 const [sharingScreen, setSharingScreen] = useState(false);
 
 // =====================================================
 // MICRO CAMERA GLOBAL
-// ===================================================== 
+// =====================================================
 const [allStudentsMicOn, setAllStudentsMicOn] = useState(false);
 const [allStudentsCamOn, setAllStudentsCamOn] = useState(false);
 
@@ -161,37 +169,37 @@ useEffect(() => {
 
     const stream =
     await webrtcService.startLocalStream();
-    
+
     if (!mounted) return;
-    
+
     // =====================================================
     // ETAT INITIAL DES MEDIAS
     // =====================================================
-    
+
     if (isHost) {
-    
+
         // Le professeur démarre avec
         // micro + caméra activés
-    
+
         webrtcService.setMicrophoneEnabled(true);
         webrtcService.setCameraEnabled(true);
-    
+
         setMicOn(true);
         setCamOn(true);
-    
+
     } else {
-    
+
         // L'étudiant démarre avec
         // micro + caméra désactivés
-    
+
         webrtcService.setMicrophoneEnabled(false);
         webrtcService.setCameraEnabled(false);
-    
+
         setMicOn(false);
         setCamOn(false);
-    
+
     }
-    
+
     setMainStream(stream);
 
       }
@@ -206,54 +214,74 @@ useEffect(() => {
 
   initConference();
 
-    // ==========================================
-    // CALLBACK REMOTE STREAM
-    // ==========================================
-    webrtcService.setRemoteStreamCallback((socketId, stream) => {
+// ==========================================
+// CALLBACK REMOTE STREAM
+// ==========================================
+webrtcService.setRemoteStreamCallback((socketId, stream) => {
 
-      if (!isHost) {
+  console.log(
+    "📹 Flux distant reçu :",
+    socketId
+  );
 
-        setMainStream(stream);
+  // =====================================================
+  // LA VIDEO DE L'AUTRE PARTICIPANT
+  // DEVIENT LA VIDEO PRINCIPALE
+  // =====================================================
 
-        return;
+  setMainStream(stream);
 
-      }
-  
-      setThumbnailStreams(prev => {
-  
-          const exists = prev.some(
-  
-              item => item.socketId === socketId
-  
-          );
-  
-          if (exists) return prev;
-  
-          return [
-  
-              ...prev,
-  
-              {
-  
-                  socketId,
-  
-                  stream,
-  
-                  participant: {
-  
-                      socketId,
-  
-                      name: "Participant"
-  
-                  }
-  
-              }
-  
-          ];
-  
+  // =====================================================
+  // MA CAMERA RESTE EN MINIATURE
+  // =====================================================
+
+  const localStream = webrtcService.getStream();
+
+  if (!localStream) return;
+
+  setThumbnailStreams(prev => {
+
+    const localSocketId = socket.id;
+
+    const exists = prev.some(
+      item => item.socketId === localSocketId
+    );
+
+    if (exists) {
+
+      return prev.map(item => {
+
+        if (item.socketId !== localSocketId) {
+          return item;
+        }
+
+        return {
+          ...item,
+          stream: localStream
+        };
+
       });
-  
-    });
+
+    }
+
+    return [
+      ...prev,
+      {
+        socketId: localSocketId,
+        stream: localStream,
+        participant: {
+          socketId: localSocketId,
+          name:
+            `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+            "Vous"
+        },
+        isLocal: true
+      }
+    ];
+
+  });
+
+});
 
 
   // ====================================
@@ -342,6 +370,38 @@ useEffect(() => {
       }
 
   );
+
+  // =====================================================
+// ETAT MICRO / CAMERA DES PARTICIPANTS
+// =====================================================
+socket.on(
+  "participant:mediaState",
+  ({
+    socketId,
+    microphone,
+    camera
+  }) => {
+
+    if (!socketId) return;
+
+    setParticipantMediaStates(prev => ({
+
+      ...prev,
+
+      [socketId]: {
+
+        ...prev[socketId],
+
+        microphone: Boolean(microphone),
+
+        camera: Boolean(camera)
+
+      }
+
+    }));
+
+  }
+);
 
   // ==========================================
   // HISTORIQUE CHAT
@@ -460,17 +520,17 @@ useEffect(() => {
               participant.socketId
 
           );
-        
+
         setThumbnailStreams(prev =>
-        
+
             prev.filter(
-        
+
                 item =>
-        
+
                     item.socketId !== participant.socketId
-        
+
             )
-        
+
         );
 
       }
@@ -576,7 +636,8 @@ useEffect(() => {
 
   );
 
-  // ==========================================
+
+// ==========================================
 // CONTROLE MICRO PAR L'ENSEIGNANT
 // ==========================================
 socket.on(
@@ -591,7 +652,22 @@ socket.on(
       const result =
           webrtcService.setMicrophoneEnabled(enabled);
 
-      setMicOn(result);
+      const finalState = Boolean(result);
+
+      setMicOn(finalState);
+
+      // Informer le serveur de l'état réellement appliqué
+      if (conference) {
+
+          socket.emit(
+              "participant:microphone",
+              {
+                  roomId: conference._id,
+                  enabled: finalState
+              }
+          );
+
+      }
 
   }
 );
@@ -611,15 +687,30 @@ socket.on(
       const result =
           webrtcService.setCameraEnabled(enabled);
 
-      setCamOn(result);
+      const finalState = Boolean(result);
+
+      setCamOn(finalState);
+
+      // Informer le serveur de l'état réellement appliqué
+      if (conference) {
+
+          socket.emit(
+              "participant:camera",
+              {
+                  roomId: conference._id,
+                  enabled: finalState
+              }
+          );
+
+      }
 
   }
 );
 
+
 // =====================================================
 // CONTROLE GLOBAL MICRO PAR L'ENSEIGNANT
 // =====================================================
-
 socket.on(
   "teacher:microphone:all",
   ({ enabled }) => {
@@ -702,18 +793,18 @@ socket.on(
 
     // Seul l'hôte reçoit visuellement la notification
     if (!isHost) return;
-  
+
     setHandNotification({
       name,
       raised
     });
-  
+
     setTimeout(() => {
-  
+
       setHandNotification(null);
-  
+
     }, 4000);
-  
+
   });
 
 
@@ -790,7 +881,7 @@ socket.on(
 
   }
 );
-  
+
   // ==========================================
   // CLEANUP
   // ==========================================
@@ -810,6 +901,7 @@ socket.on(
     socket.off("webrtc:iceCandidate");
     socket.off("participant:microphone");
     socket.off("participant:camera");
+    socket.off("participant:mediaState");
     socket.off("teacher:microphone:all");
     socket.off("teacher:camera:all");
     socket.off("hand:list");
@@ -870,7 +962,19 @@ const toggleMicrophone = () => {
   const enabled =
     webrtcService.toggleMicrophone();
 
-  setMicOn(enabled);
+  setMicOn(Boolean(enabled));
+
+  if (conference) {
+
+    socket.emit(
+      "participant:microphone",
+      {
+        roomId: conference._id,
+        enabled: Boolean(enabled)
+      }
+    );
+
+  }
 
 };
 
@@ -885,7 +989,19 @@ const toggleCamera = () => {
   const enabled =
     webrtcService.toggleCamera();
 
-  setCamOn(enabled);
+  setCamOn(Boolean(enabled));
+
+  if (conference) {
+
+    socket.emit(
+      "participant:camera",
+      {
+        roomId: conference._id,
+        enabled: Boolean(enabled)
+      }
+    );
+
+  }
 
 };
 
@@ -1293,28 +1409,28 @@ const leaveConference = () => {
 
     return (
       <div className="h-screen flex items-center justify-center">
-  
+
         <h2 className="text-2xl font-bold">
           Chargement de la conférence...
         </h2>
-  
+
       </div>
     );
-  
+
   }
-  
+
   if (!conference) {
-  
+
     return (
       <div className="h-screen flex items-center justify-center">
-        
+
         <h2 className="text-2xl text-red-500 font-bold">
-          Conférence introuvable. 
+          Conférence introuvable.
         </h2>
-  
+
       </div>
     );
-  
+
   }
 
 // =====================================================
@@ -1618,7 +1734,7 @@ if (conferenceEnded) {
 
 )}
 
-           {handNotification && isHost && (      
+           {handNotification && isHost && (
               <div
                   className="
                       fixed
@@ -1637,9 +1753,9 @@ if (conferenceEnded) {
                   {handNotification.raised
                       ? `✋ ${handNotification.name} a levé la main`
                       : `🙋 ${handNotification.name} a baissé la main`}
-              </div> 
+              </div>
             )}
-      
+
         <div className="h-screen bg-[#071326] flex flex-col">
 
 {/* =====================================================
@@ -1738,7 +1854,7 @@ if (conferenceEnded) {
 
       {/* CONTENU */}
 
-      <div className="flex flex-1">
+      <div className="relative flex flex-1 min-h-0 overflow-hidden">
 
         {/* VIDEO */}
         <div className="flex-1 flex flex-col">
@@ -1770,7 +1886,6 @@ if (conferenceEnded) {
 // =====================================================
 // CONFERENCE TERMINEE
 // =====================================================
-
 <>
 
   <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-700/80 z-30">
@@ -1823,7 +1938,6 @@ if (conferenceEnded) {
 // =====================================================
 // CONFERENCE EN DIRECT
 // =====================================================
-
 <>
 
   <MainVideo
@@ -1842,18 +1956,26 @@ if (conferenceEnded) {
     "
   >
 
-    {
-      isHost &&
-      thumbnailStreams.map((item) => (
-
-        <RemoteVideo
-          key={item.socketId}
-          stream={item.stream}
-          name={item.participant?.name}
-        />
-
-      ))
+    {thumbnailStreams.map((item) => (
+<RemoteVideo
+    key={item.socketId}
+    stream={item.stream}
+    name={
+        item.isLocal
+            ? "Vous"
+            : item.participant?.name
     }
+    muted={item.isLocal}
+    cameraEnabled={
+        item.isLocal
+            ? camOn
+            : (
+                participantMediaStates[item.socketId]?.camera
+                ?? false
+            )
+    }
+/>
+    ))}
 
   </div>
 
@@ -1893,7 +2015,7 @@ if (conferenceEnded) {
 
 </>
 
-)}
+   )}
          </div>
 
           </div>
@@ -1980,6 +2102,38 @@ if (conferenceEnded) {
              `}
             >
                <FaDesktop />
+            </button>
+
+            {/* DISCUSSION */}
+            <button
+              onClick={() => setShowSidebar(prev => !prev)}
+              title={
+                showSidebar
+                  ? "Fermer la discussion"
+                  : "Ouvrir la discussion"
+              }
+              aria-label={
+                showSidebar
+                  ? "Fermer la discussion"
+                  : "Ouvrir la discussion"
+              }
+              className={`
+                w-14
+                h-14
+                rounded-full
+                flex
+                items-center
+                justify-center
+                hover:scale-110
+                transition
+                ${
+                  showSidebar
+                    ? "bg-[#7c3aed] text-white"
+                    : "bg-white text-gray-800"
+                }
+              `}
+            >
+              <FaComments />
             </button>
 
             {!isHost && (
@@ -2153,33 +2307,89 @@ if (conferenceEnded) {
 
         </div>
 
-        {/* SIDEBAR */}
+        {/* =====================================================
+            PANNEAU DISCUSSION / PARTICIPANTS
+            Caché par défaut et coulissant depuis la droite.
+            Il ne réduit pas la zone vidéo lorsqu'il est fermé.
+        ===================================================== */}
 
-        <div
-          className="
-          w-[350px]
-          bg-white
-          border-l
-          flex
-          flex-col
-          "
+        {/* Fond cliquable sur petit écran */}
+        {showSidebar && (
+          <button
+            type="button"
+            aria-label="Fermer la discussion"
+            onClick={() => setShowSidebar(false)}
+            className="
+              absolute
+              inset-0
+              bg-black/20
+              z-40
+              md:hidden
+            "
+          />
+        )}
+
+        <aside
+          className={`
+            absolute
+            top-0
+            right-0
+            bottom-0
+            z-50
+            w-full
+            max-w-[380px]
+            bg-white
+            border-l
+            border-gray-200
+            flex
+            flex-col
+            shadow-2xl
+            transition-transform
+            duration-300
+            ease-in-out
+            ${
+              showSidebar
+                ? "translate-x-0"
+                : "translate-x-full"
+            }
+          `}
         >
 
           {/* CHAT HEADER */}
-
-          <div className="p-5 border-b">
+          <div className="p-5 border-b flex items-center justify-between shrink-0">
 
             <h2 className="font-bold text-lg">
               Discussion
             </h2>
 
+            <button
+              type="button"
+              onClick={() => setShowSidebar(false)}
+              title="Fermer"
+              aria-label="Fermer la discussion"
+              className="
+                w-9
+                h-9
+                rounded-full
+                flex
+                items-center
+                justify-center
+                text-gray-500
+                hover:bg-gray-100
+                hover:text-gray-800
+                transition
+              "
+            >
+              <FaTimes />
+            </button>
+
           </div>
 
           {/* CHAT */}
-
           <div
             className="
             flex-1
+            min-h-0
             overflow-y-auto
             p-4
             space-y-4
@@ -2222,7 +2432,6 @@ if (conferenceEnded) {
           </div>
 
           {/* ENVOI MESSAGE */}
-
           <div
             className="
             p-4
@@ -2264,9 +2473,8 @@ if (conferenceEnded) {
           </div>
 
           {/* PARTICIPANTS */}
-
           <div className="border-t p-5">
-          
+
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-bold mb-4">
               Participants ({participants.length})
@@ -2354,7 +2562,6 @@ const mediaState =
 </div>
 
       {/* CONTROLES ENSEIGNANT */}
-
     {isHost &&
          participant.socketId !== socket.id && (
 
@@ -2426,7 +2633,7 @@ const mediaState =
     ? <FaVideo size={13} />
     : <FaVideoSlash size={13} />
   }
-</button>       
+</button>
 
         </div>
 
@@ -2436,18 +2643,12 @@ const mediaState =
   );
 
 })}
-
-</div>
-
+            </div>
           </div>
-
+        </aside>
         </div>
-
-      </div>
-
         </div>
-
-      </>
+        </>
    );
 }
 
