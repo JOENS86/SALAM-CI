@@ -493,6 +493,52 @@ async createOffer(socketId) {
 }
 
 // =====================================================
+// APPLIQUER LES ICE CANDIDATES EN ATTENTE
+// =====================================================
+async flushPendingCandidates(socketId) {
+
+    const peerConnection =
+        this.peerConnections.get(socketId);
+
+    if (!peerConnection) return;
+
+    if (!peerConnection.remoteDescription) return;
+
+    const pending =
+        this.pendingCandidates.get(socketId);
+
+    if (!pending || pending.length === 0) return;
+
+    console.log(
+        "🧊 Application des ICE en attente :",
+        socketId,
+        pending.length
+    );
+
+    for (const candidate of pending) {
+
+        try {
+
+            await peerConnection.addIceCandidate(
+                new RTCIceCandidate(candidate)
+            );
+
+        } catch (error) {
+
+            console.error(
+                "❌ Erreur ICE en attente :",
+                error
+            );
+
+        }
+
+    }
+
+    this.pendingCandidates.delete(socketId);
+
+}
+
+// =====================================================
 // TRAITER UNE OFFER
 // =====================================================
 async handleOffer(socketId, offer) {
@@ -508,9 +554,15 @@ async handleOffer(socketId, offer) {
     await peerConnection.setRemoteDescription(
 
         new RTCSessionDescription(offer)
-
+    
     );
+    
+    // =====================================================
+    // APPLIQUER LES ICE ARRIVÉS AVANT L'OFFER
+    // =====================================================
 
+    await this.flushPendingCandidates(socketId);
+    
     // Créer une réponse
     const answer = await peerConnection.createAnswer();
 
@@ -533,32 +585,34 @@ async handleAnswer(socketId, answer) {
     const peerConnection = this.peerConnections.get(socketId);
 
     if (!peerConnection) {
-    
+
         console.warn(
-    
+
             "PeerConnection introuvable :", socketId
-    
+
         );
-    
+
         return;
-    
+
     }
-    
+
     if (
 
         peerConnection.signalingState === "stable"
-    
+
     ) {
-    
+
         return;
-    
+
     }
-    
+
     await peerConnection.setRemoteDescription(
-    
+
         new RTCSessionDescription(answer)
-    
+
     );
+
+    await this.flushPendingCandidates(socketId);
 
 }
 
