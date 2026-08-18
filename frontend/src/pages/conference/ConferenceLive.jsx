@@ -218,71 +218,133 @@ useEffect(() => {
 // CALLBACK REMOTE STREAM
 // ==========================================
 webrtcService.setRemoteStreamCallback((socketId, stream) => {
-
   console.log(
-    "📹 Flux distant reçu :",
-    socketId
+      "📹 Flux distant reçu :",
+      socketId
   );
 
   // =====================================================
-  // LA VIDEO DE L'AUTRE PARTICIPANT
-  // DEVIENT LA VIDEO PRINCIPALE
+  // RETROUVER LE PARTICIPANT DANS LA LISTE
   // =====================================================
+  const remoteParticipant =
+      participants.find(
+          participant =>
+              participant.socketId === socketId
+      );
 
+  const remoteName =
+      remoteParticipant?.name ||
+      `${remoteParticipant?.firstName || ""} ${remoteParticipant?.lastName || ""}`.trim() ||
+      "Participant";
+
+
+  // =====================================================
+  // PARTICIPANT / ETUDIANT
+  // =====================================================
+  if (!isHost) {
+
+      // La vidéo de l'autre devient principale
+      setMainStream(stream);
+
+      // Ma caméra reste en miniature
+      const localStream =
+          webrtcService.getStream();
+
+      if (localStream) {
+
+          setThumbnailStreams(prev => {
+
+              const exists =
+                  prev.some(
+                      item =>
+                          item.socketId === socket.id
+                  );
+
+              if (exists) {
+                  return prev;
+              }
+
+              return [
+                  ...prev,
+                  {
+                      socketId: socket.id,
+                      stream: localStream,
+                      participant: {
+                          socketId: socket.id,
+                          name:
+                              `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+                              "Vous"
+                      },
+                      isLocal: true
+                  }
+              ];
+
+          });
+
+      }
+
+      return;
+  }
+
+
+  // =====================================================
+  // HOTE
+  // =====================================================
   setMainStream(stream);
 
   // =====================================================
-  // MA CAMERA RESTE EN MINIATURE
+  // L'AUTRE PARTICIPANT EN MINIATURE
   // =====================================================
-
-  const localStream = webrtcService.getStream();
-
-  if (!localStream) return;
-
   setThumbnailStreams(prev => {
 
-    const localSocketId = socket.id;
+      const existingIndex =
+          prev.findIndex(
+              item =>
+                  item.socketId === socketId
+          );
 
-    const exists = prev.some(
-      item => item.socketId === localSocketId
-    );
+      // Si la miniature existe déjà,
+      // mettre simplement à jour le flux + le nom
+      if (existingIndex !== -1) {
 
-    if (exists) {
+          return prev.map(
+              (item, index) => {
 
-      return prev.map(item => {
+                  if (index !== existingIndex) {
+                      return item;
+                  }
 
-        if (item.socketId !== localSocketId) {
-          return item;
-        }
+                  return {
+                      ...item,
+                      stream,
+                      participant: {
+                          ...item.participant,
+                          socketId,
+                          name: remoteName
+                      }
+                  };
 
-        return {
-          ...item,
-          stream: localStream
-        };
+              }
+          );
 
-      });
-
-    }
-
-    return [
-      ...prev,
-      {
-        socketId: localSocketId,
-        stream: localStream,
-        participant: {
-          socketId: localSocketId,
-          name:
-            `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
-            "Vous"
-        },
-        isLocal: true
       }
-    ];
+
+      return [
+          ...prev,
+          {
+              socketId,
+              stream,
+              participant: {
+                  socketId,
+                  name: remoteName
+              },
+              isLocal: false
+          }
+      ];
 
   });
 
 });
-
 
   // ====================================
   // Fin du Partage d'écran
@@ -910,8 +972,7 @@ socket.on(
 
 };
 
-}, [conference, isTeacher]);
-
+}, [conference, isTeacher, participants]);
 
 // =====================================================
 // ENVOYER UN MESSAGE
@@ -1976,7 +2037,6 @@ if (conferenceEnded) {
     }
 />
     ))}
-
   </div>
 
 {/* NOM DU PROFESSEUR */}

@@ -10,28 +10,37 @@ const rooms = new Map();
 export const addParticipant = (roomId, participant) => {
 
     if (!rooms.has(roomId)) {
-
         rooms.set(roomId, []);
-
     }
 
     const participants = rooms.get(roomId);
 
-    const exists = participants.find(
-
-        p =>
-    
-            p.socketId === participant.socketId ||
-    
-            p._id === participant._id
-    
+    // IMPORTANT :
+    // Un participant est identifié par son socketId.
+    // On ne compare PAS _id ici car deux connexions
+    // différentes peuvent avoir des objets user différents.
+    const exists = participants.some(
+        p => p.socketId === participant.socketId
     );
 
-    if (!exists) {
-
-        participants.push(participant);
-
+    if (exists) {
+        return;
     }
+
+    // Normaliser le nom
+    const name =
+        participant.name ||
+        `${participant.firstName || ""} ${participant.lastName || ""}`.trim() ||
+        "Participant";
+
+    participants.push({
+        ...participant,
+        name
+    });
+
+    console.log(
+        `✅ Participant ajouté : ${name} (${participant.socketId})`
+    );
 
 };
 
@@ -39,30 +48,24 @@ export const addParticipant = (roomId, participant) => {
 // RETIRER UN PARTICIPANT
 // =====================================================
 export const removeParticipant = (
-
     roomId,
-
     socketId
-
 ) => {
 
     if (!rooms.has(roomId)) return;
 
-    const participants = rooms.get(roomId).filter(
+    const participants = rooms
+        .get(roomId)
+        .filter(
+            participant =>
+                participant.socketId !== socketId
+        );
 
-        participant => participant.socketId !== socketId
-
-    );
-
-    // =====================================================
-    // SUPPRIMER LA SALLE SI ELLE EST VIDE
-    // =====================================================
     if (participants.length === 0) {
 
         rooms.delete(roomId);
 
         return;
-
     }
 
     rooms.set(roomId, participants);
