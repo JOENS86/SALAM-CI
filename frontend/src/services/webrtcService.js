@@ -73,16 +73,16 @@ class WebRTCService {
         // Etats
         // ============================
 
-        this.cameraEnabled = true;
-        this.microphoneEnabled = true;
-        
+        this.cameraEnabled = false;
+        this.microphoneEnabled = false;
+
         this.audioTrack = null;
         this.videoTrack = null;
-        
+
         this.localStreamPromise = null;
-        
+
         this.isScreenSharing = false;
-        
+
         this.onScreenShareEnded = null;
     }
 
@@ -144,6 +144,19 @@ async startLocalStream(options = {}) {
             this.localStream
                 .getVideoTracks()[0] || null;
 
+        // =====================================================
+        // ETAT INITIAL : CAMERA ET MICRO DESACTIVES
+        // =====================================================
+        if (this.audioTrack) {
+          this.audioTrack.enabled = false;
+        }
+
+        if (this.videoTrack) {
+          this.videoTrack.enabled = false;
+        }
+
+        this.microphoneEnabled = false;
+        this.cameraEnabled = false;
 
         // -------------------------------------------------
         // Resynchroniser les états
@@ -248,6 +261,16 @@ async startLocalStream(options = {}) {
                     stream
                         .getVideoTracks()[0] || null;
 
+                // =====================================================
+                // ETAT INITIAL : CAMERA ET MICRO DESACTIVES
+                // =====================================================
+                if (this.audioTrack) {
+                  this.audioTrack.enabled = false;
+                }
+
+                if (this.videoTrack) {
+                  this.videoTrack.enabled = false;
+                }
 
                 // =========================================
                 // ÉTATS RÉELS
@@ -319,7 +342,7 @@ async startLocalStream(options = {}) {
     // =====================================================
     createPeerConnection(socketId) {
 
-    // Si elle existe déjà
+    // Si elle existe déj�
     if (this.peerConnections.has(socketId)) {
 
         return this.peerConnections.get(socketId);
@@ -440,21 +463,21 @@ async startLocalStream(options = {}) {
     // =====================================================
     peerConnection.ontrack = (event) => {
         const stream = event.streams[0];
-  
+
         this.remoteStreams.set(
-  
+
           socketId,
-  
+
           stream
-  
+
         );
-  
+
         if (this.onRemoteStream) {
           this.onRemoteStream(
-  
+
               socketId,
               stream
-  
+
           );
         }
       };
@@ -554,15 +577,15 @@ async handleOffer(socketId, offer) {
     await peerConnection.setRemoteDescription(
 
         new RTCSessionDescription(offer)
-    
+
     );
-    
+
     // =====================================================
     // APPLIQUER LES ICE ARRIVÉS AVANT L'OFFER
     // =====================================================
 
     await this.flushPendingCandidates(socketId);
-    
+
     // Créer une réponse
     const answer = await peerConnection.createAnswer();
 
@@ -666,27 +689,6 @@ await peerConnection.addIceCandidate(
     new RTCIceCandidate(candidate)
 );
 
-   // =====================================================
-   // AJOUTER LES ICE EN ATTENTE
-   // =====================================================
-   const pending = this.pendingCandidates.get(socketId);
-
-   if (pending) {
-
-    for (const candidate of pending) {
-
-        await peerConnection.addIceCandidate(
-
-            new RTCIceCandidate(candidate)
-
-        );
-
-    }
-
-    this.pendingCandidates.delete(socketId);
-
-   }
-
   }
 
     catch (error) {
@@ -778,13 +780,13 @@ stopLocalStream() {
         this.localStream = null;
 
         this.audioTrack = null;
-        
+
         this.videoTrack = null;
-        
+
         this.localStreamPromise = null;
-        
+
         this.cameraEnabled = false;
-        
+
         this.microphoneEnabled = false;
 
 }
@@ -1405,6 +1407,10 @@ stopScreenShare() {
                     cameraTrack || null
                 );
 
+                if (cameraTrack) {
+                    cameraTrack.enabled = this.cameraEnabled;
+                }
+
             }
 
         }
@@ -1425,7 +1431,7 @@ stopScreenShare() {
         this.screenStream = null;
 
         this.isScreenSharing = false;
-        
+
         if (this.onScreenShareEnded) {
             this.onScreenShareEnded();
         }

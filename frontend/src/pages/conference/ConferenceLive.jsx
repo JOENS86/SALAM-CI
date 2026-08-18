@@ -38,8 +38,13 @@ function ConferenceLive() {
 // ETAT DE FIN DE CONFERENCE
 // =====================================================
   const [conferenceEnded, setConferenceEnded] = useState(false);
-
   const [participants, setParticipants] = useState([]);
+
+  const participantsRef = useRef([]);
+
+  useEffect(() => {
+    participantsRef.current = participants;
+  }, [participants]);
 
 // =====================================================
 // ETATS DES PARTICIPANTS
@@ -48,9 +53,9 @@ const [participantMediaStates, setParticipantMediaStates] = useState({});
 
   const [loading, setLoading] = useState(true);
 
-  const [micOn, setMicOn] = useState(true);
+  const [micOn, setMicOn] = useState(false);
 
-  const [camOn, setCamOn] = useState(true);
+  const [camOn, setCamOn] = useState(false);
 
   const [message, setMessage] = useState("");
 
@@ -74,6 +79,8 @@ const [participantMediaStates, setParticipantMediaStates] = useState({});
 // FLUX PRINCIPAL
 // =====================================================
 const [mainStream, setMainStream] = useState(null);
+
+const [mainParticipant, setMainParticipant] = useState(null);
 
 // =====================================================
 // MINIATURES
@@ -172,35 +179,31 @@ useEffect(() => {
 
     if (!mounted) return;
 
-    // =====================================================
-    // ETAT INITIAL DES MEDIAS
-    // =====================================================
+// =====================================================
+// ETAT INITIAL
+// La caméra et le micro sont désactivés à l'entrée.
+// L'utilisateur les active manuellement.
+// Pour un étudiant, l'hôte peut ensuite contrôler
+// ses médias.
+// =====================================================
+webrtcService.setMicrophoneEnabled(false);
+webrtcService.setCameraEnabled(false);
 
-    if (isHost) {
-
-        // Le professeur démarre avec
-        // micro + caméra activés
-
-        webrtcService.setMicrophoneEnabled(true);
-        webrtcService.setCameraEnabled(true);
-
-        setMicOn(true);
-        setCamOn(true);
-
-    } else {
-
-        // L'étudiant démarre avec
-        // micro + caméra désactivés
-
-        webrtcService.setMicrophoneEnabled(false);
-        webrtcService.setCameraEnabled(false);
-
-        setMicOn(false);
-        setCamOn(false);
-
-    }
+setMicOn(false);
+setCamOn(false);
 
     setMainStream(stream);
+
+    setMainParticipant({
+      socketId: socket.id,
+      name:
+        `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+        "Vous",
+      role: user.role,
+      isLocal: true
+    });
+
+
 
       }
 
@@ -215,136 +218,95 @@ useEffect(() => {
   initConference();
 
 // ==========================================
-// CALLBACK REMOTE STREAM
+// CALLBACK FLUX DISTANT
 // ==========================================
 webrtcService.setRemoteStreamCallback((socketId, stream) => {
-  console.log(
-      "📹 Flux distant reçu :",
-      socketId
+
+  console.log("📹 Flux distant reçu :", socketId);
+
+  if (!stream) return;
+
+  const remoteParticipant = participantsRef.current.find(
+    participant =>
+      participant.socketId === socketId
   );
 
-  // =====================================================
-  // RETROUVER LE PARTICIPANT DANS LA LISTE
-  // =====================================================
-  const remoteParticipant =
-      participants.find(
-          participant =>
-              participant.socketId === socketId
-      );
-
   const remoteName =
-      remoteParticipant?.name ||
-      `${remoteParticipant?.firstName || ""} ${remoteParticipant?.lastName || ""}`.trim() ||
-      "Participant";
-
-
-  // =====================================================
-  // PARTICIPANT / ETUDIANT
-  // =====================================================
-  if (!isHost) {
-
-      // La vidéo de l'autre devient principale
-      setMainStream(stream);
-
-      // Ma caméra reste en miniature
-      const localStream =
-          webrtcService.getStream();
-
-      if (localStream) {
-
-          setThumbnailStreams(prev => {
-
-              const exists =
-                  prev.some(
-                      item =>
-                          item.socketId === socket.id
-                  );
-
-              if (exists) {
-                  return prev;
-              }
-
-              return [
-                  ...prev,
-                  {
-                      socketId: socket.id,
-                      stream: localStream,
-                      participant: {
-                          socketId: socket.id,
-                          name:
-                              `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
-                              "Vous"
-                      },
-                      isLocal: true
-                  }
-              ];
-
-          });
-
-      }
-
-      return;
-  }
-
+    remoteParticipant?.name ||
+    `${remoteParticipant?.firstName || ""} ${remoteParticipant?.lastName || ""}`.trim() ||
+    "Participant";
 
   // =====================================================
-  // HOTE
+  // LE FLUX DISTANT DEVIENT LA VIDEO PRINCIPALE
   // =====================================================
+
   setMainStream(stream);
 
+  setMainParticipant({
+    socketId,
+    name: remoteName,
+    role: remoteParticipant?.role || "student",
+    isLocal: false
+  });
+
   // =====================================================
-  // L'AUTRE PARTICIPANT EN MINIATURE
+  // MA VIDEO RESTE TOUJOURS EN MINIATURE
   // =====================================================
+
+  const localStream = webrtcService.getStream();
+
   setThumbnailStreams(prev => {
 
-      const existingIndex =
-          prev.findIndex(
-              item =>
-                  item.socketId === socketId
-          );
+    // ---------------------------------------------------
+    // On retire uniquement le participant qui vient
+    // de devenir la vidéo principale.
+    // ---------------------------------------------------
 
-      // Si la miniature existe déjà,
-      // mettre simplement à jour le flux + le nom
-      if (existingIndex !== -1) {
+    const thumbnailsWithoutMain = prev.filter(
+      item => item.socketId !== socketId
+    );
 
-          return prev.map(
-              (item, index) => {
+    // ---------------------------------------------------
+    // Vérifier si ma vidéo existe déjà en miniature
+    // ---------------------------------------------------
 
-                  if (index !== existingIndex) {
-                      return item;
-                  }
+    const localExists = thumbnailsWithoutMain.some(
+      item => item.isLocal
+    );
 
-                  return {
-                      ...item,
-                      stream,
-                      participant: {
-                          ...item.participant,
-                          socketId,
-                          name: remoteName
-                      }
-                  };
+    // ---------------------------------------------------
+    // Si ma vidéo est déjà présente,
+    // on ne l'ajoute pas une deuxième fois.
+    // ---------------------------------------------------
 
-              }
-          );
+    if (localExists) {
+      return thumbnailsWithoutMain;
+    }
 
+    // ---------------------------------------------------
+    // Ajouter ma vidéo en miniature
+    // ---------------------------------------------------
+
+    return [
+      ...thumbnailsWithoutMain,
+      {
+        socketId: socket.id,
+        stream: localStream,
+        participant: {
+          socketId: socket.id,
+          name:
+            `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+            "Vous",
+          role: user.role
+        },
+        isLocal: true
       }
-
-      return [
-          ...prev,
-          {
-              socketId,
-              stream,
-              participant: {
-                  socketId,
-                  name: remoteName
-              },
-              isLocal: false
-          }
-      ];
+    ];
 
   });
 
 });
+
 
   // ====================================
   // Fin du Partage d'écran
@@ -572,30 +534,48 @@ socket.on(
   // PARTICIPANT PARTI
   // ==========================================
   socket.on(
+    "conference:userLeft",
 
-      "conference:userLeft",
+    ({ participant }) => {
 
-      ({ participant }) => {
+      webrtcService.closePeerConnection(
+        participant.socketId
+      );
 
-          webrtcService.closePeerConnection(
+      setThumbnailStreams(prev =>
+        prev.filter(
+          item =>
+            item.socketId !== participant.socketId
+        )
+      );
 
-              participant.socketId
+      // =====================================================
+      // SI LE PARTICIPANT PRINCIPAL PART
+      // ON REVIENT SUR MA VIDEO
+      // =====================================================
 
-          );
+      if (
+        mainParticipant?.socketId ===
+        participant.socketId
+      ) {
 
-        setThumbnailStreams(prev =>
+        const localStream =
+          webrtcService.getStream();
 
-            prev.filter(
+        setMainStream(localStream);
 
-                item =>
-
-                    item.socketId !== participant.socketId
-
-            )
-
-        );
+        setMainParticipant({
+          socketId: socket.id,
+          name:
+            `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+            "Vous",
+          role: user.role,
+          isLocal: true
+        });
 
       }
+
+    }
 
   );
 
@@ -972,7 +952,7 @@ socket.on(
 
 };
 
-}, [conference, isTeacher, participants]);
+}, [conference, isTeacher]);
 
 // =====================================================
 // ENVOYER UN MESSAGE
@@ -1016,17 +996,16 @@ const sendMessage = () => {
 // =====================================================
 // MICRO
 // =====================================================
-const toggleMicrophone = () => {
+const toggleMicrophone = async () => {
 
   if (conferenceEnded) return;
 
   const enabled =
-    webrtcService.toggleMicrophone();
+    await webrtcService.toggleMicrophone();
 
   setMicOn(Boolean(enabled));
 
   if (conference) {
-
     socket.emit(
       "participant:microphone",
       {
@@ -1034,26 +1013,29 @@ const toggleMicrophone = () => {
         enabled: Boolean(enabled)
       }
     );
-
   }
-
 };
 
 
 // =====================================================
 // CAMERA
 // =====================================================
-const toggleCamera = () => {
+const toggleCamera = async () => {
 
   if (conferenceEnded) return;
 
+  // Un étudiant ne peut pas activer sa caméra
+  // sans autorisation de l'hôte.
+  if (!isHost && user.role === "student" && !camOn) {
+    return;
+  }
+
   const enabled =
-    webrtcService.toggleCamera();
+    await webrtcService.toggleCamera();
 
   setCamOn(Boolean(enabled));
 
   if (conference) {
-
     socket.emit(
       "participant:camera",
       {
@@ -1061,9 +1043,7 @@ const toggleCamera = () => {
         enabled: Boolean(enabled)
       }
     );
-
   }
-
 };
 
 // =====================================================
@@ -2001,43 +1981,142 @@ if (conferenceEnded) {
 // =====================================================
 <>
 
-  <MainVideo
-    stream={mainStream}
-    muted={isHost}
-  />
+{/* =====================================================
+    VIDEO PRINCIPALE
+===================================================== */}
 
-  <div
-    className="
-      absolute
-      bottom-5
-      right-5
-      flex
-      flex-col
-      gap-4
-    "
-  >
-
-    {thumbnailStreams.map((item) => (
-<RemoteVideo
-    key={item.socketId}
-    stream={item.stream}
-    name={
-        item.isLocal
-            ? "Vous"
-            : item.participant?.name
-    }
-    muted={item.isLocal}
-    cameraEnabled={
-        item.isLocal
-            ? camOn
-            : (
-                participantMediaStates[item.socketId]?.camera
-                ?? false
-            )
-    }
+<MainVideo
+  stream={mainStream}
+  muted={mainParticipant?.isLocal === true}
 />
-    ))}
-  </div>
+
+
+{/* =====================================================
+    MINIATURES
+===================================================== */}
+
+<div
+  className="
+    absolute
+    bottom-5
+    right-5
+    z-20
+    flex
+    flex-col
+    gap-3
+  "
+>
+
+  {thumbnailStreams.map((item) => (
+
+    <div
+      key={item.socketId}
+      className="
+        relative
+        w-44
+        h-28
+        rounded-2xl
+        overflow-hidden
+        bg-[#16233d]
+        shadow-2xl
+        border
+        border-white/20
+      "
+    >
+
+      {item.stream ? (
+
+        <RemoteVideo
+          stream={item.stream}
+          name={
+            item.isLocal
+              ? "Vous"
+              : item.participant?.name || "Participant"
+          }
+          muted={item.isLocal}
+          cameraEnabled={
+            item.isLocal
+              ? camOn
+              : (
+                  participantMediaStates[
+                    item.socketId
+                  ]?.camera ?? false
+                )
+          }
+        />
+
+      ) : (
+
+        <div
+          className="
+            w-full
+            h-full
+            flex
+            flex-col
+            items-center
+            justify-center
+            bg-[#16233d]
+            text-white
+          "
+        >
+
+          <div
+            className="
+              w-12
+              h-12
+              rounded-full
+              bg-gray-500
+              flex
+              items-center
+              justify-center
+              font-bold
+              text-lg
+            "
+          >
+            {(item.participant?.name || "U")
+              .charAt(0)
+              .toUpperCase()}
+          </div>
+
+          <span
+            className="
+              mt-2
+              text-xs
+              font-semibold
+              truncate
+              max-w-[130px]
+            "
+          >
+            {item.isLocal
+              ? "Vous"
+              : item.participant?.name || "Participant"}
+          </span>
+
+        </div>
+
+      )}
+
+      {/* NOM */}
+      <div
+        className="
+          absolute
+          bottom-1
+          left-2
+          right-2
+          text-white
+          text-xs
+          font-semibold
+          truncate
+          drop-shadow-lg
+        "
+      >
+        {item.isLocal
+          ? "Vous"
+          : item.participant?.name || "Participant"}
+      </div>
+    </div>
+  ))}
+</div>
 
 {/* NOM DU PROFESSEUR */}
   <h2 className="
