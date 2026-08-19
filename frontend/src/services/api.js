@@ -78,15 +78,25 @@ API.interceptors.response.use(
         // ==========================================
         // SERVEUR INJOIGNABLE
         // ==========================================
-
         if (!error.response) {
 
+            console.error(
+                "❌ API INJOIGNABLE",
+                {
+                    message: error.message,
+                    code: error.code,
+                    method: error.config?.method,
+                    url: error.config?.url,
+                    baseURL: error.config?.baseURL,
+                    fullURL:
+                        `${error.config?.baseURL || ""}${error.config?.url || ""}`,
+                    timeout: error.config?.timeout
+                }
+            );
+
             errorToast(
-
                 "Serveur indisponible",
-
                 "Impossible de contacter le serveur."
-
             );
 
             return Promise.reject(error);

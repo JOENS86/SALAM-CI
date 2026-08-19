@@ -19,7 +19,6 @@ import {useNavigate, useParams} from "react-router-dom";
 import conferenceService from "../../services/conferenceService";
 import socket from "../../socket/socket";
 import webrtcService from "../../services/webrtcService";
-import RemoteVideo from "../../components/conference/RemoteVideo";
 import MainVideo from "../../components/conference/MainVideo";
 
 
@@ -38,18 +37,74 @@ function ConferenceLive() {
 // ETAT DE FIN DE CONFERENCE
 // =====================================================
   const [conferenceEnded, setConferenceEnded] = useState(false);
-  const [participants, setParticipants] = useState([]);
-
-  const participantsRef = useRef([]);
-
-  useEffect(() => {
-    participantsRef.current = participants;
-  }, [participants]);
 
 // =====================================================
-// ETATS DES PARTICIPANTS
+// PARTICIPANTS
 // =====================================================
-const [participantMediaStates, setParticipantMediaStates] = useState({});
+const [participants, setParticipants] = useState([]);
+const participantsRef = useRef([]);
+
+useEffect(() => {
+
+  participantsRef.current =
+    participants;
+
+}, [participants]);
+
+
+// =====================================================
+// ETATS MEDIA DES PARTICIPANTS
+// =====================================================
+const [
+  participantMediaStates,
+  setParticipantMediaStates
+] = useState({});
+
+const participantMediaStatesRef =
+  useRef({});
+
+useEffect(() => {
+
+  participantMediaStatesRef.current =
+    participantMediaStates;
+
+}, [participantMediaStates]);
+
+
+// =====================================================
+// MINIATURES
+// =====================================================
+const [
+  thumbnailStreams,
+  setThumbnailStreams
+] = useState([]);
+
+
+// =====================================================
+// PARTICIPANT PRINCIPAL
+// =====================================================
+const [
+  mainParticipant,
+  setMainParticipant
+] = useState(null);
+
+
+// =====================================================
+// PARTICIPANT QUI PARTAGE SON ECRAN
+// =====================================================
+const [
+  screenShareOwner,
+  setScreenShareOwner
+] = useState(null);
+
+
+// =====================================================
+// AUTORISATION PARTAGE ECRAN ETUDIANT
+// =====================================================
+const [
+  screenShareAllowed,
+  setScreenShareAllowed
+] = useState(false);
 
   const [loading, setLoading] = useState(true);
 
@@ -79,14 +134,6 @@ const [participantMediaStates, setParticipantMediaStates] = useState({});
 // FLUX PRINCIPAL
 // =====================================================
 const [mainStream, setMainStream] = useState(null);
-
-const [mainParticipant, setMainParticipant] = useState(null);
-
-// =====================================================
-// MINIATURES
-// =====================================================
-const [thumbnailStreams, setThumbnailStreams] = useState([]);
-
 
 // =====================================================
 // ROLE UTILISATEUR
@@ -167,244 +214,283 @@ useEffect(() => {
 
   let mounted = true;
 
-  // ==========================================
-  // INITIALISATION CAMERA
-  // ==========================================
-  const initConference = async () => {
+// ==========================================
+// INITIALISATION CAMERA
+// ==========================================
+const initConference = async () => {
 
-      try {
+  try {
 
-    const stream =
-    await webrtcService.startLocalStream();
+      console.log(
+          "🎥 Initialisation de la conférence..."
+      );
 
-    if (!mounted) return;
+      const stream =
+          await webrtcService.startLocalStream();
 
-// =====================================================
-// ETAT INITIAL
-// La caméra et le micro sont désactivés à l'entrée.
-// L'utilisateur les active manuellement.
-// Pour un étudiant, l'hôte peut ensuite contrôler
-// ses médias.
-// =====================================================
-webrtcService.setMicrophoneEnabled(false);
-webrtcService.setCameraEnabled(false);
+      if (!mounted) return;
 
-setMicOn(false);
-setCamOn(false);
+      // ==========================================
+      // ETATS INITIAUX
+      // ==========================================
 
-// =====================================================
-// VIDEO INITIALE
-// =====================================================
-if (isHost) {
+      if (isHost) {
 
-  // L'hôte voit sa propre caméra en grand
-  setMainStream(stream);
+          webrtcService.setMicrophoneEnabled(true);
+          webrtcService.setCameraEnabled(true);
 
-  setMainParticipant({
-    socketId: socket.id,
-    name:
-      `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
-      "Vous",
-    role: user.role,
-    isLocal: true
-  });
+          setMicOn(true);
+          setCamOn(true);
 
-} else {
+      } else {
 
-  // L'étudiant conserve temporairement son flux local.
-  // Dès que le flux distant de l'hôte arrive,
-  // setRemoteStreamCallback() le remplacera.
-  setMainStream(stream);
+          webrtcService.setMicrophoneEnabled(false);
+          webrtcService.setCameraEnabled(false);
 
-  setMainParticipant({
-    socketId: socket.id,
-    name:
-      `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
-      "Vous",
-    role: user.role,
-    isLocal: true
-  });
-
-  // Sa propre caméra est déjà préparée pour la miniature.
-  setThumbnailStreams([
-    {
-      socketId: socket.id,
-      stream,
-      participant: {
-        socketId: socket.id,
-        name:
-          `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
-          "Vous",
-        role: user.role
-      },
-      isLocal: true
-    }
-  ]);
-}
+          setMicOn(false);
+          setCamOn(false);
 
       }
 
-      catch (error) {
+      // ==========================================
+      // INFORMATIONS UTILISATEUR LOCAL
+      // ==========================================
 
-          console.error(error);
+      const localParticipant = {
+
+          socketId: socket.id,
+
+          name:
+              `${user.firstName || ""} ${
+                  user.lastName || ""
+              }`.trim() || "Vous",
+
+          role: user.role,
+
+          photo: user.photo,
+
+          isLocal: true
+
+      };
+
+      // ==========================================
+      // MOI = TOUJOURS MINIATURE
+      // ==========================================
+      setThumbnailStreams([]);
+
+      // ==========================================
+      // HOTE SEUL
+      // ==========================================
+
+      if (isHost) {
+
+          setMainStream(stream);
+
+          setMainParticipant({
+
+              ...localParticipant,
+
+              cameraEnabled: true
+
+          });
 
       }
 
-  };
+      // ==========================================
+      // ETUDIANT
+      // ==========================================
 
-  initConference();
+      else {
+
+          setMainStream(null);
+
+          setMainParticipant(null);
+
+      }
+
+      console.log(
+          "✅ Initialisation conférence terminée"
+      );
+
+  }
+
+  catch (error) {
+
+      console.error(
+          "❌ ERREUR INIT CONFERENCE :",
+          error
+      );
+
+  }
+
+};
+
+initConference();
 
 // ==========================================
 // FLUX DISTANT
 // ==========================================
+// ==========================================
+// FLUX DISTANT WEBRTC
+// ==========================================
 webrtcService.setRemoteStreamCallback(
   (socketId, stream) => {
 
+    if (!mounted || !socketId || !stream) {
+      return;
+    }
+
     console.log(
-      "📹 Flux distant reçu :",
+      "📹 FLUX DISTANT REÇU :",
       socketId
     );
 
-    if (!stream) return;
-
-    // ------------------------------------------
-    // Chercher le participant correspondant
-    // ------------------------------------------
-    const remoteParticipant =
+    // ==========================================
+    // RECHERCHER LE PARTICIPANT
+    // ==========================================
+    const participant =
       participantsRef.current.find(
-        participant =>
-          participant.socketId === socketId
+        item =>
+          item.socketId === socketId
       );
 
-    const remoteName =
-      remoteParticipant?.name ||
-      `${remoteParticipant?.firstName || ""} ${remoteParticipant?.lastName || ""}`.trim() ||
-      "Participant";
+    if (!participant) {
 
-    // ----------------------------------------------------
-    // HOTE
-    // -----------------------------------------------------
-    // L'hôte garde SA caméra en grand.
-    // Les participants distants vont en miniature.
-    // -----------------------------------------------------
-
-    if (isHost) {
-
-      setThumbnailStreams(prev => {
-
-        const existingIndex =
-          prev.findIndex(
-            item =>
-              item.socketId === socketId
-          );
-
-        const item = {
-          socketId,
-          stream,
-          participant: {
-            socketId,
-            name: remoteName,
-            role:
-              remoteParticipant?.role ||
-              "student"
-          },
-          isLocal: false
-        };
-
-        if (existingIndex !== -1) {
-
-          return prev.map(
-            (oldItem, index) =>
-              index === existingIndex
-                ? {
-                    ...oldItem,
-                    ...item
-                  }
-                : oldItem
-          );
-
-        }
-
-        return [
-          ...prev,
-          item
-        ];
-
-      });
+      console.warn(
+        "⚠️ Participant introuvable pour le flux :",
+        socketId
+      );
 
       return;
     }
 
-    // -----------------------------------------------------
-    // PARTICIPANT / ETUDIANT
-    // -----------------------------------------------------
-    // Le participant voit l'hôte en grand.
-    // Sa propre caméra reste en miniature.
-    // -----------------------------------------------------
+    // ==========================================
+    // ETAT CAMERA DISTANTE
+    // ==========================================
+    const mediaState =
+      participantMediaStatesRef.current[
+        socketId
+      ] || {};
 
+    const cameraEnabled =
+      Boolean(mediaState.camera);
+
+    // ==========================================
+    // PARTICIPANT DISTANT
+    // ==========================================
+    const remoteParticipant = {
+
+      ...participant,
+
+      isLocal: false,
+
+      cameraEnabled
+
+    };
+
+    // ==========================================
+    // VERIFIER SI CE FLUX EST UN PARTAGE D'ECRAN
+    // ==========================================
+    const isRemoteScreenShare =
+      screenShareOwner === socketId;
+
+    // ==========================================
+    // FLUX PRINCIPAL
+    //
+    // Si le participant partage son écran :
+    // son écran reste en grand.
+    //
+    // Sinon :
+    // sa caméra / son flux devient le grand écran.
+    // ==========================================
     setMainStream(stream);
 
-    setMainParticipant({
-      socketId,
-      name: remoteName,
-      role:
-        remoteParticipant?.role ||
-        "teacher",
-      isLocal: false
-    });
+    setMainParticipant(
+      remoteParticipant
+    );
 
-    // ------------------------------------------
-    // Ajouter ma propre caméra en miniature
-    // ------------------------------------------
-
-    const localStream =
-      webrtcService.getStream();
-
-    if (!localStream) return;
-
+    // ==========================================
+    // MA VIDEO = TOUJOURS MINIATURE
+    // ==========================================
     setThumbnailStreams(prev => {
 
-      const localExists =
+      const localStream =
+        webrtcService.getStream();
+
+      const localParticipant = {
+
+        socketId: socket.id,
+
+        name:
+          `${user.firstName || ""} ${
+            user.lastName || ""
+          }`.trim() || "Vous",
+
+        role: user.role,
+
+        photo: user.photo,
+
+        isLocal: true
+
+      };
+
+      const localItem = {
+
+        socketId: socket.id,
+
+        stream: localStream,
+
+        participant:
+          localParticipant,
+
+        isLocal: true,
+
+        cameraEnabled:
+          webrtcService.cameraEnabled
+
+      };
+
+      const exists =
         prev.some(
           item =>
             item.socketId === socket.id
         );
 
-      if (localExists) {
+      // ==========================================
+      // MA MINIATURE EXISTE DEJA
+      // ==========================================
+      if (exists) {
 
         return prev.map(item =>
+
           item.socketId === socket.id
-            ? {
-                ...item,
-                stream: localStream,
-                isLocal: true
-              }
+
+            ? localItem
+
             : item
+
         );
 
       }
 
+      // ==========================================
+      // AJOUTER MA MINIATURE
+      // ==========================================
       return [
         ...prev,
-        {
-          socketId: socket.id,
-          stream: localStream,
-          participant: {
-            socketId: socket.id,
-            name:
-              `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
-              "Vous",
-            role: user.role
-          },
-          isLocal: true
-        }
+        localItem
       ];
 
     });
 
+    console.log(
+      isRemoteScreenShare
+        ? "🖥️ Partage écran distant affiché en grand"
+        : "📺 Vidéo distante affichée en grand"
+    );
+
   }
 );
-
 
   // -----------------------------------
   // Fin du Partage d'écran
@@ -479,6 +565,132 @@ socket.on(
   }
 );
 
+// =====================================================
+// AUTORISATION PARTAGE ECRAN
+// =====================================================
+socket.on(
+  "participant:screenShare",
+  ({ enabled } = {}) => {
+
+    const allowed =
+      Boolean(enabled);
+
+    console.log(
+      "🖥️ Autorisation partage écran :",
+      allowed
+    );
+
+    setScreenShareAllowed(
+      allowed
+    );
+
+    setParticipantMediaStates(prev => ({
+
+      ...prev,
+
+      [socket.id]: {
+
+        ...prev[socket.id],
+
+        screenShare:
+          allowed
+
+      }
+
+    }));
+
+
+    // ================================================
+    // SI L'AUTORISATION EST RETIREE
+    // ================================================
+    if (
+      !allowed &&
+      webrtcService.isScreenSharing
+    ) {
+
+      webrtcService
+        .stopScreenShare();
+
+      setSharingScreen(false);
+
+      setScreenShareOwner(null);
+
+      setMainStream(
+        webrtcService.getStream()
+      );
+
+    }
+
+  }
+);
+
+
+// =====================================================
+// ETAT DU PARTAGE D'ECRAN
+// =====================================================
+socket.on(
+  "participant:screenShareState",
+  ({
+    socketId,
+    enabled
+  } = {}) => {
+
+    if (!socketId) {
+      return;
+    }
+
+    console.log(
+      "🖥️ Etat partage écran :",
+      socketId,
+      enabled
+    );
+
+    if (enabled) {
+
+      setScreenShareOwner(
+        socketId
+      );
+
+      const remoteStream =
+        webrtcService.getRemoteStream(
+          socketId
+        );
+
+      if (remoteStream) {
+
+        setMainStream(
+          remoteStream
+        );
+
+      }
+
+    }
+
+    else {
+
+      setScreenShareOwner(
+        null
+      );
+
+      const remoteStream =
+        webrtcService.getRemoteStream(
+          socketId
+        );
+
+      if (remoteStream) {
+
+        setMainStream(
+          remoteStream
+        );
+
+      }
+
+    }
+
+  }
+);
+
+
 // ==========================================
 // REJOINDRE LA SALLE
 // ==========================================
@@ -508,28 +720,43 @@ socket.emit(
 socket.on(
   "participant:mediaState",
   ({
-    socketId,
-    microphone,
-    camera
+      socketId,
+      microphone,
+      camera
   }) => {
 
-    if (!socketId) return;
+      if (!socketId) return;
 
-    setParticipantMediaStates(prev => ({
+      setParticipantMediaStates(prev => {
 
-      ...prev,
+          const current =
+              prev[socketId] || {};
 
-      [socketId]: {
+          return {
 
-        ...prev[socketId],
+              ...prev,
 
-        microphone: Boolean(microphone),
+              [socketId]: {
 
-        camera: Boolean(camera)
+                  ...current,
 
-      }
+                  ...(typeof microphone === "boolean"
+                      ? {
+                          microphone
+                      }
+                      : {}),
 
-    }));
+                  ...(typeof camera === "boolean"
+                      ? {
+                          camera
+                      }
+                      : {})
+
+              }
+
+          };
+
+      });
 
   }
 );
@@ -640,51 +867,123 @@ socket.on(
   // ==========================================
   // PARTICIPANT PARTI
   // ==========================================
-  socket.on(
-    "conference:userLeft",
+// ==========================================
+// PARTICIPANT PARTI
+// ==========================================
+socket.on(
+  "conference:userLeft",
+  ({ participant } = {}) => {
 
-    ({ participant }) => {
+    if (!participant?.socketId) {
+      return;
+    }
 
-      webrtcService.closePeerConnection(
-        participant.socketId
+    const leftSocketId =
+      participant.socketId;
+
+    console.log(
+      "🔴 Participant parti :",
+      leftSocketId
+    );
+
+    // Fermer uniquement sa connexion WebRTC
+    webrtcService.closePeerConnection(
+      leftSocketId
+    );
+
+    // Supprimer sa miniature
+    setThumbnailStreams(prev =>
+      prev.filter(
+        item =>
+          item.socketId !== leftSocketId
+      )
+    );
+
+    // Supprimer ses états média
+    setParticipantMediaStates(prev => {
+
+      const updated = {
+        ...prev
+      };
+
+      delete updated[leftSocketId];
+
+      return updated;
+
+    });
+
+    // Si c'était lui qui partageait son écran
+    if (
+      screenShareOwner ===
+      leftSocketId
+    ) {
+
+      setScreenShareOwner(null);
+
+      // Revenir sur le flux local
+      setMainStream(
+        webrtcService.getStream()
       );
 
-      setThumbnailStreams(prev =>
-        prev.filter(
-          item =>
-            item.socketId !== participant.socketId
-        )
-      );
+      setMainParticipant({
 
-      // =====================================================
-      // SI LE PARTICIPANT PRINCIPAL PART
-      // ON REVIENT SUR MA VIDEO
-      // =====================================================
+        socketId: socket.id,
 
-      if (
-        mainParticipant?.socketId ===
-        participant.socketId
-      ) {
+        name:
+          `${user.firstName || ""} ${
+            user.lastName || ""
+          }`.trim() || "Vous",
 
-        const localStream =
-          webrtcService.getStream();
+        role: user.role,
 
-        setMainStream(localStream);
+        photo: user.photo,
 
-        setMainParticipant({
-          socketId: socket.id,
-          name:
-            `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
-            "Vous",
-          role: user.role,
-          isLocal: true
-        });
+        isLocal: true,
 
-      }
+        cameraEnabled:
+          webrtcService.cameraEnabled
+
+      });
 
     }
 
-  );
+    // IMPORTANT :
+    // On ne change l'écran principal
+    // que si le participant parti
+    // était réellement affiché en grand.
+    if (
+      mainParticipant?.socketId ===
+      leftSocketId
+    ) {
+
+      setMainStream(
+        webrtcService.getStream()
+      );
+
+      setMainParticipant({
+
+        socketId: socket.id,
+
+        name:
+          `${user.firstName || ""} ${
+            user.lastName || ""
+          }`.trim() || "Vous",
+
+        role: user.role,
+
+        photo: user.photo,
+
+        isLocal: true,
+
+        cameraEnabled:
+          webrtcService.cameraEnabled
+
+      });
+
+    }
+
+  }
+);
 
   // ==========================================
   // OFFER
@@ -884,6 +1183,7 @@ socket.on(
   }
 );
 
+
    // ==========================================
   // LEVER LA MAIN
   // ==========================================
@@ -1010,10 +1310,15 @@ socket.on(
     socket.off("participant:mediaState");
     socket.off("teacher:microphone:all");
     socket.off("teacher:camera:all");
+    socket.off("participant:screenShare");
+    socket.off("participant:screenShareState");
     socket.off("hand:list");
     socket.off("hand:notification");
     socket.off("conference:ended");
 
+    webrtcService.setRemoteStreamCallback(null);
+    webrtcService.setIceCandidateCallback(null);
+    webrtcService.setScreenShareEndedCallback(null);
 };
 
 }, [conference, isTeacher, isHost]);
@@ -1325,56 +1630,267 @@ const controlParticipantCamera = (
 };
 
 // =====================================================
+// CONTROLE PARTAGE ECRAN D'UN ETUDIANT
+// =====================================================
+const controlParticipantScreenShare = (
+  targetSocketId,
+  enabled
+) => {
+
+  if (!isHost) return;
+
+  console.log(
+    "🖥️ Contrôle partage écran :",
+    targetSocketId,
+    enabled
+      ? "AUTORISER"
+      : "INTERDIRE"
+  );
+
+  socket.emit(
+    "participant:screenShare",
+    {
+      roomId: conference._id,
+      targetSocketId,
+      enabled
+    }
+  );
+
+  setParticipantMediaStates(prev => ({
+
+    ...prev,
+
+    [targetSocketId]: {
+
+      ...prev[targetSocketId],
+
+      screenShare: Boolean(enabled)
+
+    }
+
+  }));
+
+};
+
+// =====================================================
 // PARTAGE D'ECRAN
 // =====================================================
 const toggleScreenShare = async () => {
 
-  if (conferenceEnded) return;
+  if (conferenceEnded) {
+    return;
+  }
+
+  // =====================================================
+  // ETUDIANT : VERIFIER L'AUTORISATION
+  // =====================================================
+  if (
+    !isHost &&
+    user.role === "student" &&
+    !screenShareAllowed
+  ) {
+
+    console.warn(
+      "⚠️ Partage d'écran non autorisé."
+    );
+
+    return;
+  }
 
   try {
 
+    // ===================================================
+    // DEMARRER LE PARTAGE
+    // ===================================================
     if (!sharingScreen) {
 
-      const stream =
+      console.log(
+        "🖥️ Démarrage du partage d'écran..."
+      );
+
+      const screenStream =
         await webrtcService.startScreenShare();
 
-      if (!stream) return;
+      if (!screenStream) {
 
-      if (isHost) {
+        console.warn(
+          "⚠️ Aucun flux d'écran obtenu."
+        );
 
-        setMainStream(stream);
-
+        return;
       }
 
-      setSharingScreen(true);
+      // -----------------------------------------------
+      // L'ECRAN PARTAGE DEVIENT LE GRAND FLUX
+      // -----------------------------------------------
+      setMainStream(
+        screenStream
+      );
+
+      setScreenShareOwner(
+        socket.id
+      );
+
+      setSharingScreen(
+        true
+      );
+
+      // -----------------------------------------------
+      // INFORMER LES AUTRES PARTICIPANTS
+      // -----------------------------------------------
+      socket.emit(
+        "participant:screenShareState",
+        {
+          roomId: conference._id,
+          socketId: socket.id,
+          enabled: true
+        }
+      );
+
+      console.log(
+        "✅ Partage d'écran démarré"
+      );
 
       return;
     }
 
-    webrtcService.stopScreenShare();
 
-    if (isHost) {
+    // ===================================================
+    // ARRETER LE PARTAGE
+    // ===================================================
+
+    console.log(
+      "🛑 Arrêt du partage d'écran..."
+    );
+
+    await webrtcService.stopScreenShare();
+
+    setSharingScreen(
+      false
+    );
+
+    setScreenShareOwner(
+      null
+    );
+
+    // -----------------------------------------------
+    // INFORMER LES AUTRES
+    // -----------------------------------------------
+    socket.emit(
+      "participant:screenShareState",
+      {
+        roomId: conference._id,
+        socketId: socket.id,
+        enabled: false
+      }
+    );
+
+    // ===================================================
+    // RESTAURER LE FLUX LOCAL
+    //
+    // Si je suis seul :
+    //       ma caméra revient en grand.
+    //
+    // Si un participant est présent :
+    //       son flux doit rester en grand.
+    // ===================================================
+
+    const remoteParticipant =
+      participantsRef.current.find(
+        participant =>
+          participant.socketId !== socket.id
+      );
+
+    if (remoteParticipant) {
+
+      const remoteStream =
+        webrtcService.getRemoteStream(
+          remoteParticipant.socketId
+        );
+
+      if (remoteStream) {
+
+        setMainStream(
+          remoteStream
+        );
+
+        const mediaState =
+          participantMediaStatesRef.current[
+            remoteParticipant.socketId
+          ] || {};
+
+        setMainParticipant({
+
+          ...remoteParticipant,
+
+          isLocal: false,
+
+          cameraEnabled:
+            Boolean(mediaState.camera)
+
+        });
+
+      }
+
+    } else {
+
+      // -----------------------------------------------
+      // PERSONNE D'AUTRE DANS LA SALLE
+      // -----------------------------------------------
+      const localStream =
+        webrtcService.getStream();
 
       setMainStream(
-        webrtcService.getStream()
+        localStream
       );
+
+      setMainParticipant({
+
+        socketId: socket.id,
+
+        name:
+          `${user.firstName || ""} ${
+            user.lastName || ""
+          }`.trim() || "Vous",
+
+        role: user.role,
+
+        photo: user.photo,
+
+        isLocal: true,
+
+        cameraEnabled:
+          webrtcService.cameraEnabled
+
+      });
 
     }
 
-    setSharingScreen(false);
+    console.log(
+      "✅ Partage d'écran arrêté"
+    );
 
   }
 
   catch (error) {
 
     console.error(
-      "Erreur partage écran :",
+      "❌ ERREUR PARTAGE D'ÉCRAN :",
       error
+    );
+
+    setSharingScreen(
+      false
+    );
+
+    setScreenShareOwner(
+      null
     );
 
   }
 
 };
+
 
 // =====================================================
 // LEVER LA MAIN
@@ -1995,10 +2511,54 @@ if (conferenceEnded) {
 
     <div className="w-full h-full absolute inset-0 flex items-center justify-center">
 
-      <MainVideo
+{mainStream &&
+  mainParticipant?.cameraEnabled !== false ? (
+
+    <MainVideo
         stream={mainStream}
         muted={isHost}
-      />
+    />
+
+  ) : (
+
+    <div
+        className="
+            w-full
+            h-full
+            flex
+            flex-col
+            items-center
+            justify-center
+            bg-[#111827]
+            text-white
+        "
+    >
+
+        <div
+            className="
+                w-24
+                h-24
+                rounded-full
+                bg-blue-600
+                flex
+                items-center
+                justify-center
+                text-4xl
+                font-bold
+            "
+        >
+            {(mainParticipant?.name || "P")
+                .charAt(0)
+                .toUpperCase()}
+        </div>
+
+        <span className="mt-4 text-lg font-semibold">
+            {mainParticipant?.name || "Participant"}
+        </span>
+
+    </div>
+
+)}
 
     </div>
 
@@ -2038,185 +2598,354 @@ if (conferenceEnded) {
 
 ) : (
 
-// =====================================================
-// CONFERENCE EN DIRECT
-// =====================================================
-<>
-
+  <>
 {/* =====================================================
-    VIDEO PRINCIPALE
+    ZONE VIDEO PRINCIPALE
 ===================================================== */}
+<div className="absolute inset-0">
 
-<MainVideo
-  stream={mainStream}
-  muted={mainParticipant?.isLocal === true}
-/>
+  {/* ===================================================
+      FLUX PRINCIPAL
+      - écran partagé si quelqu'un partage
+      - sinon participant distant
+      - sinon moi si je suis seul
+      - sinon avatar
+  =================================================== */}
+  {mainStream ? (
+
+    <MainVideo
+      stream={mainStream}
+      muted={
+        mainParticipant?.isLocal === true
+      }
+    />
+
+  ) : (
+
+    <div
+      className="
+        absolute
+        inset-0
+        flex
+        flex-col
+        items-center
+        justify-center
+        bg-[#111827]
+        text-white
+      "
+    >
+
+      <div
+        className="
+          w-28
+          h-28
+          rounded-full
+          bg-blue-600
+          flex
+          items-center
+          justify-center
+          text-4xl
+          font-bold
+        "
+      >
+        {(mainParticipant?.name || "P")
+          .charAt(0)
+          .toUpperCase()}
+      </div>
+
+      <span
+        className="
+          mt-4
+          text-xl
+          font-semibold
+        "
+      >
+        {mainParticipant?.name ||
+          "En attente d'un participant..."}
+      </span>
+
+    </div>
+
+  )}
+
+</div>
 
 
-{/* =====================================================
-    MINIATURES
-===================================================== */}
-
+    {/* =====================================================
+        MINIATURES
+        IMPORTANT :
+        - toujours visibles
+        - hôte : sa propre caméra en miniature
+        - participant : sa propre caméra en miniature
+    ===================================================== */}
 <div
   className="
     absolute
     bottom-5
     right-5
-    z-20
+    z-30
     flex
     flex-col
     gap-3
   "
 >
 
-  {thumbnailStreams.map((item) => (
+  {thumbnailStreams.map((item) => {
 
-    <div
-      key={item.socketId}
-      className="
-        relative
-        w-44
-        h-28
-        rounded-2xl
-        overflow-hidden
-        bg-[#16233d]
-        shadow-2xl
-        border
-        border-white/20
-      "
-    >
+    if (!item) {
+      return null;
+    }
 
-      {item.stream ? (
+    const mediaState =
+      participantMediaStates[
+        item.socketId
+      ] || {};
 
-        <RemoteVideo
-          stream={item.stream}
-          name={
-            item.isLocal
-              ? "Vous"
-              : item.participant?.name || "Participant"
-          }
-          muted={item.isLocal}
-          cameraEnabled={
-            item.isLocal
-              ? camOn
-              : (
-                  participantMediaStates[
-                    item.socketId
-                  ]?.camera ?? false
-                )
-          }
-        />
+    const cameraEnabled =
+      item.isLocal
+        ? camOn
+        : Boolean(
+            mediaState.camera ??
+            item.cameraEnabled
+          );
 
-      ) : (
+    const participantName =
+      item.isLocal
+        ? "Vous"
+        : (
+            item.participant?.name ||
+            "Participant"
+          );
 
-        <div
-          className="
-            w-full
-            h-full
-            flex
-            flex-col
-            items-center
-            justify-center
-            bg-[#16233d]
-            text-white
-          "
-        >
+    const avatarName =
+      item.isLocal
+        ? (
+            `${user.firstName || ""} ${
+              user.lastName || ""
+            }`.trim() || "Vous"
+          )
+        : participantName;
+
+    return (
+
+      <div
+        key={item.socketId}
+        className="
+          relative
+          w-48
+          h-32
+          rounded-2xl
+          overflow-hidden
+          bg-[#111827]
+          border
+          border-white/30
+          shadow-2xl
+        "
+      >
+
+        {/* =============================================
+            CAMERA ACTIVE
+        ============================================= */}
+
+        {item.stream && cameraEnabled ? (
+
+          <video
+            ref={(element) => {
+
+              if (!element) {
+                return;
+              }
+
+              if (
+                element.srcObject !==
+                item.stream
+              ) {
+
+                element.srcObject =
+                  item.stream;
+
+              }
+
+              element
+                .play()
+                .catch(() => {});
+
+            }}
+            autoPlay
+            playsInline
+            muted={item.isLocal}
+            className="
+              absolute
+              inset-0
+              w-full
+              h-full
+              object-cover
+            "
+          />
+
+        ) : (
+
+          /* ==========================================
+             CAMERA DESACTIVEE
+             → AVATAR
+          ========================================== */
 
           <div
             className="
-              w-12
-              h-12
-              rounded-full
-              bg-gray-500
+              absolute
+              inset-0
               flex
+              flex-col
               items-center
               justify-center
-              font-bold
-              text-lg
+              bg-[#111827]
+              text-white
             "
           >
-            {(item.participant?.name || "U")
-              .charAt(0)
-              .toUpperCase()}
+
+            <div
+              className="
+                w-16
+                h-16
+                rounded-full
+                bg-blue-600
+                flex
+                items-center
+                justify-center
+                text-2xl
+                font-bold
+              "
+            >
+              {avatarName
+                .charAt(0)
+                .toUpperCase()}
+            </div>
+
+            <span
+              className="
+                mt-2
+                text-sm
+                font-medium
+              "
+            >
+              {participantName}
+            </span>
+
           </div>
 
-          <span
-            className="
-              mt-2
-              text-xs
-              font-semibold
-              truncate
-              max-w-[130px]
-            "
-          >
-            {item.isLocal
-              ? "Vous"
-              : item.participant?.name || "Participant"}
-          </span>
+        )}
 
+        {/* =============================================
+            NOM
+        ============================================= */}
+
+        <div
+          className="
+            absolute
+            bottom-0
+            left-0
+            right-0
+            z-20
+            bg-black/60
+            text-white
+            text-xs
+            font-semibold
+            px-3
+            py-2
+            truncate
+          "
+        >
+          {participantName}
         </div>
 
-      )}
-
-      {/* NOM */}
-      <div
-        className="
-          absolute
-          bottom-1
-          left-2
-          right-2
-          text-white
-          text-xs
-          font-semibold
-          truncate
-          drop-shadow-lg
-        "
-      >
-        {item.isLocal
-          ? "Vous"
-          : item.participant?.name || "Participant"}
       </div>
-    </div>
-  ))}
+
+    );
+
+  })}
+
 </div>
 
-{/* NOM DU PROFESSEUR */}
-  <h2 className="
+
+    {/* =====================================================
+        NOM DU PROFESSEUR
+    ===================================================== */}
+
+<h2
+  className="
+    absolute
+    bottom-20
+    left-1/2
+    -translate-x-1/2
+    z-20
     text-white
     text-2xl
     font-bold
-    mt-3
     text-center
-  ">
-{conference.teacher?.name || "Administration"}
-  </h2>
+    drop-shadow-lg
+  "
+>
+  {screenShareOwner
+    ? (
+        screenShareOwner === socket.id
+          ? "Vous partagez votre écran"
+          : `${mainParticipant?.name || "Participant"} partage son écran`
+      )
+    : (
+        mainParticipant?.name ||
+        conference.teacher?.name ||
+        "Administration"
+      )}
+</h2>
 
-{/* COURS */}
-  <p className="
-    text-gray-300
-    text-base
-    mt-2
-    mb-4
-    text-center
-  ">
-{conference.course?.title || "Conférence générale"}
-  </p>
 
-  <span className="
-    mt-6
-    bg-red-500
-    text-white
-    px-4
-    py-2
-    rounded-full
-    animate-pulse
-  ">
-    🔴 EN DIRECT
-  </span>
+    {/* =====================================================
+        COURS
+    ===================================================== */}
 
-</>
+    <p
+      className="
+        absolute
+        bottom-12
+        left-1/2
+        -translate-x-1/2
+        z-20
+        text-gray-300
+        text-sm
+        text-center
+        drop-shadow-lg
+      "
+    >
+      {conference.course?.title ||
+        "Conférence générale"}
+    </p>
 
-   )}
+
+    {/* =====================================================
+        EN DIRECT
+    ===================================================== */}
+    <span
+      className="
+        absolute
+        top-5
+        left-5
+        z-20
+        bg-red-500
+        text-white
+        px-4
+        py-2
+        rounded-full
+        animate-pulse
+        text-sm
+        font-semibold
+      "
+    >
+      🔴 EN DIRECT
+    </span>
+
+  </>
+
+  )}
          </div>
 
           </div>
@@ -2280,10 +3009,16 @@ if (conferenceEnded) {
 
             <button
               onClick={toggleScreenShare}
+              disabled={
+                conferenceEnded ||
+                (!isHost && !screenShareAllowed)
+              }
               title={
-                sharingScreen
-                  ? "Arrêter le partage d'écran"
-                  : "Partager l'écran"
+                !isHost && !screenShareAllowed
+                  ? "Le partage d'écran doit être autorisé par l'hôte"
+                  : sharingScreen
+                    ? "Arrêter le partage d'écran"
+                    : "Partager l'écran"
               }
               className={`
                 w-14
@@ -2296,11 +3031,13 @@ if (conferenceEnded) {
                 hover:scale-110
                 transition
                 ${
-                  sharingScreen
-                    ? "bg-green-500 text-white"
-                    : "bg-white"
+                  !isHost && !screenShareAllowed
+                    ? "bg-gray-400 text-gray-200 cursor-not-allowed"
+                    : sharingScreen
+                      ? "bg-green-500 text-white hover:scale-110"
+                      : "bg-white hover:scale-110"
                 }
-             `}
+              `}
             >
                <FaDesktop />
             </button>
@@ -2409,7 +3146,6 @@ if (conferenceEnded) {
 
 
   {/* CAMERA GLOBALE */}
-
   <button
     onClick={toggleAllStudentsCamera}
     title={
@@ -2764,7 +3500,7 @@ const mediaState =
 
       {/* CONTROLES ENSEIGNANT */}
     {isHost &&
-         participant.socketId !== socket.id && (
+        participant.socketId !== socket.id && (
 
         <div className="flex items-center gap-1">
 
@@ -2839,6 +3575,44 @@ const mediaState =
         </div>
 
       )}
+
+      {/* AUTORISATION PARTAGE ECRAN */}
+{isHost &&
+      participant.socketId !== socket.id &&
+      participant.role === "student" && (
+
+  <button
+    onClick={() =>
+      controlParticipantScreenShare(
+        participant.socketId,
+        !mediaState.screenShare
+      )
+    }
+    title={
+      mediaState.screenShare
+        ? "Interdire le partage d'écran"
+        : "Autoriser le partage d'écran"
+    }
+    className={`
+      w-8
+      h-8
+      rounded-full
+      flex
+      items-center
+      justify-center
+      transition
+
+      ${
+        mediaState.screenShare
+          ? "bg-green-100 text-green-600 hover:bg-green-200"
+          : "bg-red-100 text-red-600 hover:bg-red-200"
+      }
+    `}
+  >
+    <FaDesktop size={13} />
+  </button>
+
+)}
 
     </div>
   );

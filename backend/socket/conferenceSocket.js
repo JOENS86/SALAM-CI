@@ -165,6 +165,37 @@ socket.on(
     }
 );
 
+// =====================================================
+// ETAT PARTAGE D'ECRAN
+// =====================================================
+socket.on(
+    "participant:screenShareState",
+    ({
+        roomId,
+        enabled
+    } = {}) => {
+
+        if (!roomId) return;
+
+        console.log(
+            `🖥️ ${socket.id} ${
+                enabled
+                    ? "COMMENCE"
+                    : "ARRETE"
+            } le partage d'écran`
+        );
+
+        socket.to(roomId).emit(
+            "participant:screenShareState",
+            {
+                socketId: socket.id,
+                enabled: Boolean(enabled)
+            }
+        );
+
+    }
+);
+
     // =====================================================
     // QUITTER UNE SALLE
     // =====================================================

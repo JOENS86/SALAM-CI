@@ -9,7 +9,6 @@ const controlSocket = (io, socket) => {
     // =====================================================
     // VERIFIER QUE L'UTILISATEUR EST L'HOTE
     // =====================================================
-
     const isConferenceHost = async (roomId) => {
 
         try {
@@ -28,9 +27,12 @@ const controlSocket = (io, socket) => {
 
             }
 
+            const user =
+                socket.data.user || {};
+
             const userId =
-                socket.data.user?._id ||
-                socket.data.user?.id;
+                user._id ||
+                user.id;
 
             if (!userId) {
 
@@ -43,42 +45,73 @@ const controlSocket = (io, socket) => {
             }
 
             // =================================================
-            // CONFERENCE CREEE PAR L'ADMIN
+            // ADMIN
             // =================================================
 
-            if (conference.createdBy) {
+            if (
+                user.role === "admin"
+            ) {
+
+                const adminIds = [
+
+                    conference.createdBy,
+                    conference.startedBy
+
+                ]
+                .filter(Boolean)
+                .map(
+                    value =>
+                        String(
+                            value?._id ||
+                            value
+                        )
+                );
 
                 if (
-                    String(conference.createdBy)
-                    ===
-                    String(userId)
+                    adminIds.includes(
+                        String(userId)
+                    )
                 ) {
 
                     return true;
 
                 }
-
-                return false;
 
             }
 
             // =================================================
-            // CONFERENCE CREEE PAR L'ENSEIGNANT
+            // ENSEIGNANT
             // =================================================
 
-            if (conference.teacher) {
+            if (
+                user.role === "teacher"
+            ) {
+
+                const teacherIds = [
+
+                    conference.teacher,
+                    conference.createdBy,
+                    conference.startedBy
+
+                ]
+                .filter(Boolean)
+                .map(
+                    value =>
+                        String(
+                            value?._id ||
+                            value
+                        )
+                );
 
                 if (
-                    String(conference.teacher)
-                    ===
-                    String(userId)
+                    teacherIds.includes(
+                        String(userId)
+                    )
                 ) {
 
                     return true;
 
                 }
-
-                return false;
 
             }
 
@@ -524,6 +557,128 @@ const controlSocket = (io, socket) => {
 
         }
     );
+
+// =====================================================
+// AUTORISER / INTERDIRE LE PARTAGE D'ECRAN
+// =====================================================
+socket.on(
+    "participant:screenShare",
+    async ({
+        roomId,
+        targetSocketId,
+        enabled
+    } = {}) => {
+
+        console.log(
+            "🖥️ Demande autorisation partage écran :",
+            {
+                roomId,
+                targetSocketId,
+                enabled
+            }
+        );
+
+        // =================================================
+        // VERIFIER L'HOTE
+        // =================================================
+
+        const isHost =
+            await isConferenceHost(roomId);
+
+        if (!isHost) {
+
+            console.warn(
+                "⚠️ Tentative d'autorisation partage écran par un non-hôte."
+            );
+
+            return;
+        }
+
+        // =================================================
+        // VERIFIER QUE L'HOTE EST DANS LA SALLE
+        // =================================================
+
+        if (
+            socket.data.roomId !== roomId
+        ) {
+
+            console.warn(
+                "⚠️ L'hôte n'est pas dans cette salle."
+            );
+
+            return;
+        }
+
+        // =================================================
+        // RECUPERER LE PARTICIPANT
+        // =================================================
+
+        const targetSocket =
+            io.sockets.sockets.get(
+                targetSocketId
+            );
+
+        if (!targetSocket) {
+
+            console.warn(
+                "⚠️ Participant introuvable :",
+                targetSocketId
+            );
+
+            return;
+        }
+
+        // =================================================
+        // VERIFIER SA PRESENCE
+        // =================================================
+
+        if (
+            !targetSocket.rooms.has(roomId)
+        ) {
+
+            console.warn(
+                "⚠️ Participant absent de la salle."
+            );
+
+            return;
+        }
+
+        // =================================================
+        // UNIQUEMENT LES ETUDIANTS
+        // =================================================
+
+        if (
+            targetSocket.data.user?.role !== "student"
+        ) {
+
+            console.warn(
+                "⚠️ Le contrôle du partage concerne uniquement les étudiants."
+            );
+
+            return;
+        }
+
+        // =================================================
+        // ENVOYER UNIQUEMENT L'AUTORISATION
+        // =================================================
+
+        targetSocket.emit(
+            "participant:screenShare",
+            {
+                enabled: Boolean(enabled)
+            }
+        );
+
+        console.log(
+            `🖥️ Partage écran ${
+                enabled
+                    ? "autorisé"
+                    : "interdit"
+            } pour ${targetSocketId}`
+        );
+
+    }
+);
 
 };
 

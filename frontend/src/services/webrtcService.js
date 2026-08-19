@@ -75,14 +75,11 @@ class WebRTCService {
 
         this.cameraEnabled = false;
         this.microphoneEnabled = false;
-
         this.audioTrack = null;
         this.videoTrack = null;
-
         this.localStreamPromise = null;
-
         this.isScreenSharing = false;
-
+        this.originalCameraTrack = null;
         this.onScreenShareEnded = null;
     }
 
@@ -999,20 +996,25 @@ stopLocalStream() {
 // =====================================================
 // REINITIALISER WEBRTC
 // =====================================================
-destroy(){
+destroy() {
 
-    console.log("🚨 DESTROY APPELÉ");
+    console.log(
+        "🚨 DESTROY APPELÉ"
+    );
 
     console.trace();
 
     this.stopScreenShare();
 
-    this.stopLocalStream();
-
     this.closeAllConnections();
 
+    this.stopLocalStream();
+
     this.onRemoteStream = null;
+
     this.onIceCandidate = null;
+
+    this.onScreenShareEnded = null;
 
 }
 
@@ -1436,136 +1438,186 @@ setCameraEnabled(enabled) {
 // =====================================================
 async startScreenShare() {
 
-    console.log("========== PARTAGE ECRAN ==========");
+    console.log(
+        "========== DEMARRAGE PARTAGE ECRAN =========="
+    );
 
-    if (this.screenStream) {
+    // =================================================
+    // EVITER DE DEMARRER DEUX PARTAGES
+    // =================================================
+    if (
+        this.screenStream instanceof MediaStream &&
+        this.isScreenSharing
+    ) {
 
-        console.log("Partage écran déjà actif");
+        console.log(
+            "⚠️ Partage écran déjà actif"
+        );
 
         return this.screenStream;
 
     }
 
+    // =================================================
+    // DEMANDER L'ECRAN AU NAVIGATEUR
+    // =================================================
+    let screenStream;
+
     try {
 
-        const screenStream =
+        screenStream =
             await navigator.mediaDevices.getDisplayMedia({
-
-                video: true
-
+                video: true,
+                audio: false
             });
-
-        const screenTrack =
-            screenStream.getVideoTracks()[0];
-
-        if (!screenTrack) {
-
-            console.error(
-                "Aucune piste vidéo écran"
-            );
-
-            return null;
-
-        }
-
-        console.log(
-            "Piste écran obtenue :",
-            screenTrack
-        );
-
-        // ------------------------------------------
-        // Remplacer la caméra par l'écran
-        // ------------------------------------------
-        for (
-            const [socketId, peerConnection]
-            of this.peerConnections.entries()
-        ) {
-
-            const sender =
-                peerConnection
-                    .getSenders()
-                    .find(
-                        item =>
-                            item.track?.kind === "video"
-                    );
-
-            if (!sender) {
-
-                console.warn(
-                    "⚠️ Aucun sender vidéo pour :",
-                    socketId
-                );
-
-                continue;
-            }
-
-            try {
-
-                await sender.replaceTrack(
-                    screenTrack
-                );
-
-                console.log(
-                    "🖥️ Écran envoyé à :",
-                    socketId
-                );
-
-            } catch (error) {
-
-                console.error(
-                    "❌ Erreur replaceTrack écran :",
-                    socketId,
-                    error
-                );
-            }
-        }
-
-        // ------------------------------------------
-        // Sauvegarder le flux écran
-        // ------------------------------------------
-        this.screenStream = screenStream;
-        this.isScreenSharing = true;
-
-        // ------------------------------------------
-        // Si l'utilisateur arrête le partage
-        // depuis Chrome/Edge
-        // ------------------------------------------
-
-        screenTrack.onended = () => {
-
-            console.log(
-                "Partage écran arrêté depuis le navigateur"
-            );
-
-            this.stopScreenShare();
-
-        };
-
-        return screenStream;
 
     }
 
     catch (error) {
 
-        console.error(
-            "Erreur partage écran :",
+        console.warn(
+            "⚠️ Partage d'écran annulé :",
             error
         );
 
-        throw error;
+        return null;
 
     }
 
+    const screenTrack =
+        screenStream.getVideoTracks()[0];
+
+    if (!screenTrack) {
+
+        screenStream
+            .getTracks()
+            .forEach(track => track.stop());
+
+        throw new Error(
+            "Aucune piste vidéo écran disponible."
+        );
+
+    }
+
+    // =================================================
+    // CONSERVER LA CAMERA
+    // =================================================
+    this.originalCameraTrack =
+        this.videoTrack ||
+        this.localStream?.getVideoTracks()[0] ||
+        null;
+
+    console.log(
+        "📹 Caméra conservée :",
+        this.originalCameraTrack
+    );
+
+    // =================================================
+    // SAUVEGARDER LE FLUX ECRAN AVANT REPLACETRACK
+    // =================================================
+    this.screenStream =
+        screenStream;
+
+    this.isScreenSharing =
+        true;
+
+    // =================================================
+    // REMPLACER LA CAMERA PAR L'ECRAN
+    // CHEZ TOUS LES PARTICIPANTS
+    // =================================================
+    for (
+        const [
+            socketId,
+            peerConnection
+        ]
+        of this.peerConnections.entries()
+    ) {
+
+        if (
+            !peerConnection ||
+            peerConnection.connectionState === "closed"
+        ) {
+
+            continue;
+
+        }
+
+        const videoSender =
+            peerConnection
+                .getSenders()
+                .find(
+                    sender =>
+                        sender.track?.kind === "video"
+                );
+
+        if (!videoSender) {
+
+            console.warn(
+                "⚠️ Aucun sender vidéo pour :",
+                socketId
+            );
+
+            continue;
+
+        }
+
+        try {
+
+            await videoSender.replaceTrack(
+                screenTrack
+            );
+
+            console.log(
+                "🖥️ Écran envoyé à :",
+                socketId
+            );
+
+        }
+
+        catch (error) {
+
+            console.error(
+                "❌ Erreur replaceTrack écran :",
+                socketId,
+                error
+            );
+
+        }
+
+    }
+
+    // =================================================
+    // ARRET DEPUIS LE NAVIGATEUR
+    // =================================================
+    screenTrack.onended = async () => {
+
+        console.log(
+            "🛑 Partage arrêté depuis le navigateur"
+        );
+
+        await this.stopScreenShare();
+
+    };
+
+    console.log(
+        "✅ Partage écran actif"
+    );
+
+    return screenStream;
+
 }
+
 
 // =====================================================
 // CALLBACK FIN PARTAGE ECRAN
 // =====================================================
 setScreenShareEndedCallback(callback) {
 
-    this.onScreenShareEnded = callback;
+    this.onScreenShareEnded =
+        callback;
 
 }
+
 
 // =====================================================
 // ARRETER LE PARTAGE D'ECRAN
@@ -1573,60 +1625,94 @@ setScreenShareEndedCallback(callback) {
 async stopScreenShare() {
 
     console.log(
-        "========== STOP PARTAGE ECRAN =========="
+        "========== ARRET PARTAGE ECRAN =========="
     );
 
-    if (!this.screenStream) {
+    // =================================================
+    // CONSERVER LES REFERENCES AVANT NETTOYAGE
+    // =================================================
+    const screenStream =
+        this.screenStream;
+
+    const cameraTrack =
+        this.originalCameraTrack ||
+        this.videoTrack ||
+        this.localStream?.getVideoTracks()[0] ||
+        null;
+
+    // =================================================
+    // SI LE PARTAGE EST DEJA TERMINE
+    // ON NETTOIE QUAND MEME LES ETATS
+    // =================================================
+    if (
+        !screenStream &&
+        !this.isScreenSharing
+    ) {
 
         console.log(
-            "Aucun partage écran actif"
+            "ℹ️ Aucun partage d'écran actif"
         );
 
         return;
 
     }
 
-    const cameraTrack =
-        this.localStream instanceof MediaStream
-            ? this.localStream.getVideoTracks()[0] || null
-            : null;
-
+    // =================================================
+    // RESTAURER LA CAMERA CHEZ TOUS LES PARTICIPANTS
+    // =================================================
     for (
-        const [socketId, peerConnection]
+        const [
+            socketId,
+            peerConnection
+        ]
         of this.peerConnections.entries()
     ) {
 
-        if (!peerConnection) continue;
+        if (
+            !peerConnection ||
+            peerConnection.connectionState === "closed"
+        ) {
 
-        const sender =
+            continue;
+
+        }
+
+        const videoSender =
             peerConnection
                 .getSenders()
                 .find(
-                    item =>
-                        item.track?.kind === "video"
+                    sender =>
+                        sender.track?.kind === "video"
                 );
 
-        if (!sender) continue;
+        if (!videoSender) {
+
+            continue;
+
+        }
 
         try {
 
-            await sender.replaceTrack(
+            await videoSender.replaceTrack(
                 cameraTrack || null
             );
 
             if (cameraTrack) {
 
                 cameraTrack.enabled =
-                    Boolean(this.cameraEnabled);
+                    Boolean(
+                        this.cameraEnabled
+                    );
 
             }
 
             console.log(
-                "✅ Caméra restaurée pour :",
+                "📹 Caméra restaurée pour :",
                 socketId
             );
 
         }
+
         catch (error) {
 
             console.error(
@@ -1639,27 +1725,74 @@ async stopScreenShare() {
 
     }
 
-    this.screenStream
-        .getTracks()
-        .forEach(track => {
+    // =================================================
+    // ARRETER LE FLUX ECRAN
+    // =================================================
+    if (
+        screenStream instanceof MediaStream
+    ) {
 
-            track.stop();
+        screenStream
+            .getTracks()
+            .forEach(track => {
 
-        });
+                // Eviter de rappeler stopScreenShare
+                // depuis onended.
+                track.onended = null;
 
-    this.screenStream = null;
+                if (
+                    track.readyState !== "ended"
+                ) {
 
-    this.isScreenSharing = false;
+                    track.stop();
 
-    if (this.onScreenShareEnded) {
+                }
 
-        this.onScreenShareEnded();
+            });
+
+    }
+
+    // =================================================
+    // NETTOYER LES ETATS
+    // =================================================
+    this.screenStream =
+        null;
+
+    this.isScreenSharing =
+        false;
+
+    this.originalCameraTrack =
+        null;
+
+    // =================================================
+    // CALLBACK LOCAL
+    // =================================================
+    if (
+        typeof this.onScreenShareEnded ===
+        "function"
+    ) {
+
+        try {
+
+            this.onScreenShareEnded();
+
+        }
+
+        catch (error) {
+
+            console.error(
+                "❌ Erreur callback fin partage :",
+                error
+            );
+
+        }
 
     }
 
     console.log(
-        "✅ Partage écran arrêté"
+        "✅ Partage écran terminé"
     );
+
 }
 
     // =====================================================
