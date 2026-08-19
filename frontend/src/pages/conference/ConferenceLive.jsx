@@ -273,10 +273,19 @@ const initConference = async () => {
 
       };
 
-      // ==========================================
-      // MOI = TOUJOURS MINIATURE
-      // ==========================================
-      setThumbnailStreams([]);
+  // ==========================================
+  // MA VIDEO = MINIATURE
+  // ==========================================
+    setThumbnailStreams([
+      {
+        socketId: socket.id,
+        stream,
+        participant: localParticipant,
+        isLocal: true,
+        cameraEnabled: isHost
+      }
+    ]);
+
 
       // ==========================================
       // HOTE SEUL
@@ -327,9 +336,7 @@ const initConference = async () => {
 
 initConference();
 
-// ==========================================
-// FLUX DISTANT
-// ==========================================
+
 // ==========================================
 // FLUX DISTANT WEBRTC
 // ==========================================
@@ -345,9 +352,9 @@ webrtcService.setRemoteStreamCallback(
       socketId
     );
 
-    // ==========================================
-    // RECHERCHER LE PARTICIPANT
-    // ==========================================
+    // =====================================================
+    // RECHERCHER LE PARTICIPANT DISTANT
+    // =====================================================
     const participant =
       participantsRef.current.find(
         item =>
@@ -364,9 +371,9 @@ webrtcService.setRemoteStreamCallback(
       return;
     }
 
-    // ==========================================
-    // ETAT CAMERA DISTANTE
-    // ==========================================
+    // =====================================================
+    // ETAT MEDIA DU PARTICIPANT
+    // =====================================================
     const mediaState =
       participantMediaStatesRef.current[
         socketId
@@ -375,9 +382,6 @@ webrtcService.setRemoteStreamCallback(
     const cameraEnabled =
       Boolean(mediaState.camera);
 
-    // ==========================================
-    // PARTICIPANT DISTANT
-    // ==========================================
     const remoteParticipant = {
 
       ...participant,
@@ -388,105 +392,80 @@ webrtcService.setRemoteStreamCallback(
 
     };
 
-    // ==========================================
-    // VERIFIER SI CE FLUX EST UN PARTAGE D'ECRAN
-    // ==========================================
-    const isRemoteScreenShare =
-      screenShareOwner === socketId;
+    // =====================================================
+    // IMPORTANT
+    //
+    // LE PARTICIPANT DISTANT EST TOUJOURS LE FLUX PRINCIPAL
+    //
+    // MOI → miniature
+    // AUTRE → grand écran
+    // =====================================================
 
-    // ==========================================
-    // FLUX PRINCIPAL
-    //
-    // Si le participant partage son écran :
-    // son écran reste en grand.
-    //
-    // Sinon :
-    // sa caméra / son flux devient le grand écran.
-    // ==========================================
     setMainStream(stream);
 
     setMainParticipant(
       remoteParticipant
     );
 
-    // ==========================================
-    // MA VIDEO = TOUJOURS MINIATURE
-    // ==========================================
-    setThumbnailStreams(prev => {
+    // =====================================================
+    // CONSTRUIRE MA MINIATURE
+    // =====================================================
 
-      const localStream =
-        webrtcService.getStream();
+    const localStream =
+      webrtcService.getStream();
 
-      const localParticipant = {
+    if (!localStream) {
+      return;
+    }
 
-        socketId: socket.id,
+    const localParticipant = {
 
-        name:
-          `${user.firstName || ""} ${
-            user.lastName || ""
-          }`.trim() || "Vous",
+      socketId: socket.id,
 
-        role: user.role,
+      name:
+        `${user.firstName || ""} ${
+          user.lastName || ""
+        }`.trim() || "Vous",
 
-        photo: user.photo,
+      role: user.role,
 
-        isLocal: true
+      photo: user.photo,
 
-      };
+      isLocal: true
 
-      const localItem = {
+    };
 
-        socketId: socket.id,
+    const localItem = {
 
-        stream: localStream,
+      socketId: socket.id,
 
-        participant:
-          localParticipant,
+      stream: localStream,
 
-        isLocal: true,
+      participant:
+        localParticipant,
 
-        cameraEnabled:
-          webrtcService.cameraEnabled
+      isLocal: true,
 
-      };
+      cameraEnabled:
+        webrtcService.cameraEnabled
 
-      const exists =
-        prev.some(
-          item =>
-            item.socketId === socket.id
-        );
+    };
 
-      // ==========================================
-      // MA MINIATURE EXISTE DEJA
-      // ==========================================
-      if (exists) {
+    // =====================================================
+    // MOI = TOUJOURS UNE SEULE MINIATURE
+    // =====================================================
 
-        return prev.map(item =>
-
-          item.socketId === socket.id
-
-            ? localItem
-
-            : item
-
-        );
-
-      }
-
-      // ==========================================
-      // AJOUTER MA MINIATURE
-      // ==========================================
-      return [
-        ...prev,
-        localItem
-      ];
-
-    });
+    setThumbnailStreams([
+      localItem
+    ]);
 
     console.log(
-      isRemoteScreenShare
-        ? "🖥️ Partage écran distant affiché en grand"
-        : "📺 Vidéo distante affichée en grand"
+      "📺 Participant distant en grand :",
+      remoteParticipant.name
+    );
+
+    console.log(
+      "🎥 Moi affiché en miniature"
     );
 
   }
@@ -556,10 +535,13 @@ socket.on(
       count
     );
 
-    setParticipants(
+    const participantList =
       Array.isArray(participants)
-        ? participants
-        : []
+      ? participants
+      : [];
+
+    setParticipants(
+      participantList
     );
 
   }
@@ -864,9 +846,6 @@ socket.on(
 
   );
 
-  // ==========================================
-  // PARTICIPANT PARTI
-  // ==========================================
 // ==========================================
 // PARTICIPANT PARTI
 // ==========================================
@@ -886,20 +865,18 @@ socket.on(
       leftSocketId
     );
 
-    // Fermer uniquement sa connexion WebRTC
+    // =====================================================
+    // FERMER SA CONNEXION WEBRTC
+    // =====================================================
+
     webrtcService.closePeerConnection(
       leftSocketId
     );
 
-    // Supprimer sa miniature
-    setThumbnailStreams(prev =>
-      prev.filter(
-        item =>
-          item.socketId !== leftSocketId
-      )
-    );
+    // =====================================================
+    // SUPPRIMER SES ETATS MEDIA
+    // =====================================================
 
-    // Supprimer ses états média
     setParticipantMediaStates(prev => {
 
       const updated = {
@@ -912,7 +889,10 @@ socket.on(
 
     });
 
-    // Si c'était lui qui partageait son écran
+    // =====================================================
+    // SI C'ETAIT LE PARTAGE D'ECRAN
+    // =====================================================
+
     if (
       screenShareOwner ===
       leftSocketId
@@ -920,44 +900,72 @@ socket.on(
 
       setScreenShareOwner(null);
 
-      // Revenir sur le flux local
-      setMainStream(
-        webrtcService.getStream()
+    }
+
+    // =====================================================
+    // VERIFIER S'IL RESTE UN AUTRE PARTICIPANT
+    // =====================================================
+
+    const remainingParticipant =
+      participantsRef.current.find(
+        item =>
+          item.socketId !== socket.id &&
+          item.socketId !== leftSocketId
       );
 
-      setMainParticipant({
+    // =====================================================
+    // UN AUTRE PARTICIPANT EST ENCORE PRESENT
+    //
+    // → Il reste en grand
+    // → Moi je reste en miniature
+    // =====================================================
 
-        socketId: socket.id,
+    if (remainingParticipant) {
 
-        name:
-          `${user.firstName || ""} ${
-            user.lastName || ""
-          }`.trim() || "Vous",
+      const remoteStream =
+        webrtcService.getRemoteStream(
+          remainingParticipant.socketId
+        );
 
-        role: user.role,
+      if (remoteStream) {
 
-        photo: user.photo,
+        const mediaState =
+          participantMediaStatesRef.current[
+            remainingParticipant.socketId
+          ] || {};
 
-        isLocal: true,
+        setMainStream(
+          remoteStream
+        );
 
-        cameraEnabled:
-          webrtcService.cameraEnabled
+        setMainParticipant({
 
-      });
+          ...remainingParticipant,
+
+          isLocal: false,
+
+          cameraEnabled:
+            Boolean(mediaState.camera)
+
+        });
+
+      }
 
     }
 
-    // IMPORTANT :
-    // On ne change l'écran principal
-    // que si le participant parti
-    // était réellement affiché en grand.
-    if (
-      mainParticipant?.socketId ===
-      leftSocketId
-    ) {
+    // =====================================================
+    // PLUS PERSONNE D'AUTRE
+    //
+    // → Moi redeviens le grand écran
+    // =====================================================
+
+    else {
+
+      const localStream =
+        webrtcService.getStream();
 
       setMainStream(
-        webrtcService.getStream()
+        localStream
       );
 
       setMainParticipant({
@@ -979,6 +987,11 @@ socket.on(
           webrtcService.cameraEnabled
 
       });
+
+      // Plus personne :
+      // ma miniature n'a plus besoin d'être affichée
+
+      setThumbnailStreams([]);
 
     }
 
@@ -2601,23 +2614,23 @@ if (conferenceEnded) {
   <>
 {/* =====================================================
     ZONE VIDEO PRINCIPALE
+    LOGIQUE TYPE GOOGLE MEET
 ===================================================== */}
 <div className="absolute inset-0">
 
   {/* ===================================================
       FLUX PRINCIPAL
-      - écran partagé si quelqu'un partage
-      - sinon participant distant
-      - sinon moi si je suis seul
-      - sinon avatar
+      - Si quelqu'un partage son écran → écran en grand
+      - Sinon → participant distant en grand
+      - Si personne n'est présent → moi en grand
+      - Si caméra coupée → avatar
   =================================================== */}
+
   {mainStream ? (
 
     <MainVideo
       stream={mainStream}
-      muted={
-        mainParticipant?.isLocal === true
-      }
+      muted={mainParticipant?.isLocal === true}
     />
 
   ) : (
@@ -2668,280 +2681,309 @@ if (conferenceEnded) {
 
   )}
 
-</div>
 
+  {/* =====================================================
+      MINIATURES
+      -----------------------------------------------------
+      La miniature représente TOUJOURS ma propre caméra
+      lorsqu'un participant distant est présent.
 
-    {/* =====================================================
-        MINIATURES
-        IMPORTANT :
-        - toujours visibles
-        - hôte : sa propre caméra en miniature
-        - participant : sa propre caméra en miniature
-    ===================================================== */}
-<div
-  className="
-    absolute
-    bottom-5
-    right-5
-    z-30
-    flex
-    flex-col
-    gap-3
-  "
->
+      Exemple :
+      PC professeur :
+        GRAND  → étudiant
+        PETIT  → professeur
 
-  {thumbnailStreams.map((item) => {
+      Téléphone étudiant :
+        GRAND  → professeur
+        PETIT  → étudiant
+  ===================================================== */}
 
-    if (!item) {
-      return null;
-    }
+  <div
+    className="
+      absolute
+      bottom-5
+      right-5
+      z-30
+      flex
+      flex-col
+      gap-3
+    "
+  >
 
-    const mediaState =
-      participantMediaStates[
-        item.socketId
-      ] || {};
+    {thumbnailStreams
+      .filter(Boolean)
+      .map((item) => {
 
-    const cameraEnabled =
-      item.isLocal
-        ? camOn
-        : Boolean(
-            mediaState.camera ??
-            item.cameraEnabled
-          );
+        /* =================================================
+           IMPORTANT :
+           Si cette miniature correspond actuellement
+           au flux principal, on ne l'affiche pas ici.
+        ================================================= */
 
-    const participantName =
-      item.isLocal
-        ? "Vous"
-        : (
-            item.participant?.name ||
-            "Participant"
-          );
+        if (
+          item.socketId ===
+          mainParticipant?.socketId
+        ) {
+          return null;
+        }
 
-    const avatarName =
-      item.isLocal
-        ? (
-            `${user.firstName || ""} ${
-              user.lastName || ""
-            }`.trim() || "Vous"
-          )
-        : participantName;
+        const mediaState =
+          participantMediaStates[
+            item.socketId
+          ] || {};
 
-    return (
+        const cameraEnabled =
+          item.isLocal
+            ? camOn
+            : Boolean(
+                mediaState.camera ??
+                item.cameraEnabled
+              );
 
-      <div
-        key={item.socketId}
-        className="
-          relative
-          w-48
-          h-32
-          rounded-2xl
-          overflow-hidden
-          bg-[#111827]
-          border
-          border-white/30
-          shadow-2xl
-        "
-      >
+        const participantName =
+          item.isLocal
+            ? "Vous"
+            : (
+                item.participant?.name ||
+                "Participant"
+              );
 
-        {/* =============================================
-            CAMERA ACTIVE
-        ============================================= */}
+        const avatarName =
+          item.isLocal
+            ? (
+                `${user.firstName || ""} ${
+                  user.lastName || ""
+                }`.trim() || "Vous"
+              )
+            : participantName;
 
-        {item.stream && cameraEnabled ? (
-
-          <video
-            ref={(element) => {
-
-              if (!element) {
-                return;
-              }
-
-              if (
-                element.srcObject !==
-                item.stream
-              ) {
-
-                element.srcObject =
-                  item.stream;
-
-              }
-
-              element
-                .play()
-                .catch(() => {});
-
-            }}
-            autoPlay
-            playsInline
-            muted={item.isLocal}
-            className="
-              absolute
-              inset-0
-              w-full
-              h-full
-              object-cover
-            "
-          />
-
-        ) : (
-
-          /* ==========================================
-             CAMERA DESACTIVEE
-             → AVATAR
-          ========================================== */
+        return (
 
           <div
+            key={item.socketId}
             className="
-              absolute
-              inset-0
-              flex
-              flex-col
-              items-center
-              justify-center
+              relative
+              w-48
+              h-32
+              rounded-2xl
+              overflow-hidden
               bg-[#111827]
-              text-white
+              border
+              border-white/30
+              shadow-2xl
             "
           >
 
+            {/* =========================================
+                CAMERA ACTIVE
+            ========================================= */}
+
+            {item.stream && cameraEnabled ? (
+
+              <video
+                ref={(element) => {
+
+                  if (!element) {
+                    return;
+                  }
+
+                  if (
+                    element.srcObject !==
+                    item.stream
+                  ) {
+
+                    element.srcObject =
+                      item.stream;
+
+                  }
+
+                  element
+                    .play()
+                    .catch(() => {});
+
+                }}
+                autoPlay
+                playsInline
+                muted={item.isLocal}
+                className="
+                  absolute
+                  inset-0
+                  w-full
+                  h-full
+                  object-cover
+                "
+              />
+
+            ) : (
+
+              /* =======================================
+                 CAMERA DESACTIVEE
+                 → AVATAR
+              ======================================= */
+
+              <div
+                className="
+                  absolute
+                  inset-0
+                  flex
+                  flex-col
+                  items-center
+                  justify-center
+                  bg-[#111827]
+                  text-white
+                "
+              >
+
+                <div
+                  className="
+                    w-16
+                    h-16
+                    rounded-full
+                    bg-blue-600
+                    flex
+                    items-center
+                    justify-center
+                    text-2xl
+                    font-bold
+                  "
+                >
+                  {avatarName
+                    .charAt(0)
+                    .toUpperCase()}
+                </div>
+
+                <span
+                  className="
+                    mt-2
+                    text-sm
+                    font-medium
+                  "
+                >
+                  {participantName}
+                </span>
+
+              </div>
+
+            )}
+
+            {/* =========================================
+                NOM
+            ========================================= */}
+
             <div
               className="
-                w-16
-                h-16
-                rounded-full
-                bg-blue-600
-                flex
-                items-center
-                justify-center
-                text-2xl
-                font-bold
-              "
-            >
-              {avatarName
-                .charAt(0)
-                .toUpperCase()}
-            </div>
-
-            <span
-              className="
-                mt-2
-                text-sm
-                font-medium
+                absolute
+                bottom-0
+                left-0
+                right-0
+                z-20
+                bg-black/60
+                text-white
+                text-xs
+                font-semibold
+                px-3
+                py-2
+                truncate
               "
             >
               {participantName}
-            </span>
+            </div>
 
           </div>
 
-        )}
+        );
 
-        {/* =============================================
-            NOM
-        ============================================= */}
+      })}
 
-        <div
-          className="
-            absolute
-            bottom-0
-            left-0
-            right-0
-            z-20
-            bg-black/60
-            text-white
-            text-xs
-            font-semibold
-            px-3
-            py-2
-            truncate
-          "
-        >
-          {participantName}
-        </div>
+  </div>
 
-      </div>
 
-    );
+  {/* =====================================================
+      NOM DU PARTICIPANT PRINCIPAL
+  ===================================================== */}
 
-  })}
+  <h2
+    className="
+      absolute
+      bottom-20
+      left-1/2
+      -translate-x-1/2
+      z-20
+      text-white
+      text-2xl
+      font-bold
+      text-center
+      drop-shadow-lg
+    "
+  >
+
+    {screenShareOwner ? (
+
+      screenShareOwner === socket.id
+
+        ? "Vous partagez votre écran"
+
+        : (
+            `${mainParticipant?.name || "Participant"} partage son écran`
+          )
+
+    ) : (
+
+      mainParticipant?.name ||
+      conference.teacher?.name ||
+      "Administration"
+
+    )}
+
+  </h2>
+
+
+  {/* =====================================================
+      COURS
+  ===================================================== */}
+
+  <p
+    className="
+      absolute
+      bottom-12
+      left-1/2
+      -translate-x-1/2
+      z-20
+      text-gray-300
+      text-sm
+      text-center
+      drop-shadow-lg
+    "
+  >
+    {conference.course?.title ||
+      "Conférence générale"}
+  </p>
+
+
+  {/* =====================================================
+      EN DIRECT
+  ===================================================== */}
+
+  <span
+    className="
+      absolute
+      top-5
+      left-5
+      z-20
+      bg-red-500
+      text-white
+      px-4
+      py-2
+      rounded-full
+      animate-pulse
+      text-sm
+      font-semibold
+    "
+  >
+    🔴 EN DIRECT
+  </span>
 
 </div>
-
-
-    {/* =====================================================
-        NOM DU PROFESSEUR
-    ===================================================== */}
-
-<h2
-  className="
-    absolute
-    bottom-20
-    left-1/2
-    -translate-x-1/2
-    z-20
-    text-white
-    text-2xl
-    font-bold
-    text-center
-    drop-shadow-lg
-  "
->
-  {screenShareOwner
-    ? (
-        screenShareOwner === socket.id
-          ? "Vous partagez votre écran"
-          : `${mainParticipant?.name || "Participant"} partage son écran`
-      )
-    : (
-        mainParticipant?.name ||
-        conference.teacher?.name ||
-        "Administration"
-      )}
-</h2>
-
-
-    {/* =====================================================
-        COURS
-    ===================================================== */}
-
-    <p
-      className="
-        absolute
-        bottom-12
-        left-1/2
-        -translate-x-1/2
-        z-20
-        text-gray-300
-        text-sm
-        text-center
-        drop-shadow-lg
-      "
-    >
-      {conference.course?.title ||
-        "Conférence générale"}
-    </p>
-
-
-    {/* =====================================================
-        EN DIRECT
-    ===================================================== */}
-    <span
-      className="
-        absolute
-        top-5
-        left-5
-        z-20
-        bg-red-500
-        text-white
-        px-4
-        py-2
-        rounded-full
-        animate-pulse
-        text-sm
-        font-semibold
-      "
-    >
-      🔴 EN DIRECT
-    </span>
 
   </>
 
