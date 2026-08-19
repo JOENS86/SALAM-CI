@@ -30,7 +30,7 @@ const API = axios.create({
 
     baseURL: API_URL.replace(/\/+$/, ""),
 
-    timeout: 10000,
+    timeout: 60000,
 
     headers: {}
 

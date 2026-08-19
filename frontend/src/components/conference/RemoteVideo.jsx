@@ -11,28 +11,25 @@ function RemoteVideo({
 
     useEffect(() => {
 
-        if (!videoRef.current) return;
+        const video =
+            videoRef.current;
 
-        if (!stream) {
+        if (!video) return;
 
-            videoRef.current.srcObject = null;
+        video.srcObject =
+            stream || null;
 
-            return;
+        if (stream) {
+
+            video.play()
+                .catch(() => {});
 
         }
 
-        videoRef.current.srcObject = stream;
-
-        videoRef.current
-            .play()
-            .catch(() => {});
-
         return () => {
 
-            if (videoRef.current) {
-
-                videoRef.current.srcObject = null;
-
+            if (video) {
+                video.srcObject = null;
             }
 
         };
@@ -44,14 +41,11 @@ function RemoteVideo({
         <div
             className="
                 relative
-                w-72
-                h-44
+                w-full
+                h-full
                 rounded-2xl
                 overflow-hidden
                 bg-[#111827]
-                border
-                border-white/20
-                shadow-2xl
             "
         >
 
@@ -97,7 +91,9 @@ function RemoteVideo({
                             font-bold
                         "
                     >
-                        {(name || "P").charAt(0).toUpperCase()}
+                        {(name || "P")
+                            .charAt(0)
+                            .toUpperCase()}
                     </div>
 
                     <span
@@ -122,9 +118,10 @@ function RemoteVideo({
                     right-0
                     bg-black/60
                     text-white
-                    text-sm
+                    text-xs
                     px-3
                     py-2
+                    truncate
                 "
             >
                 {name || "Participant"}

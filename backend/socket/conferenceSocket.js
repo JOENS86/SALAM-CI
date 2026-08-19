@@ -14,6 +14,8 @@ const conferenceSocket = (io, socket) => {
         "conference:joinRoom",
         ({ roomId, user = {} }) => {
 
+            if (!roomId) return;
+
             socket.join(roomId);
 
             socket.data.roomId = roomId;
@@ -61,7 +63,7 @@ const conferenceSocket = (io, socket) => {
             );
 
             // ---------------------------------------------
-            // INFORMER LES AUTRES QU'UN PARTICIPANT ARRIVE
+            // INFORMER UNIQUEMENT LES AUTRES
             // ---------------------------------------------
             socket.to(roomId).emit(
                 "conference:userJoined",
@@ -71,7 +73,8 @@ const conferenceSocket = (io, socket) => {
             );
 
             // ---------------------------------------------
-            // ENVOYER LA LISTE COMPLETE A TOUT LE MONDE
+            // ENVOYER LA LISTE COMPLETE
+            // A TOUS LES PARTICIPANTS
             // ---------------------------------------------
             io.to(roomId).emit(
                 "conference:participants",
@@ -97,16 +100,85 @@ const conferenceSocket = (io, socket) => {
 
 
     // =====================================================
+    // ETAT MEDIA D'UN PARTICIPANT
+    // =====================================================
+    socket.on(
+        "participant:mediaState",
+        ({
+            roomId,
+            microphone,
+            camera
+        } = {}) => {
+
+            if (!roomId) return;
+
+            socket.to(roomId).emit(
+                "participant:mediaState",
+                {
+                    socketId: socket.id,
+                    microphone: Boolean(microphone),
+                    camera: Boolean(camera)
+                }
+            );
+
+        }
+    );
+
+// =====================================================
+// ETAT MICRO DU PARTICIPANT
+// =====================================================
+socket.on(
+    "participant:microphone:state",
+    ({ roomId, enabled } = {}) => {
+
+        if (!roomId) return;
+
+        socket.to(roomId).emit(
+            "participant:mediaState",
+            {
+                socketId: socket.id,
+                microphone: Boolean(enabled)
+            }
+        );
+
+    }
+);
+
+
+// =====================================================
+// ETAT CAMERA DU PARTICIPANT
+// =====================================================
+socket.on(
+    "participant:camera:state",
+    ({ roomId, enabled } = {}) => {
+
+        if (!roomId) return;
+
+        socket.to(roomId).emit(
+            "participant:mediaState",
+            {
+                socketId: socket.id,
+                camera: Boolean(enabled)
+            }
+        );
+
+    }
+);
+
+    // =====================================================
     // QUITTER UNE SALLE
     // =====================================================
     socket.on(
         "conference:leaveRoom",
-        ({ roomId }) => {
+        ({ roomId } = {}) => {
+
+            if (!roomId) return;
 
             const participant =
                 getParticipants(roomId)
                     .find(
-                        p => p.socketId === socket.id
+                        p =>
+                            p.socketId === socket.id
                     );
 
             removeParticipant(
@@ -136,20 +208,29 @@ const conferenceSocket = (io, socket) => {
             io.to(roomId).emit(
                 "conference:participants",
                 {
-                    participants: getParticipants(roomId),
-                    count: getParticipantCount(roomId)
+                    participants:
+                        getParticipants(roomId),
+
+                    count:
+                        getParticipantCount(roomId)
                 }
             );
 
+            // ---------------------------------------------
+            // MISE A JOUR GLOBALE
+            // ---------------------------------------------
             io.emit(
                 "conference:participantsUpdated",
                 {
                     roomId,
-                    count: getParticipantCount(roomId)
+                    count:
+                        getParticipantCount(roomId)
                 }
             );
 
-            // Nettoyer les données socket
+            // ---------------------------------------------
+            // NETTOYER LES DONNEES SOCKET
+            // ---------------------------------------------
             socket.data.roomId = null;
             socket.data.user = null;
 
@@ -160,56 +241,80 @@ const conferenceSocket = (io, socket) => {
     // =====================================================
     // DECONNEXION
     // =====================================================
-    socket.on("disconnect", () => {
+    socket.on(
+        "disconnect",
+        () => {
 
-        if (
-            !socket.data.roomId ||
-            !socket.data.user
-        ) {
-            return;
-        }
+            if (
+                !socket.data.roomId ||
+                !socket.data.user
+            ) {
+                return;
+            }
 
-        const roomId = socket.data.roomId;
+            const roomId =
+                socket.data.roomId;
 
-        const participant =
-            getParticipants(roomId)
-                .find(
-                    p => p.socketId === socket.id
+            const participant =
+                getParticipants(roomId)
+                    .find(
+                        p =>
+                            p.socketId === socket.id
+                    );
+
+            removeParticipant(
+                roomId,
+                socket.id
+            );
+
+            // ---------------------------------------------
+            // INFORMER LES AUTRES
+            // ---------------------------------------------
+            if (participant) {
+
+                io.to(roomId).emit(
+                    "conference:userLeft",
+                    {
+                        participant
+                    }
                 );
 
-        removeParticipant(
-            roomId,
-            socket.id
-        );
+            }
 
-        if (participant) {
-
+            // ---------------------------------------------
+            // NOUVELLE LISTE
+            // ---------------------------------------------
             io.to(roomId).emit(
-                "conference:userLeft",
+                "conference:participants",
                 {
-                    participant
+                    participants:
+                        getParticipants(roomId),
+
+                    count:
+                        getParticipantCount(roomId)
                 }
             );
 
+            // ---------------------------------------------
+            // MISE A JOUR GLOBALE
+            // ---------------------------------------------
+            io.emit(
+                "conference:participantsUpdated",
+                {
+                    roomId,
+                    count:
+                        getParticipantCount(roomId)
+                }
+            );
+
+            // ---------------------------------------------
+            // NETTOYER
+            // ---------------------------------------------
+            socket.data.roomId = null;
+            socket.data.user = null;
+
         }
-
-        io.to(roomId).emit(
-            "conference:participants",
-            {
-                participants: getParticipants(roomId),
-                count: getParticipantCount(roomId)
-            }
-        );
-
-        io.emit(
-            "conference:participantsUpdated",
-            {
-                roomId,
-                count: getParticipantCount(roomId)
-            }
-        );
-
-    });
+    );
 
 
     // =====================================================
@@ -217,7 +322,9 @@ const conferenceSocket = (io, socket) => {
     // =====================================================
     socket.on(
         "conference:start",
-        ({ roomId }) => {
+        ({ roomId } = {}) => {
+
+            if (!roomId) return;
 
             io.to(roomId).emit(
                 "conference:started",
@@ -235,7 +342,9 @@ const conferenceSocket = (io, socket) => {
     // =====================================================
     socket.on(
         "conference:end",
-        ({ roomId }) => {
+        ({ roomId } = {}) => {
+
+            if (!roomId) return;
 
             io.to(roomId).emit(
                 "conference:ended",
@@ -253,7 +362,12 @@ const conferenceSocket = (io, socket) => {
     // =====================================================
     socket.on(
         "conference:cancel",
-        ({ roomId, reason }) => {
+        ({
+            roomId,
+            reason
+        } = {}) => {
+
+            if (!roomId) return;
 
             io.to(roomId).emit(
                 "conference:cancelled",
@@ -271,7 +385,12 @@ const conferenceSocket = (io, socket) => {
     // =====================================================
     socket.on(
         "conference:update",
-        ({ roomId, conference }) => {
+        ({
+            roomId,
+            conference
+        } = {}) => {
+
+            if (!roomId) return;
 
             io.to(roomId).emit(
                 "conference:updated",
@@ -289,16 +408,22 @@ const conferenceSocket = (io, socket) => {
         "conference:getRoomInfo",
         (roomId) => {
 
+            if (!roomId) return;
+
             const room =
-                io.sockets.adapter.rooms.get(roomId);
+                io.sockets.adapter.rooms.get(
+                    roomId
+                );
 
             socket.emit(
                 "conference:roomInfo",
                 {
                     roomId,
-                    participants: room
-                        ? room.size
-                        : 0
+
+                    participants:
+                        room
+                            ? room.size
+                            : 0
                 }
             );
 

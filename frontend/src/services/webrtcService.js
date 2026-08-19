@@ -147,16 +147,11 @@ async startLocalStream(options = {}) {
         // =====================================================
         // ETAT INITIAL : CAMERA ET MICRO DESACTIVES
         // =====================================================
-        if (this.audioTrack) {
-          this.audioTrack.enabled = false;
-        }
+        this.microphoneEnabled =
+        Boolean(this.audioTrack?.enabled);
 
-        if (this.videoTrack) {
-          this.videoTrack.enabled = false;
-        }
-
-        this.microphoneEnabled = false;
-        this.cameraEnabled = false;
+        this.cameraEnabled =
+        Boolean(this.videoTrack?.enabled);
 
         // -------------------------------------------------
         // Resynchroniser les états
@@ -337,153 +332,317 @@ async startLocalStream(options = {}) {
     return this.localStreamPromise;
 }
 
-    // =====================================================
-    // CREER UNE PEER CONNECTION
-    // =====================================================
-    createPeerConnection(socketId) {
+// =====================================================
+// AJOUTER LES PISTES LOCALES À UNE PEER CONNECTION
+// =====================================================
+addLocalTracksToPeerConnection(peerConnection) {
 
-    // Si elle existe déj�
-    if (this.peerConnections.has(socketId)) {
+    if (!peerConnection) return;
 
-        return this.peerConnections.get(socketId);
+    if (!(this.localStream instanceof MediaStream)) {
 
+        console.warn(
+            "⚠️ Aucun localStream disponible pour ajouter les pistes"
+        );
+
+        return;
     }
 
-    const peerConnection = new RTCPeerConnection(
+    const senders = peerConnection.getSenders();
 
-        configuration
+    const audioSender =
+        senders.find(
+            sender =>
+                sender.track?.kind === "audio"
+        );
 
-    );
+    const videoSender =
+        senders.find(
+            sender =>
+                sender.track?.kind === "video"
+        );
 
-    // Sauvegarde
+    const audioTrack =
+        this.localStream.getAudioTracks()[0] || null;
+
+    const videoTrack =
+        this.localStream.getVideoTracks()[0] || null;
+
+    // MICRO
+    if (audioTrack && !audioSender) {
+
+        peerConnection.addTrack(
+            audioTrack,
+            this.localStream
+        );
+
+        console.log(
+            "🎤 Piste audio ajoutée"
+        );
+    }
+
+    // CAMERA
+    if (videoTrack && !videoSender) {
+
+        peerConnection.addTrack(
+            videoTrack,
+            this.localStream
+        );
+
+        console.log(
+            "📹 Piste vidéo ajoutée"
+        );
+    }
+}
+
+// =====================================================
+// CREER UNE PEER CONNECTION
+// =====================================================
+createPeerConnection(socketId) {
+
+    // -------------------------------------------------
+    // Si elle existe déj�
+    // -------------------------------------------------
+
+    if (this.peerConnections.has(socketId)) {
+
+        const existingConnection =
+            this.peerConnections.get(socketId);
+
+        // S'assurer que les pistes locales sont présentes
+        this.addLocalTracksToPeerConnection(
+            existingConnection
+        );
+
+        return existingConnection;
+    }
+
+    // -------------------------------------------------
+    // Créer la PeerConnection
+    // -------------------------------------------------
+
+    const peerConnection =
+        new RTCPeerConnection(configuration);
+
+    // -------------------------------------------------
+    // Sauvegarder
+    // -------------------------------------------------
 
     this.peerConnections.set(
-
         socketId,
-
         peerConnection
-
     );
 
     // =====================================================
     // ETAT DE LA CONNEXION
     // =====================================================
+
     peerConnection.onconnectionstatechange = () => {
 
-      console.log(
-        "ConnectionState :",
-        socketId,
-        peerConnection.connectionState
-      );
+        console.log(
+            "🔗 ConnectionState :",
+            socketId,
+            peerConnection.connectionState
+        );
 
-      this.connectionStates.set(
-        socketId,
-        peerConnection.connectionState
-      );
+        this.connectionStates.set(
+            socketId,
+            peerConnection.connectionState
+        );
 
-    // Si la connexion est terminée
-      if (
-        peerConnection.connectionState === "failed" ||
-        peerConnection.connectionState === "closed" ||
-        peerConnection.connectionState === "disconnected"
-      ) {
+        if (
+            peerConnection.connectionState === "failed" ||
+            peerConnection.connectionState === "closed"
+        ) {
 
-        this.closePeerConnection(socketId);
+            this.closePeerConnection(socketId);
 
-      }
+        }
 
     };
 
     // =====================================================
     // ETAT ICE
     // =====================================================
+
     peerConnection.oniceconnectionstatechange = () => {
 
-      console.log(
-        "ICE State :",
-        socketId,
-        peerConnection.iceConnectionState
-      );
-
-      if (
-
-        peerConnection.iceConnectionState === "failed"
-
-      ) {
-
-        this.closePeerConnection(socketId);
-
-      }
-
-   };
-
-    // Ajouter les pistes locales
-    if (this.localStream) {
-
-        this.localStream
-
-            .getTracks()
-
-            .forEach(track => {
-
-                peerConnection.addTrack(
-
-                    track,
-
-                    this.localStream
-
-                );
-
-            });
-
-    }
-
-   // =====================================================
-   // ENVOI ICE CANDIDATE
-   // =====================================================
-
-   peerConnection.onicecandidate = (event) => {
-
-    if (event.candidate && this.onIceCandidate) {
-
-        this.onIceCandidate(
-
+        console.log(
+            "🧊 ICE State :",
             socketId,
+            peerConnection.iceConnectionState
+        );
 
-            event.candidate
+        if (
+            peerConnection.iceConnectionState === "failed"
+        ) {
 
+            console.warn(
+                "⚠️ Connexion ICE échouée :",
+                socketId
+            );
+
+        }
+
+    };
+
+    // =====================================================
+    // AJOUTER LES PISTES LOCALES
+    // =====================================================
+
+    this.addLocalTracksToPeerConnection(
+        peerConnection
+    );
+
+    // =====================================================
+    // ENVOI ICE CANDIDATE
+    // =====================================================
+
+    peerConnection.onicecandidate = (event) => {
+
+        if (
+            event.candidate &&
+            this.onIceCandidate
+        ) {
+
+            this.onIceCandidate(
+                socketId,
+                event.candidate
+            );
+
+        }
+
+    };
+
+// =====================================================
+// RECEPTION DU FLUX DISTANT
+// =====================================================
+peerConnection.ontrack = (event) => {
+
+    console.log(
+        "📹 ontrack reçu de :",
+        socketId,
+        event.track?.kind
+    );
+
+    if (!event.track) return;
+
+    // =================================================
+    // TOUJOURS UTILISER UN SEUL MEDIASTREAM PAR
+    // PARTICIPANT
+    // =================================================
+
+    let remoteStream =
+        this.remoteStreams.get(socketId);
+
+    if (!(remoteStream instanceof MediaStream)) {
+
+        remoteStream = new MediaStream();
+
+        this.remoteStreams.set(
+            socketId,
+            remoteStream
         );
 
     }
 
-   };
+    // =================================================
+    // EVITER LES DOUBLONS
+    // =================================================
 
-    // =====================================================
-    // RECEPTION DU FLUX DISTANT
-    // =====================================================
-    peerConnection.ontrack = (event) => {
-        const stream = event.streams[0];
+    const alreadyExists =
+        remoteStream
+            .getTracks()
+            .some(
+                track =>
+                    track.id === event.track.id
+            );
+
+    if (!alreadyExists) {
+
+        remoteStream.addTrack(
+            event.track
+        );
+
+    }
+
+    // =================================================
+    // SURVEILLER LA FIN DE LA PISTE
+    // =================================================
+
+    event.track.onended = () => {
+
+        console.log(
+            "⏹️ Piste distante terminée :",
+            socketId,
+            event.track.kind
+        );
+
+        const currentStream =
+            this.remoteStreams.get(socketId);
+
+        if (!currentStream) return;
+
+        const remainingTracks =
+            currentStream
+                .getTracks()
+                .filter(
+                    track =>
+                        track.id !== event.track.id
+                );
+
+        // Recréer le stream proprement
+        const newStream =
+            new MediaStream(
+                remainingTracks
+            );
 
         this.remoteStreams.set(
-
-          socketId,
-
-          stream
-
+            socketId,
+            newStream
         );
 
         if (this.onRemoteStream) {
-          this.onRemoteStream(
 
-              socketId,
-              stream
+            this.onRemoteStream(
+                socketId,
+                newStream
+            );
 
-          );
         }
-      };
+
+    };
+
+    console.log(
+        "✅ Flux distant disponible :",
+        socketId,
+        remoteStream
+            .getTracks()
+            .map(
+                track => ({
+                    kind: track.kind,
+                    enabled: track.enabled,
+                    readyState: track.readyState
+                })
+            )
+    );
+
+    // =================================================
+    // ENVOYER LE FLUX COMPLET À CONFERENCELIVE
+    // =================================================
+
+    if (this.onRemoteStream) {
+
+        this.onRemoteStream(
+            socketId,
+            remoteStream
+        );
+
+    }
+
+};
 
     return peerConnection;
-
 }
 
 // =====================================================
@@ -491,28 +650,72 @@ async startLocalStream(options = {}) {
 // =====================================================
 async createOffer(socketId) {
 
-    const peerConnection = this.createPeerConnection(
+    // -------------------------------------------------
+    // Sécurité : le flux local doit être disponible
+    // -------------------------------------------------
 
-        socketId
+    if (!(this.localStream instanceof MediaStream)) {
 
+        console.log(
+            "⏳ Flux local absent, initialisation..."
+        );
+
+        await this.startLocalStream();
+
+    }
+
+    // -------------------------------------------------
+    // Créer / récupérer la PeerConnection
+    // -------------------------------------------------
+
+    const peerConnection =
+        this.createPeerConnection(
+            socketId
+        );
+
+    // -------------------------------------------------
+    // S'assurer que caméra + micro sont bien ajoutés
+    // -------------------------------------------------
+
+    this.addLocalTracksToPeerConnection(
+        peerConnection
     );
 
-    const offer = await peerConnection.createOffer({
+    console.log(
+        "📡 Pistes envoyées à :",
+        socketId,
+        peerConnection
+            .getSenders()
+            .map(
+                sender =>
+                    sender.track?.kind
+            )
+    );
 
-        offerToReceiveAudio: true,
+    // -------------------------------------------------
+    // Créer l'offre
+    // -------------------------------------------------
 
-        offerToReceiveVideo: true
+    const offer =
+        await peerConnection.createOffer({
+            offerToReceiveAudio: true,
+            offerToReceiveVideo: true
+        });
 
-    });
+    // -------------------------------------------------
+    // Définir la description locale
+    // -------------------------------------------------
 
     await peerConnection.setLocalDescription(
-
         offer
+    );
 
+    console.log(
+        "📤 Offer créée pour :",
+        socketId
     );
 
     return offer;
-
 }
 
 // =====================================================
@@ -575,25 +778,27 @@ async handleOffer(socketId, offer) {
 
     // Enregistrer l'offre distante
     await peerConnection.setRemoteDescription(
-
         new RTCSessionDescription(offer)
-
     );
 
     // =====================================================
     // APPLIQUER LES ICE ARRIVÉS AVANT L'OFFER
     // =====================================================
-
     await this.flushPendingCandidates(socketId);
 
+    this.addLocalTracksToPeerConnection(
+        peerConnection
+    );
+
     // Créer une réponse
-    const answer = await peerConnection.createAnswer();
+    const answer = await peerConnection.createAnswer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: true
+    });
 
     // Sauvegarder la réponse
     await peerConnection.setLocalDescription(
-
         answer
-
     );
 
     return answer;
@@ -1271,41 +1476,54 @@ async startScreenShare() {
         // ------------------------------------------
         // Remplacer la caméra par l'écran
         // ------------------------------------------
+        for (
+            const [socketId, peerConnection]
+            of this.peerConnections.entries()
+        ) {
 
-        this.peerConnections.forEach(
-            (peerConnection, socketId) => {
-
-                const sender =
-                    peerConnection
-                        .getSenders()
-                        .find(
-                            sender =>
-                                sender.track &&
-                                sender.track.kind === "video"
-                        );
-
-                if (sender) {
-
-                    console.log(
-                        "Remplacement vidéo pour :",
-                        socketId
+            const sender =
+                peerConnection
+                    .getSenders()
+                    .find(
+                        item =>
+                            item.track?.kind === "video"
                     );
 
-                    sender.replaceTrack(
-                        screenTrack
-                    );
+            if (!sender) {
 
-                }
+                console.warn(
+                    "⚠️ Aucun sender vidéo pour :",
+                    socketId
+                );
 
+                continue;
             }
-        );
+
+            try {
+
+                await sender.replaceTrack(
+                    screenTrack
+                );
+
+                console.log(
+                    "🖥️ Écran envoyé à :",
+                    socketId
+                );
+
+            } catch (error) {
+
+                console.error(
+                    "❌ Erreur replaceTrack écran :",
+                    socketId,
+                    error
+                );
+            }
+        }
 
         // ------------------------------------------
         // Sauvegarder le flux écran
         // ------------------------------------------
-
         this.screenStream = screenStream;
-
         this.isScreenSharing = true;
 
         // ------------------------------------------
@@ -1352,9 +1570,11 @@ setScreenShareEndedCallback(callback) {
 // =====================================================
 // ARRETER LE PARTAGE D'ECRAN
 // =====================================================
-stopScreenShare() {
+async stopScreenShare() {
 
-    console.log("========== STOP PARTAGE ECRAN ==========");
+    console.log(
+        "========== STOP PARTAGE ECRAN =========="
+    );
 
     if (!this.screenStream) {
 
@@ -1366,59 +1586,58 @@ stopScreenShare() {
 
     }
 
-    // ------------------------------------------
-    // Récupérer la caméra
-    // ------------------------------------------
+    const cameraTrack =
+        this.localStream instanceof MediaStream
+            ? this.localStream.getVideoTracks()[0] || null
+            : null;
 
-    let cameraTrack = null;
+    for (
+        const [socketId, peerConnection]
+        of this.peerConnections.entries()
+    ) {
 
-    if (this.localStream) {
+        if (!peerConnection) continue;
 
-        cameraTrack =
-            this.localStream
-                .getVideoTracks()[0];
-
-    }
-
-    // ------------------------------------------
-    // Remettre la caméra chez les participants
-    // ------------------------------------------
-
-    this.peerConnections.forEach(
-        (peerConnection, socketId) => {
-
-            const sender =
-                peerConnection
-                    .getSenders()
-                    .find(
-                        sender =>
-                            sender.track &&
-                            sender.track.kind === "video"
-                    );
-
-            if (sender) {
-
-                console.log(
-                    "Retour caméra pour :",
-                    socketId
+        const sender =
+            peerConnection
+                .getSenders()
+                .find(
+                    item =>
+                        item.track?.kind === "video"
                 );
 
-                sender.replaceTrack(
-                    cameraTrack || null
-                );
+        if (!sender) continue;
 
-                if (cameraTrack) {
-                    cameraTrack.enabled = this.cameraEnabled;
-                }
+        try {
+
+            await sender.replaceTrack(
+                cameraTrack || null
+            );
+
+            if (cameraTrack) {
+
+                cameraTrack.enabled =
+                    Boolean(this.cameraEnabled);
 
             }
 
-        }
-    );
+            console.log(
+                "✅ Caméra restaurée pour :",
+                socketId
+            );
 
-    // ------------------------------------------
-    // Arrêter le partage écran
-    // ------------------------------------------
+        }
+        catch (error) {
+
+            console.error(
+                "❌ Erreur restauration caméra :",
+                socketId,
+                error
+            );
+
+        }
+
+    }
 
     this.screenStream
         .getTracks()
@@ -1428,18 +1647,19 @@ stopScreenShare() {
 
         });
 
-        this.screenStream = null;
+    this.screenStream = null;
 
-        this.isScreenSharing = false;
+    this.isScreenSharing = false;
 
-        if (this.onScreenShareEnded) {
-            this.onScreenShareEnded();
-        }
+    if (this.onScreenShareEnded) {
+
+        this.onScreenShareEnded();
+
+    }
 
     console.log(
-        "Partage écran arrêté"
+        "✅ Partage écran arrêté"
     );
-
 }
 
     // =====================================================

@@ -192,18 +192,55 @@ webrtcService.setCameraEnabled(false);
 setMicOn(false);
 setCamOn(false);
 
-    setMainStream(stream);
+// =====================================================
+// VIDEO INITIALE
+// =====================================================
+if (isHost) {
 
-    setMainParticipant({
+  // L'hôte voit sa propre caméra en grand
+  setMainStream(stream);
+
+  setMainParticipant({
+    socketId: socket.id,
+    name:
+      `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+      "Vous",
+    role: user.role,
+    isLocal: true
+  });
+
+} else {
+
+  // L'étudiant conserve temporairement son flux local.
+  // Dès que le flux distant de l'hôte arrive,
+  // setRemoteStreamCallback() le remplacera.
+  setMainStream(stream);
+
+  setMainParticipant({
+    socketId: socket.id,
+    name:
+      `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+      "Vous",
+    role: user.role,
+    isLocal: true
+  });
+
+  // Sa propre caméra est déjà préparée pour la miniature.
+  setThumbnailStreams([
+    {
       socketId: socket.id,
-      name:
-        `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
-        "Vous",
-      role: user.role,
+      stream,
+      participant: {
+        socketId: socket.id,
+        name:
+          `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+          "Vous",
+        role: user.role
+      },
       isLocal: true
-    });
-
-
+    }
+  ]);
+}
 
       }
 
@@ -218,99 +255,160 @@ setCamOn(false);
   initConference();
 
 // ==========================================
-// CALLBACK FLUX DISTANT
+// FLUX DISTANT
 // ==========================================
-webrtcService.setRemoteStreamCallback((socketId, stream) => {
+webrtcService.setRemoteStreamCallback(
+  (socketId, stream) => {
 
-  console.log("📹 Flux distant reçu :", socketId);
-
-  if (!stream) return;
-
-  const remoteParticipant = participantsRef.current.find(
-    participant =>
-      participant.socketId === socketId
-  );
-
-  const remoteName =
-    remoteParticipant?.name ||
-    `${remoteParticipant?.firstName || ""} ${remoteParticipant?.lastName || ""}`.trim() ||
-    "Participant";
-
-  // =====================================================
-  // LE FLUX DISTANT DEVIENT LA VIDEO PRINCIPALE
-  // =====================================================
-
-  setMainStream(stream);
-
-  setMainParticipant({
-    socketId,
-    name: remoteName,
-    role: remoteParticipant?.role || "student",
-    isLocal: false
-  });
-
-  // =====================================================
-  // MA VIDEO RESTE TOUJOURS EN MINIATURE
-  // =====================================================
-
-  const localStream = webrtcService.getStream();
-
-  setThumbnailStreams(prev => {
-
-    // ---------------------------------------------------
-    // On retire uniquement le participant qui vient
-    // de devenir la vidéo principale.
-    // ---------------------------------------------------
-
-    const thumbnailsWithoutMain = prev.filter(
-      item => item.socketId !== socketId
+    console.log(
+      "📹 Flux distant reçu :",
+      socketId
     );
 
-    // ---------------------------------------------------
-    // Vérifier si ma vidéo existe déjà en miniature
-    // ---------------------------------------------------
+    if (!stream) return;
 
-    const localExists = thumbnailsWithoutMain.some(
-      item => item.isLocal
-    );
+    // ------------------------------------------
+    // Chercher le participant correspondant
+    // ------------------------------------------
+    const remoteParticipant =
+      participantsRef.current.find(
+        participant =>
+          participant.socketId === socketId
+      );
 
-    // ---------------------------------------------------
-    // Si ma vidéo est déjà présente,
-    // on ne l'ajoute pas une deuxième fois.
-    // ---------------------------------------------------
+    const remoteName =
+      remoteParticipant?.name ||
+      `${remoteParticipant?.firstName || ""} ${remoteParticipant?.lastName || ""}`.trim() ||
+      "Participant";
 
-    if (localExists) {
-      return thumbnailsWithoutMain;
+    // ----------------------------------------------------
+    // HOTE
+    // -----------------------------------------------------
+    // L'hôte garde SA caméra en grand.
+    // Les participants distants vont en miniature.
+    // -----------------------------------------------------
+
+    if (isHost) {
+
+      setThumbnailStreams(prev => {
+
+        const existingIndex =
+          prev.findIndex(
+            item =>
+              item.socketId === socketId
+          );
+
+        const item = {
+          socketId,
+          stream,
+          participant: {
+            socketId,
+            name: remoteName,
+            role:
+              remoteParticipant?.role ||
+              "student"
+          },
+          isLocal: false
+        };
+
+        if (existingIndex !== -1) {
+
+          return prev.map(
+            (oldItem, index) =>
+              index === existingIndex
+                ? {
+                    ...oldItem,
+                    ...item
+                  }
+                : oldItem
+          );
+
+        }
+
+        return [
+          ...prev,
+          item
+        ];
+
+      });
+
+      return;
     }
 
-    // ---------------------------------------------------
-    // Ajouter ma vidéo en miniature
-    // ---------------------------------------------------
+    // -----------------------------------------------------
+    // PARTICIPANT / ETUDIANT
+    // -----------------------------------------------------
+    // Le participant voit l'hôte en grand.
+    // Sa propre caméra reste en miniature.
+    // -----------------------------------------------------
 
-    return [
-      ...thumbnailsWithoutMain,
-      {
-        socketId: socket.id,
-        stream: localStream,
-        participant: {
-          socketId: socket.id,
-          name:
-            `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
-            "Vous",
-          role: user.role
-        },
-        isLocal: true
+    setMainStream(stream);
+
+    setMainParticipant({
+      socketId,
+      name: remoteName,
+      role:
+        remoteParticipant?.role ||
+        "teacher",
+      isLocal: false
+    });
+
+    // ------------------------------------------
+    // Ajouter ma propre caméra en miniature
+    // ------------------------------------------
+
+    const localStream =
+      webrtcService.getStream();
+
+    if (!localStream) return;
+
+    setThumbnailStreams(prev => {
+
+      const localExists =
+        prev.some(
+          item =>
+            item.socketId === socket.id
+        );
+
+      if (localExists) {
+
+        return prev.map(item =>
+          item.socketId === socket.id
+            ? {
+                ...item,
+                stream: localStream,
+                isLocal: true
+              }
+            : item
+        );
+
       }
-    ];
 
-  });
+      return [
+        ...prev,
+        {
+          socketId: socket.id,
+          stream: localStream,
+          participant: {
+            socketId: socket.id,
+            name:
+              `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+              "Vous",
+            role: user.role
+          },
+          isLocal: true
+        }
+      ];
 
-});
+    });
+
+  }
+);
 
 
-  // ====================================
+  // -----------------------------------
   // Fin du Partage d'écran
-  //=====================================
+  // -----------------------------------
   webrtcService.setScreenShareEndedCallback(() => {
 
     console.log("Partage écran terminé");
@@ -352,22 +450,45 @@ webrtcService.setRemoteStreamCallback((socketId, stream) => {
 
   );
 
-  // ==========================================
-  // REJOINDRE LA SALLE
-  // ==========================================
-  socket.emit(
+// ==========================================
+// PARTICIPANTS
+// ==========================================
+socket.on(
+  "conference:participants",
+  ({
+    participants = [],
+    count = 0
+  } = {}) => {
 
-      "conference:joinRoom",
+    console.log(
+      "👥 Liste participants reçue :",
+      participants
+    );
 
-      {
+    console.log(
+      "🔢 Nombre participants reçu :",
+      count
+    );
 
-          roomId: conference._id,
+    setParticipants(
+      Array.isArray(participants)
+        ? participants
+        : []
+    );
 
-          user
+  }
+);
 
-      }
-
-  );
+// ==========================================
+// REJOINDRE LA SALLE
+// ==========================================
+socket.emit(
+  "conference:joinRoom",
+  {
+    roomId: conference._id,
+    user
+  }
+);
 
   // ==========================================
   // CHAT
@@ -380,20 +501,6 @@ webrtcService.setRemoteStreamCallback((socketId, stream) => {
 
   );
 
-  // ==========================================
-  // PARTICIPANTS
-  // ==========================================
-  socket.on(
-
-      "conference:participants",
-
-      ({ participants }) => {
-
-          setParticipants(participants);
-
-      }
-
-  );
 
   // =====================================================
 // ETAT MICRO / CAMERA DES PARTICIPANTS
@@ -686,30 +793,24 @@ socket.on(
   "participant:microphone",
   ({ enabled }) => {
 
-      console.log(
-          "🎤 Commande micro reçue :",
-          enabled ? "ACTIVER" : "COUPER"
+    console.log(
+      "🎤 Commande micro reçue :",
+      enabled ? "ACTIVER" : "COUPER"
+    );
+
+    const result =
+      webrtcService.setMicrophoneEnabled(
+        Boolean(enabled)
       );
 
-      const result =
-          webrtcService.setMicrophoneEnabled(enabled);
+    const finalState = Boolean(result);
 
-      const finalState = Boolean(result);
+    setMicOn(finalState);
 
-      setMicOn(finalState);
-
-      // Informer le serveur de l'état réellement appliqué
-      if (conference) {
-
-          socket.emit(
-              "participant:microphone",
-              {
-                  roomId: conference._id,
-                  enabled: finalState
-              }
-          );
-
-      }
+    console.log(
+      "🎤 Etat réel du micro :",
+      finalState
+    );
 
   }
 );
@@ -721,30 +822,24 @@ socket.on(
   "participant:camera",
   ({ enabled }) => {
 
-      console.log(
-          "📹 Commande caméra reçue :",
-          enabled ? "ACTIVER" : "COUPER"
+    console.log(
+      "📹 Commande caméra reçue :",
+      enabled ? "ACTIVER" : "COUPER"
+    );
+
+    const result =
+      webrtcService.setCameraEnabled(
+        Boolean(enabled)
       );
 
-      const result =
-          webrtcService.setCameraEnabled(enabled);
+    const finalState = Boolean(result);
 
-      const finalState = Boolean(result);
+    setCamOn(finalState);
 
-      setCamOn(finalState);
-
-      // Informer le serveur de l'état réellement appliqué
-      if (conference) {
-
-          socket.emit(
-              "participant:camera",
-              {
-                  roomId: conference._id,
-                  enabled: finalState
-              }
-          );
-
-      }
+    console.log(
+      "📹 Etat réel de la caméra :",
+      finalState
+    );
 
   }
 );
@@ -757,29 +852,14 @@ socket.on(
   "teacher:microphone:all",
   ({ enabled }) => {
 
-      console.log(
-          "🎤 Commande globale micro reçue :",
-          enabled ? "ACTIVER" : "COUPER"
+    if (isTeacher) return;
+
+    const result =
+      webrtcService.setMicrophoneEnabled(
+        Boolean(enabled)
       );
 
-      // ------------------------------------------
-      // Appliquer uniquement aux étudiants
-      // ------------------------------------------
-
-      if (!isTeacher) {
-
-          const result =
-              webrtcService.setMicrophoneEnabled(
-                  enabled
-              );
-
-          setMicOn(Boolean(result));
-
-          console.log(
-              "🎤 Micro étudiant :",
-              result ? "ACTIVÉ" : "COUPÉ"
-          );
-      }
+    setMicOn(Boolean(result));
 
   }
 );
@@ -788,34 +868,18 @@ socket.on(
 // =====================================================
 // CONTROLE GLOBAL CAMERA PAR L'ENSEIGNANT
 // =====================================================
-
 socket.on(
   "teacher:camera:all",
   ({ enabled }) => {
 
-      console.log(
-          "📹 Commande globale caméra reçue :",
-          enabled ? "ACTIVER" : "COUPER"
+    if (isTeacher) return;
+
+    const result =
+      webrtcService.setCameraEnabled(
+        Boolean(enabled)
       );
 
-      // ------------------------------------------
-      // Appliquer uniquement aux étudiants
-      // ------------------------------------------
-
-      if (!isTeacher) {
-
-          const result =
-              webrtcService.setCameraEnabled(
-                  enabled
-              );
-
-          setCamOn(Boolean(result));
-
-          console.log(
-              "📹 Caméra étudiant :",
-              result ? "ACTIVÉE" : "COUPÉE"
-          );
-      }
+    setCamOn(Boolean(result));
 
   }
 );
@@ -952,7 +1016,7 @@ socket.on(
 
 };
 
-}, [conference, isTeacher]);
+}, [conference, isTeacher, isHost]);
 
 // =====================================================
 // ENVOYER UN MESSAGE
@@ -1001,49 +1065,47 @@ const toggleMicrophone = async () => {
   if (conferenceEnded) return;
 
   const enabled =
-    await webrtcService.toggleMicrophone();
+    webrtcService.toggleMicrophone();
 
   setMicOn(Boolean(enabled));
 
-  if (conference) {
-    socket.emit(
-      "participant:microphone",
-      {
-        roomId: conference._id,
-        enabled: Boolean(enabled)
-      }
-    );
-  }
+  socket.emit(
+    "participant:microphone:state",
+    {
+      roomId: conference._id,
+      enabled: Boolean(enabled)
+    }
+  );
 };
 
 
 // =====================================================
 // CAMERA
 // =====================================================
-const toggleCamera = async () => {
+const toggleCamera = () => {
 
   if (conferenceEnded) return;
 
-  // Un étudiant ne peut pas activer sa caméra
-  // sans autorisation de l'hôte.
-  if (!isHost && user.role === "student" && !camOn) {
+  if (
+    !isHost &&
+    user.role === "student" &&
+    !camOn
+  ) {
     return;
   }
 
   const enabled =
-    await webrtcService.toggleCamera();
+    webrtcService.toggleCamera();
 
   setCamOn(Boolean(enabled));
 
-  if (conference) {
-    socket.emit(
-      "participant:camera",
-      {
-        roomId: conference._id,
-        enabled: Boolean(enabled)
-      }
-    );
-  }
+  socket.emit(
+    "participant:camera:state",
+    {
+      roomId: conference._id,
+      enabled: Boolean(enabled)
+    }
+  );
 };
 
 // =====================================================

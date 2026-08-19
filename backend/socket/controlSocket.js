@@ -184,11 +184,18 @@ const controlSocket = (io, socket) => {
             // ---------------------------------------------
             // Envoyer la commande
             // ---------------------------------------------
-
             targetSocket.emit(
                 "participant:microphone",
                 {
                     enabled
+                }
+            );
+
+            io.to(roomId).emit(
+                "participant:mediaState",
+                {
+                    socketId: targetSocketId,
+                    microphone: Boolean(enabled)
                 }
             );
 
@@ -289,11 +296,18 @@ const controlSocket = (io, socket) => {
             // ---------------------------------------------
             // Envoyer la commande
             // ---------------------------------------------
-
             targetSocket.emit(
                 "participant:camera",
                 {
                     enabled
+                }
+            );
+
+            io.to(roomId).emit(
+                "participant:mediaState",
+                {
+                    socketId: targetSocketId,
+                    camera: Boolean(enabled)
                 }
             );
 

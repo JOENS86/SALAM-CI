@@ -1,57 +1,53 @@
 import { useEffect, useRef } from "react";
 
-function MainVideo({ stream, muted = false }) {
+function MainVideo({
+    stream,
+    muted = false
+}) {
 
     const videoRef = useRef(null);
 
     useEffect(() => {
 
-        if (!videoRef.current || !stream) return;
-    
-        videoRef.current.srcObject = stream;
-    
-        videoRef.current.play().catch(console.error);
-    
+        const video =
+            videoRef.current;
+
+        if (!video) return;
+
+        video.srcObject =
+            stream || null;
+
+        if (stream) {
+
+            video.play()
+                .catch(() => {});
+
+        }
+
         return () => {
-    
-            if (videoRef.current) {
-    
-                videoRef.current.srcObject = null;
-    
+
+            if (video) {
+                video.srcObject = null;
             }
-    
+
         };
-    
+
     }, [stream]);
 
     return (
-
         <video
-
             ref={videoRef}
-
             autoPlay
-
             playsInline
-
-            controls={false}
-
             muted={muted}
-
+            controls={false}
             className="
-
                 w-full
-
                 h-full
-
                 object-cover
-
                 rounded-3xl
-
             "
-
         />
-
     );
 
 }
