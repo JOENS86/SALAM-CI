@@ -1,4 +1,6 @@
-import Course from "../models/Course.js"
+import Course from "../models/Course.js";
+import cloudinary from "../config/cloudinary.js";
+import fs from "fs/promises";
 
 // ======================================
 // CRÉER UN COURS
@@ -24,9 +26,25 @@ export const createCourse = async (req, res) => {
     // FICHIERS UPLOADÉS
     // =========================
 
-    const thumbnail =
-
-    req.files?.thumbnail?.[0]?.path.replace(/\\/g, "/") || "";
+    let thumbnail = "";
+    if (req.files?.thumbnail?.[0]) {
+    
+        const filePath = req.files.thumbnail[0].path;
+    
+        const result = await cloudinary.uploader.upload(
+            filePath,
+            {
+                folder: "salam-ci/courses",
+                resource_type: "image"
+            }
+        );
+    
+        thumbnail = result.secure_url;
+    
+        // Supprimer le fichier temporaire local
+        await fs.unlink(filePath);
+    
+    }
 
     const pdf =
 

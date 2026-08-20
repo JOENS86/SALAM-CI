@@ -39,6 +39,15 @@ export const sendNotification = async (req, res) => {
         const sendEmail = req.body.sendEmail === true;
         const sendInternal = req.body.sendInternal === true;
 
+        console.log("📨 DONNEES NOTIFICATION REÇUES :", req.body);
+
+        console.log(
+          "📌 sendInternal =",
+          sendInternal,
+          "| sendEmail =",
+          sendEmail
+        );
+
         // =====================================================
         // VALIDATION
         // =====================================================
@@ -549,12 +558,17 @@ export const getAdminNotificationHistory = async (
         // =====================================================
         // REPONSE
         // =====================================================
+        console.log(
+            "📋 HISTORIQUE ADMIN :",
+            req.user._id.toString(),
+            "=>",
+            notifications.length,
+            "notifications"
+        );
+        
         return res.json({
-
             success: true,
-
             notifications
-
         });
 
     }

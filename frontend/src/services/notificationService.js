@@ -27,15 +27,21 @@ class NotificationService {
     // =====================================================
     // HISTORIQUE ADMIN
     // =====================================================
-
     async getAdminHistory() {
 
+        console.log("📡 APPEL HISTORIQUE ADMIN");
+    
         const response = await API.get(
             "/notifications/admin/history"
         );
-
+    
+        console.log(
+            "📥 REPONSE HISTORIQUE ADMIN :",
+            response.data
+        );
+    
         return response.data;
-
+    
     }
 
 

@@ -121,9 +121,12 @@ const getStats = async () => {
 
       console.log(res.data)
       
-      setStats(
-          res.data
-      )
+      setStats({
+        total: res.data.totalCourses,
+        published: res.data.publishedCourses,
+        pending: res.data.draftCourses,
+        suspended: res.data.suspendedCourses
+    })
   }
 
   catch (error) {
