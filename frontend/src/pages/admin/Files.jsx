@@ -40,8 +40,7 @@ function Files() {
       setLoading(true);
       setError("");
 
-      const response = await fetch(`${API_URL}/api/files`);
-
+      const response = await fetch(`${API_URL}/files`);
       const data = await response.json();
 
       if (!response.ok || !data.success) {
