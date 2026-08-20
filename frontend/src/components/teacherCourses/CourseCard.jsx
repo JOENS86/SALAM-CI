@@ -42,20 +42,25 @@ function CourseCard({ course }) {
 
             <div className="relative">
 
-              <img
-                className="
-                  w-full
-                  h-56
-                  object-cover
-                "
-                src={
-                    course.thumbnail
-                    ? course.thumbnail.startsWith("http")
-                       ? course.thumbnail
-                       : `https://salam-ci-backend.onrender.com/${course.thumbnail}`
-                    : "/images/course-placeholder.jpg"
-                 }
-              />
+            <img
+              className="
+                w-full
+                h-56
+                object-cover
+              "
+              src={
+                course.thumbnail
+                ? course.thumbnail.startsWith("http")
+                ? course.thumbnail
+                : `https://salam-ci-backend.onrender.com/${course.thumbnail}`
+                : "/images/course-placeholder.jpg"
+              }
+              alt={course.title || "Image du cours"}
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = "/images/course-placeholder.jpg";
+              }}
+           />
 
                 {/* Badge statut */}
 
