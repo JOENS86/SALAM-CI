@@ -22,6 +22,9 @@ const API_URL =
 const API_ROOT = API_URL.replace(/\/api\/?$/, "");
 
 function Files() {
+
+  const [fileToDelete, setFileToDelete] = useState(null);
+
   const [files, setFiles] = useState([]);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("Tous");
@@ -803,20 +806,9 @@ function Files() {
                           {/* SUPPRIMER */}
 
                           <button
-                            disabled
-                            title="Suppression bientôt disponible"
-                            className="
-                              w-10
-                              h-10
-                              rounded-xl
-                              bg-red-50
-                              text-red-400
-                              opacity-50
-                              cursor-not-allowed
-                              flex
-                              items-center
-                              justify-center
-                            "
+                            onClick={() => setFileToDelete(file)}
+                            title="Supprimer"
+                            className="p-2.5 rounded-xl text-red-600 bg-red-50 hover:bg-red-100 transition"
                           >
                             <FaTrash />
                           </button>
@@ -1034,6 +1026,123 @@ function Files() {
         </div>
 
       )}
+
+{/* -------------------------------
+       MODAL SUPPRESSION
+------------------------------------ */}    
+{fileToDelete && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+
+    <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden">
+
+      {/* EN-TÊTE */}
+      <div className="bg-red-500 text-white px-6 py-5 flex items-center justify-between">
+
+        <div className="flex items-center gap-3">
+          <FaTrash className="text-xl" />
+
+          <h2 className="text-xl font-bold">
+            Suppression
+          </h2>
+        </div>
+
+        <button
+          onClick={() => setFileToDelete(null)}
+          className="text-white/90 hover:text-white text-2xl font-bold"
+          title="Fermer"
+        >
+          ×
+        </button>
+
+      </div>
+
+      {/* CONTENU */}
+      <div className="p-6">
+
+        <p className="text-gray-600 mb-5">
+          Vous êtes sur le point de supprimer :
+        </p>
+
+        {/* FICHIER */}
+        <div className="bg-gray-50 rounded-2xl p-4 flex items-center gap-4">
+
+          <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center">
+            {getIcon(fileToDelete.type)}
+          </div>
+
+          <div className="min-w-0">
+
+            <p className="font-bold text-gray-900 truncate">
+              {fileToDelete.name}
+            </p>
+
+            <p className="text-sm text-gray-500">
+              {fileToDelete.type}
+            </p>
+
+            <p className="text-sm text-gray-500">
+              {fileToDelete.owner}
+            </p>
+
+          </div>
+
+        </div>
+
+        {/* AVERTISSEMENT */}
+        <p className="text-red-500 text-sm mt-6">
+          Cette action est irréversible.
+        </p>
+
+        {/* BOUTONS */}
+        <div className="flex justify-end gap-3 mt-6">
+
+          <button
+            onClick={() => setFileToDelete(null)}
+            className="
+              px-5
+              py-3
+              rounded-xl
+              bg-gray-100
+              text-gray-700
+              font-semibold
+              hover:bg-gray-200
+              transition
+            "
+          >
+            Annuler
+          </button>
+
+          <button
+            onClick={() => {
+              console.log("Suppression demandée :", fileToDelete);
+              setFileToDelete(null);
+            }}
+            className="
+              px-5
+              py-3
+              rounded-xl
+              bg-red-500
+              text-white
+              font-semibold
+              hover:bg-red-600
+              transition
+              flex
+              items-center
+              gap-2
+            "
+          >
+            <FaTrash />
+            Supprimer
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+)}
 
     </AdminLayout>
   );
