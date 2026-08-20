@@ -433,7 +433,6 @@ createPeerConnection(socketId) {
     // =====================================================
     // ETAT DE LA CONNEXION
     // =====================================================
-
     peerConnection.onconnectionstatechange = () => {
 
         console.log(
@@ -470,6 +469,12 @@ createPeerConnection(socketId) {
             peerConnection.iceConnectionState
         );
 
+        console.log(
+            "🔗 Connection State :",
+            socketId,
+            peerConnection.connectionState
+        );
+
         if (
             peerConnection.iceConnectionState === "failed"
         ) {
@@ -494,7 +499,6 @@ createPeerConnection(socketId) {
     // =====================================================
     // ENVOI ICE CANDIDATE
     // =====================================================
-
     peerConnection.onicecandidate = (event) => {
 
         if (
@@ -511,60 +515,109 @@ createPeerConnection(socketId) {
 
     };
 
+    peerConnection.onicecandidateerror = (event) => {
+
+        console.error(
+            "❌ ICE candidate error :",
+            socketId,
+            event
+        );
+    
+    };
+
 // =====================================================
 // RECEPTION DU FLUX DISTANT
 // =====================================================
 peerConnection.ontrack = (event) => {
 
     console.log(
-        "📹 ontrack reçu de :",
+        "📡 ONTRACK reçu :",
         socketId,
-        event.track?.kind
+        "kind =",
+        event.track?.kind,
+        "streams =",
+        event.streams?.length
     );
 
     if (!event.track) return;
 
     // =================================================
-    // TOUJOURS UTILISER UN SEUL MEDIASTREAM PAR
-    // PARTICIPANT
+    // UTILISER LE STREAM FOURNI PAR WEBRTC SI DISPONIBLE
     // =================================================
 
-    let remoteStream =
-        this.remoteStreams.get(socketId);
+    let remoteStream = null;
 
-    if (!(remoteStream instanceof MediaStream)) {
+    if (
+        event.streams &&
+        event.streams.length > 0 &&
+        event.streams[0] instanceof MediaStream
+    ) {
 
-        remoteStream = new MediaStream();
-
-        this.remoteStreams.set(
-            socketId,
-            remoteStream
-        );
+        remoteStream = event.streams[0];
 
     }
 
     // =================================================
-    // EVITER LES DOUBLONS
+    // FALLBACK : RECONSTRUIRE LE STREAM
     // =================================================
 
-    const alreadyExists =
-        remoteStream
-            .getTracks()
-            .some(
-                track =>
-                    track.id === event.track.id
+    if (!remoteStream) {
+
+        remoteStream =
+            this.remoteStreams.get(socketId);
+
+        if (!(remoteStream instanceof MediaStream)) {
+
+            remoteStream =
+                new MediaStream();
+
+        }
+
+        const alreadyExists =
+            remoteStream
+                .getTracks()
+                .some(
+                    track =>
+                        track.id === event.track.id
+                );
+
+        if (!alreadyExists) {
+
+            remoteStream.addTrack(
+                event.track
             );
 
-    if (!alreadyExists) {
-
-        remoteStream.addTrack(
-            event.track
-        );
+        }
 
     }
 
     // =================================================
-    // SURVEILLER LA FIN DE LA PISTE
+    // SAUVEGARDER LE STREAM
+    // =================================================
+
+    this.remoteStreams.set(
+        socketId,
+        remoteStream
+    );
+
+    // =================================================
+    // DEBUG DES PISTES
+    // =================================================
+
+    console.log(
+        "🎥 Flux distant reçu :",
+        socketId,
+        remoteStream.getTracks().map(track => ({
+            id: track.id,
+            kind: track.kind,
+            enabled: track.enabled,
+            muted: track.muted,
+            readyState: track.readyState
+        }))
+    );
+
+    // =================================================
+    // SURVEILLER LES PISTES
     // =================================================
 
     event.track.onended = () => {
@@ -588,7 +641,6 @@ peerConnection.ontrack = (event) => {
                         track.id !== event.track.id
                 );
 
-        // Recréer le stream proprement
         const newStream =
             new MediaStream(
                 remainingTracks
@@ -610,22 +662,8 @@ peerConnection.ontrack = (event) => {
 
     };
 
-    console.log(
-        "✅ Flux distant disponible :",
-        socketId,
-        remoteStream
-            .getTracks()
-            .map(
-                track => ({
-                    kind: track.kind,
-                    enabled: track.enabled,
-                    readyState: track.readyState
-                })
-            )
-    );
-
     // =================================================
-    // ENVOYER LE FLUX COMPLET À CONFERENCELIVE
+    // ENVOYER AU FRONTEND
     // =================================================
 
     if (this.onRemoteStream) {

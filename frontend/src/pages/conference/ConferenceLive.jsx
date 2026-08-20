@@ -25,184 +25,232 @@ import MainVideo from "../../components/conference/MainVideo";
 function ConferenceLive() {
 
   const navigate = useNavigate();
-
   const { id } = useParams();
 
   const user =
     JSON.parse(localStorage.getItem("user")) || {};
 
+  // =====================================================
+  // CONFERENCE
+  // =====================================================
   const [conference, setConference] = useState(null);
-
-// =====================================================
-// ETAT DE FIN DE CONFERENCE
-// =====================================================
-  const [conferenceEnded, setConferenceEnded] = useState(false);
-
-// =====================================================
-// PARTICIPANTS
-// =====================================================
-const [participants, setParticipants] = useState([]);
-const participantsRef = useRef([]);
-
-useEffect(() => {
-
-  participantsRef.current =
-    participants;
-
-}, [participants]);
-
-
-// =====================================================
-// ETATS MEDIA DES PARTICIPANTS
-// =====================================================
-const [
-  participantMediaStates,
-  setParticipantMediaStates
-] = useState({});
-
-const participantMediaStatesRef =
-  useRef({});
-
-useEffect(() => {
-
-  participantMediaStatesRef.current =
-    participantMediaStates;
-
-}, [participantMediaStates]);
-
-
-// =====================================================
-// MINIATURES
-// =====================================================
-const [
-  thumbnailStreams,
-  setThumbnailStreams
-] = useState([]);
-
-
-// =====================================================
-// PARTICIPANT PRINCIPAL
-// =====================================================
-const [
-  mainParticipant,
-  setMainParticipant
-] = useState(null);
-
-
-// =====================================================
-// PARTICIPANT QUI PARTAGE SON ECRAN
-// =====================================================
-const [
-  screenShareOwner,
-  setScreenShareOwner
-] = useState(null);
-
-
-// =====================================================
-// AUTORISATION PARTAGE ECRAN ETUDIANT
-// =====================================================
-const [
-  screenShareAllowed,
-  setScreenShareAllowed
-] = useState(false);
 
   const [loading, setLoading] = useState(true);
 
+  const [conferenceEnded, setConferenceEnded] = useState(false);
+
+
+  // =====================================================
+  // PARTICIPANTS
+  // =====================================================
+  const [participants, setParticipants] = useState([]);
+
+  const participantsRef = useRef([]);
+
+  useEffect(() => {
+
+    participantsRef.current = participants;
+
+  }, [participants]);
+
+
+  // =====================================================
+  // ETATS MEDIA DES PARTICIPANTS
+  // =====================================================
+  const [participantMediaStates, setParticipantMediaStates] =
+    useState({});
+
+  const participantMediaStatesRef = useRef({});
+
+  useEffect(() => {
+
+    participantMediaStatesRef.current =
+      participantMediaStates;
+
+  }, [participantMediaStates]);
+
+
+  // =====================================================
+  // FLUX VIDEO
+  // =====================================================
+  const [mainStream, setMainStream] = useState(null);
+
+  const [thumbnailStreams, setThumbnailStreams] =
+    useState([]);
+
+
+  // =====================================================
+  // PARTICIPANT PRINCIPAL
+  // =====================================================
+  const [mainParticipant, setMainParticipant] =
+    useState(null);
+
+
+  // =====================================================
+  // PARTAGE D'ECRAN
+  // =====================================================
+  const [screenShareOwner, setScreenShareOwner] =
+    useState(null);
+
+  const screenShareOwnerRef = useRef(null);
+
+  useEffect(() => {
+
+    screenShareOwnerRef.current =
+      screenShareOwner;
+
+  }, [screenShareOwner]);
+
+
+  // =====================================================
+  // AUTORISATION PARTAGE ECRAN
+  // =====================================================
+  const [screenShareAllowed, setScreenShareAllowed] =
+    useState(false);
+
+
+  // =====================================================
+  // MICRO / CAMERA LOCAL
+  // =====================================================
   const [micOn, setMicOn] = useState(false);
 
   const [camOn, setCamOn] = useState(false);
 
+
+  // =====================================================
+  // CHAT
+  // =====================================================
   const [message, setMessage] = useState("");
 
   const [messages, setMessages] = useState([]);
 
+
+  // =====================================================
+  // LEVER LA MAIN
+  // =====================================================
   const [handRaised, setHandRaised] = useState(false);
+
   const [raisedHands, setRaisedHands] = useState([]);
 
-  const [handNotification, setHandNotification] = useState(null);
+  const [handNotification, setHandNotification] =
+    useState(null);
 
-  const [showEndConfirm, setShowEndConfirm] = useState(false);
-  const [endingConference, setEndingConference] = useState(false);
 
   // =====================================================
-  // PANNEAU DISCUSSION / PARTICIPANTS
-  // Caché par défaut et affiché avec une animation latérale
+  // FIN DE CONFERENCE
   // =====================================================
-  const [showSidebar, setShowSidebar] = useState(false);
+  const [showEndConfirm, setShowEndConfirm] =
+    useState(false);
 
-// =====================================================
-// FLUX PRINCIPAL
-// =====================================================
-const [mainStream, setMainStream] = useState(null);
+  const [endingConference, setEndingConference] =
+    useState(false);
 
-// =====================================================
-// ROLE UTILISATEUR
-// =====================================================
-const isTeacher = user.role === "teacher";
-const isAdmin = user.role === "admin";
-
-// =====================================================
-// VERIFIER SI L'UTILISATEUR A DEMARRE LA CONFERENCE
-// =====================================================
-const isConferenceStarter = conference?.startedBy &&
-  String(
-    conference.startedBy?._id ||
-    conference.startedBy
-  ) === String(user._id);
-
-// =====================================================
-// HOTE DE LA CONFERENCE
-// =====================================================
-const isHost =
-  Boolean(isConferenceStarter) &&
-  (isTeacher || isAdmin);
-
-
-// =====================================================
-// PARTAGE D'ECRAN
-// =====================================================
-const [sharingScreen, setSharingScreen] = useState(false);
-
-// =====================================================
-// MICRO CAMERA GLOBAL
-// =====================================================
-const [allStudentsMicOn, setAllStudentsMicOn] = useState(false);
-const [allStudentsCamOn, setAllStudentsCamOn] = useState(false);
 
   // =====================================================
-  // CHARGER LA CONFERENCE
+  // SIDEBAR
   // =====================================================
-  const loadConference = async () => {
+  const [showSidebar, setShowSidebar] =
+    useState(false);
 
-    try {
 
-      setLoading(true);
+  // =====================================================
+  // ROLE UTILISATEUR
+  // =====================================================
+  const isTeacher =
+    user.role === "teacher";
 
-      const result = await conferenceService.getConferenceById(id);
+  const isAdmin =
+    user.role === "admin";
 
-      setConference(result.conference);
 
+  // =====================================================
+  // HOTE / CREATEUR
+  // =====================================================
+  const isConferenceStarter =
+    Boolean(conference?.startedBy) &&
+    String(
+      conference.startedBy?._id ||
+      conference.startedBy
+    ) === String(user._id);
+
+
+  const isHost =
+    Boolean(isConferenceStarter) &&
+    (isTeacher || isAdmin);
+
+
+  // =====================================================
+  // PARTAGE D'ECRAN LOCAL
+  // =====================================================
+  const [sharingScreen, setSharingScreen] =
+    useState(false);
+
+
+  // =====================================================
+  // CONTROLES GLOBAUX ETUDIANTS
+  // =====================================================
+  const [allStudentsMicOn, setAllStudentsMicOn] =
+    useState(false);
+
+  const [allStudentsCamOn, setAllStudentsCamOn] =
+    useState(false);
+
+// =====================================================
+// CHARGER LA CONFERENCE
+// =====================================================
+const loadConference = async () => {
+
+  try {
+
+    setLoading(true);
+
+    const result =
+      await conferenceService.getConferenceById(id);
+
+    if (!result?.conference) {
+
+      console.error(
+        "❌ Conférence introuvable"
+      );
+
+      setConference(null);
+
+      return;
     }
 
-    catch (error) {
+    setConference(
+      result.conference
+    );
 
-      console.error(error);
+  }
 
-    }
+  catch (error) {
 
-    finally {
+    console.error(
+      "❌ Erreur chargement conférence :",
+      error
+    );
 
-      setLoading(false);
+    setConference(null);
 
-    }
+  }
 
-  };
+  finally {
 
-  useEffect(() => {
+    setLoading(false);
 
-    loadConference();
+  }
 
-  }, [id]);
+};
+
+
+useEffect(() => {
+
+  if (!id) return;
+
+  loadConference();
+
+}, [id]);
 
 
 // =====================================================
@@ -210,215 +258,22 @@ const [allStudentsCamOn, setAllStudentsCamOn] = useState(false);
 // =====================================================
 useEffect(() => {
 
-  if (!conference) return;
+  if (!conference?._id) {
+    return;
+  }
 
   let mounted = true;
 
-// ==========================================
-// INITIALISATION CAMERA
-// ==========================================
-const initConference = async () => {
+  let localStream = null;
 
-  try {
 
-      console.log(
-          "🎥 Initialisation de la conférence..."
-      );
+  // =====================================================
+  // PARTICIPANT LOCAL
+  // =====================================================
 
-      const stream =
-          await webrtcService.startLocalStream();
+  const getLocalParticipant = () => {
 
-      if (!mounted) return;
-
-      // ==========================================
-      // ETATS INITIAUX
-      // ==========================================
-
-      if (isHost) {
-
-          webrtcService.setMicrophoneEnabled(true);
-          webrtcService.setCameraEnabled(true);
-
-          setMicOn(true);
-          setCamOn(true);
-
-      } else {
-
-          webrtcService.setMicrophoneEnabled(false);
-          webrtcService.setCameraEnabled(false);
-
-          setMicOn(false);
-          setCamOn(false);
-
-      }
-
-      // ==========================================
-      // INFORMATIONS UTILISATEUR LOCAL
-      // ==========================================
-
-      const localParticipant = {
-
-          socketId: socket.id,
-
-          name:
-              `${user.firstName || ""} ${
-                  user.lastName || ""
-              }`.trim() || "Vous",
-
-          role: user.role,
-
-          photo: user.photo,
-
-          isLocal: true
-
-      };
-
-  // ==========================================
-  // MA VIDEO = MINIATURE
-  // ==========================================
-    setThumbnailStreams([
-      {
-        socketId: socket.id,
-        stream,
-        participant: localParticipant,
-        isLocal: true,
-        cameraEnabled: isHost
-      }
-    ]);
-
-
-      // ==========================================
-      // HOTE SEUL
-      // ==========================================
-
-      if (isHost) {
-
-          setMainStream(stream);
-
-          setMainParticipant({
-
-              ...localParticipant,
-
-              cameraEnabled: true
-
-          });
-
-      }
-
-      // ==========================================
-      // ETUDIANT
-      // ==========================================
-
-      else {
-
-          setMainStream(null);
-
-          setMainParticipant(null);
-
-      }
-
-      console.log(
-          "✅ Initialisation conférence terminée"
-      );
-
-  }
-
-  catch (error) {
-
-      console.error(
-          "❌ ERREUR INIT CONFERENCE :",
-          error
-      );
-
-  }
-
-};
-
-initConference();
-
-
-// ==========================================
-// FLUX DISTANT WEBRTC
-// ==========================================
-webrtcService.setRemoteStreamCallback(
-  (socketId, stream) => {
-
-    if (!mounted || !socketId || !stream) {
-      return;
-    }
-
-    console.log(
-      "📹 FLUX DISTANT REÇU :",
-      socketId
-    );
-
-    // =====================================================
-    // RECHERCHER LE PARTICIPANT DISTANT
-    // =====================================================
-    const participant =
-      participantsRef.current.find(
-        item =>
-          item.socketId === socketId
-      );
-
-    if (!participant) {
-
-      console.warn(
-        "⚠️ Participant introuvable pour le flux :",
-        socketId
-      );
-
-      return;
-    }
-
-    // =====================================================
-    // ETAT MEDIA DU PARTICIPANT
-    // =====================================================
-    const mediaState =
-      participantMediaStatesRef.current[
-        socketId
-      ] || {};
-
-    const cameraEnabled =
-      Boolean(mediaState.camera);
-
-    const remoteParticipant = {
-
-      ...participant,
-
-      isLocal: false,
-
-      cameraEnabled
-
-    };
-
-    // =====================================================
-    // IMPORTANT
-    //
-    // LE PARTICIPANT DISTANT EST TOUJOURS LE FLUX PRINCIPAL
-    //
-    // MOI → miniature
-    // AUTRE → grand écran
-    // =====================================================
-
-    setMainStream(stream);
-
-    setMainParticipant(
-      remoteParticipant
-    );
-
-    // =====================================================
-    // CONSTRUIRE MA MINIATURE
-    // =====================================================
-
-    const localStream =
-      webrtcService.getStream();
-
-    if (!localStream) {
-      return;
-    }
-
-    const localParticipant = {
+    return {
 
       socketId: socket.id,
 
@@ -435,136 +290,559 @@ webrtcService.setRemoteStreamCallback(
 
     };
 
-    const localItem = {
+  };
 
-      socketId: socket.id,
 
-      stream: localStream,
+  // =====================================================
+  // INITIALISATION CONFERENCE
+  // =====================================================
+  const initConference = async () => {
 
-      participant:
-        localParticipant,
+    try {
 
-      isLocal: true,
+      console.log(
+        "🎥 Initialisation de la conférence..."
+      );
 
-      cameraEnabled:
-        webrtcService.cameraEnabled
 
-    };
+      // =================================================
+      // OBTENIR LE FLUX LOCAL
+      // =================================================
 
-    // =====================================================
-    // MOI = TOUJOURS UNE SEULE MINIATURE
-    // =====================================================
+      localStream =
+        await webrtcService.startLocalStream();
 
-    setThumbnailStreams([
-      localItem
-    ]);
 
-    console.log(
-      "📺 Participant distant en grand :",
-      remoteParticipant.name
-    );
+      if (!mounted) {
 
-    console.log(
-      "🎥 Moi affiché en miniature"
-    );
+        localStream
+          ?.getTracks()
+          ?.forEach(track => track.stop());
 
-  }
-);
-
-  // -----------------------------------
-  // Fin du Partage d'écran
-  // -----------------------------------
-  webrtcService.setScreenShareEndedCallback(() => {
-
-    console.log("Partage écran terminé");
-
-    setSharingScreen(false);
-
-    setMainStream(
-        webrtcService.getStream()
-    );
-
-});
-
-  // ==========================================
-  // ICE CALLBACK
-  // ==========================================
-  webrtcService.setIceCandidateCallback(
-
-      (socketId, candidate) => {
-
-          socket.emit(
-
-              "webrtc:iceCandidate",
-
-              {
-
-                  roomId: conference._id,
-
-                  sender: socket.id,
-
-                  target: socketId,
-
-                  candidate
-
-              }
-
-          );
+        return;
 
       }
 
+
+      // =================================================
+      // CONFIGURATION INITIALE DES MEDIA
+      // =================================================
+
+      if (isHost) {
+
+        webrtcService.setMicrophoneEnabled(true);
+
+        webrtcService.setCameraEnabled(true);
+
+        setMicOn(true);
+
+        setCamOn(true);
+
+      }
+
+      else {
+
+        webrtcService.setMicrophoneEnabled(false);
+
+        webrtcService.setCameraEnabled(false);
+
+        setMicOn(false);
+
+        setCamOn(false);
+
+      }
+
+
+      // =================================================
+      // PARTICIPANT LOCAL
+      // =================================================
+
+      const localParticipant =
+        getLocalParticipant();
+
+
+      // =================================================
+      // MA MINIATURE
+      // =================================================
+
+      setThumbnailStreams([
+
+        {
+
+          socketId: socket.id,
+
+          stream: localStream,
+
+          participant: localParticipant,
+
+          isLocal: true,
+
+          cameraEnabled: isHost
+
+        }
+
+      ]);
+
+
+      // =================================================
+      // SI JE SUIS HOTE
+      // =================================================
+
+      if (isHost) {
+
+        setMainStream(localStream);
+
+        setMainParticipant({
+
+          ...localParticipant,
+
+          cameraEnabled: true
+
+        });
+
+      }
+
+      // =================================================
+      // SI JE SUIS ETUDIANT
+      // =================================================
+
+      else {
+
+        setMainStream(null);
+
+        setMainParticipant(null);
+
+      }
+
+
+      // =================================================
+      // INFORMER LE SERVEUR DE MON ETAT MEDIA
+      // =================================================
+
+      socket.emit(
+        "participant:microphone:state",
+        {
+
+          roomId: conference._id,
+
+          enabled: isHost
+
+        }
+      );
+
+
+      socket.emit(
+        "participant:camera:state",
+        {
+
+          roomId: conference._id,
+
+          enabled: isHost
+
+        }
+      );
+
+
+      console.log(
+        "✅ Initialisation conférence terminée"
+      );
+
+    }
+
+    catch (error) {
+
+      console.error(
+        "❌ ERREUR INIT CONFERENCE :",
+        error
+      );
+
+    }
+
+  };
+
+
+  // =====================================================
+  // FLUX DISTANT RECU
+  // =====================================================
+  webrtcService.setRemoteStreamCallback(
+    (socketId, stream) => {
+
+      if (
+        !mounted ||
+        !socketId ||
+        !stream
+      ) {
+
+        return;
+
+      }
+
+
+      console.log(
+        "📹 FLUX DISTANT REÇU :",
+        socketId
+      );
+
+
+      // =================================================
+      // RECHERCHER LE PARTICIPANT
+      // =================================================
+
+      const participant =
+        participantsRef.current.find(
+          item =>
+            item.socketId === socketId
+        );
+
+
+      if (!participant) {
+
+        console.warn(
+          "⚠️ Participant introuvable pour le flux :",
+          socketId
+        );
+
+        return;
+
+      }
+
+
+      // =================================================
+      // ETAT MEDIA
+      // =================================================
+
+      const mediaState =
+        participantMediaStatesRef.current[
+          socketId
+        ] || {};
+
+
+      const cameraEnabled =
+        typeof mediaState.camera === "boolean"
+          ? mediaState.camera
+          : true;
+
+
+      // =================================================
+      // PARTICIPANT DISTANT PRINCIPAL
+      // =================================================
+
+      const remoteParticipant = {
+
+        ...participant,
+
+        isLocal: false,
+
+        cameraEnabled
+
+      };
+
+
+      // =================================================
+      // LE DISTANT PASSE EN GRAND
+      // =================================================
+
+      setMainStream(stream);
+
+      setMainParticipant(
+        remoteParticipant
+      );
+
+
+      // =================================================
+      // MOI = MINIATURE
+      // =================================================
+
+      const currentLocalStream =
+        webrtcService.getStream();
+
+
+      if (currentLocalStream) {
+
+        setThumbnailStreams([
+
+          {
+
+            socketId: socket.id,
+
+            stream: currentLocalStream,
+
+            participant:
+              getLocalParticipant(),
+
+            isLocal: true,
+
+            cameraEnabled:
+              webrtcService.cameraEnabled
+
+          }
+
+        ]);
+
+      }
+
+
+      console.log(
+        "📺 Participant distant en grand :",
+        remoteParticipant.name
+      );
+
+    }
   );
 
-// ==========================================
-// PARTICIPANTS
-// ==========================================
-socket.on(
-  "conference:participants",
-  ({
-    participants = [],
+
+  // =====================================================
+  // FIN PARTAGE ECRAN
+  // =====================================================
+
+  webrtcService.setScreenShareEndedCallback(() => {
+
+    if (!mounted) {
+      return;
+    }
+
+
+    console.log(
+      "🛑 Partage écran terminé"
+    );
+
+
+    setSharingScreen(false);
+
+    setScreenShareOwner(null);
+
+
+    const currentLocalStream =
+      webrtcService.getStream();
+
+
+    // =================================================
+    // RESTAURER LE FLUX PRINCIPAL
+    // =================================================
+
+    const remoteParticipant =
+      participantsRef.current.find(
+        participant =>
+          participant.socketId !== socket.id
+      );
+
+
+    if (remoteParticipant) {
+
+      const remoteStream =
+        webrtcService.getRemoteStream(
+          remoteParticipant.socketId
+        );
+
+
+      if (remoteStream) {
+
+        const mediaState =
+          participantMediaStatesRef.current[
+            remoteParticipant.socketId
+          ] || {};
+
+
+        setMainStream(
+          remoteStream
+        );
+
+
+        setMainParticipant({
+
+          ...remoteParticipant,
+
+          isLocal: false,
+
+          cameraEnabled:
+            typeof mediaState.camera === "boolean"
+              ? mediaState.camera
+              : true
+
+        });
+
+        return;
+
+      }
+
+    }
+
+
+    // =================================================
+    // PERSONNE D'AUTRE
+    // =================================================
+
+    if (currentLocalStream) {
+
+      setMainStream(
+        currentLocalStream
+      );
+
+
+      setMainParticipant({
+
+        ...getLocalParticipant(),
+
+        cameraEnabled:
+          webrtcService.cameraEnabled
+
+      });
+
+    }
+
+  });
+
+
+  // =====================================================
+  // ICE CALLBACK
+  // =====================================================
+
+  webrtcService.setIceCandidateCallback(
+    (socketId, candidate) => {
+
+      if (
+        !mounted ||
+        !socketId ||
+        !candidate
+      ) {
+
+        return;
+
+      }
+
+
+      socket.emit(
+        "webrtc:iceCandidate",
+        {
+
+          roomId: conference._id,
+
+          sender: socket.id,
+
+          target: socketId,
+
+          candidate
+
+        }
+      );
+
+    }
+  );
+
+
+  // =====================================================
+  // PARTICIPANTS
+  // =====================================================
+
+  const handleParticipants = ({
+    participants: receivedParticipants = [],
     count = 0
   } = {}) => {
 
-    console.log(
-      "👥 Liste participants reçue :",
-      participants
-    );
+    if (!mounted) {
+      return;
+    }
+
+
+    const participantList =
+      Array.isArray(receivedParticipants)
+        ? receivedParticipants
+        : [];
+
 
     console.log(
-      "🔢 Nombre participants reçu :",
+      "👥 Participants reçus :",
+      participantList
+    );
+
+
+    console.log(
+      "🔢 Nombre participants :",
       count
     );
 
-    const participantList =
-      Array.isArray(participants)
-      ? participants
-      : [];
 
     setParticipants(
       participantList
     );
 
-  }
-);
 
-// =====================================================
-// AUTORISATION PARTAGE ECRAN
-// =====================================================
-socket.on(
-  "participant:screenShare",
-  ({ enabled } = {}) => {
+    // =================================================
+    // INITIALISER LES ETATS MEDIA MANQUANTS
+    // =================================================
+
+    setParticipantMediaStates(prev => {
+
+      const updated = {
+        ...prev
+      };
+
+
+      participantList.forEach(
+        participant => {
+
+          if (
+            !participant?.socketId
+          ) {
+
+            return;
+
+          }
+
+
+          if (
+            !updated[
+              participant.socketId
+            ]
+          ) {
+
+            updated[
+              participant.socketId
+            ] = {
+
+              microphone: false,
+
+              camera: false,
+
+              screenShare: false
+
+            };
+
+          }
+
+        }
+      );
+
+
+      return updated;
+
+    });
+
+  };
+
+
+  // =====================================================
+  // AUTORISATION PARTAGE ECRAN
+  // =====================================================
+
+  const handleScreenSharePermission = ({
+    enabled
+  } = {}) => {
 
     const allowed =
       Boolean(enabled);
+
 
     console.log(
       "🖥️ Autorisation partage écran :",
       allowed
     );
 
+
     setScreenShareAllowed(
       allowed
     );
+
 
     setParticipantMediaStates(prev => ({
 
@@ -574,45 +852,47 @@ socket.on(
 
         ...prev[socket.id],
 
-        screenShare:
-          allowed
+        screenShare: allowed
 
       }
 
     }));
 
 
-    // ================================================
-    // SI L'AUTORISATION EST RETIREE
-    // ================================================
+    // =================================================
+    // AUTORISATION RETIREE
+    // =================================================
+
     if (
       !allowed &&
       webrtcService.isScreenSharing
     ) {
 
-      webrtcService
-        .stopScreenShare();
+      webrtcService.stopScreenShare();
 
       setSharingScreen(false);
 
       setScreenShareOwner(null);
 
+
+      const currentLocalStream =
+        webrtcService.getStream();
+
+
       setMainStream(
-        webrtcService.getStream()
+        currentLocalStream
       );
 
     }
 
-  }
-);
+  };
 
 
-// =====================================================
-// ETAT DU PARTAGE D'ECRAN
-// =====================================================
-socket.on(
-  "participant:screenShareState",
-  ({
+  // =====================================================
+  // ETAT PARTAGE ECRAN
+  // =====================================================
+
+  const handleScreenShareState = ({
     socketId,
     enabled
   } = {}) => {
@@ -621,11 +901,13 @@ socket.on(
       return;
     }
 
+
     console.log(
       "🖥️ Etat partage écran :",
       socketId,
       enabled
     );
+
 
     if (enabled) {
 
@@ -633,16 +915,41 @@ socket.on(
         socketId
       );
 
+
       const remoteStream =
         webrtcService.getRemoteStream(
           socketId
         );
+
 
       if (remoteStream) {
 
         setMainStream(
           remoteStream
         );
+
+
+        const participant =
+          participantsRef.current.find(
+            item =>
+              item.socketId === socketId
+          );
+
+
+        if (participant) {
+
+          setMainParticipant({
+
+            ...participant,
+
+            isLocal:
+              socketId === socket.id,
+
+            cameraEnabled: true
+
+          });
+
+        }
 
       }
 
@@ -654,228 +961,280 @@ socket.on(
         null
       );
 
-      const remoteStream =
-        webrtcService.getRemoteStream(
-          socketId
-        );
 
-      if (remoteStream) {
+      // =================================================
+      // SI C'EST MOI QUI ARRETE
+      // =================================================
+
+      if (
+        socketId === socket.id
+      ) {
+
+        const remoteParticipant =
+          participantsRef.current.find(
+            participant =>
+              participant.socketId !== socket.id
+          );
+
+
+        if (remoteParticipant) {
+
+          const remoteStream =
+            webrtcService.getRemoteStream(
+              remoteParticipant.socketId
+            );
+
+
+          if (remoteStream) {
+
+            const mediaState =
+              participantMediaStatesRef.current[
+                remoteParticipant.socketId
+              ] || {};
+
+
+            setMainStream(
+              remoteStream
+            );
+
+
+            setMainParticipant({
+
+              ...remoteParticipant,
+
+              isLocal: false,
+
+              cameraEnabled:
+                typeof mediaState.camera === "boolean"
+                  ? mediaState.camera
+                  : true
+
+            });
+
+            return;
+
+          }
+
+        }
+
+
+        const currentLocalStream =
+          webrtcService.getStream();
+
 
         setMainStream(
-          remoteStream
+          currentLocalStream
         );
+
+
+        setMainParticipant({
+
+          ...getLocalParticipant(),
+
+          cameraEnabled:
+            webrtcService.cameraEnabled
+
+        });
 
       }
 
     }
 
-  }
-);
-
-
-// ==========================================
-// REJOINDRE LA SALLE
-// ==========================================
-socket.emit(
-  "conference:joinRoom",
-  {
-    roomId: conference._id,
-    user
-  }
-);
-
-  // ==========================================
-  // CHAT
-  // ==========================================
-  socket.emit(
-
-      "chat:getHistory",
-
-      conference._id
-
-  );
+  };
 
 
   // =====================================================
-// ETAT MICRO / CAMERA DES PARTICIPANTS
-// =====================================================
-socket.on(
-  "participant:mediaState",
-  ({
-      socketId,
-      microphone,
-      camera
-  }) => {
+  // CHAT HISTORIQUE
+  // =====================================================
 
-      if (!socketId) return;
+  const handleChatHistory = history => {
 
-      setParticipantMediaStates(prev => {
-
-          const current =
-              prev[socketId] || {};
-
-          return {
-
-              ...prev,
-
-              [socketId]: {
-
-                  ...current,
-
-                  ...(typeof microphone === "boolean"
-                      ? {
-                          microphone
-                      }
-                      : {}),
-
-                  ...(typeof camera === "boolean"
-                      ? {
-                          camera
-                      }
-                      : {})
-
-              }
-
-          };
-
-      });
-
-  }
-);
-
-  // ==========================================
-  // HISTORIQUE CHAT
-  // ==========================================
-  socket.on(
-
-      "chat:history",
-
-      history => {
-
-          setMessages(history);
-
-      }
-
-  );
-
-  // ==========================================
-  // NOUVEAU MESSAGE
-  // ==========================================
-  socket.on(
-
-      "chat:newMessage",
-
-      message => {
-
-          setMessages(prev => [
-
-              ...prev,
-
-              message
-
-          ]);
-
-      }
-
-  );
-
-  // ==========================================
-  // NOUVEAU PARTICIPANT
-  // ==========================================
-  socket.on(
-
-      "conference:userJoined",
-
-      async ({ participant }) => {
-
-          if (participant.socketId === socket.id) return;
-
-          if (!isHost) return;
-
-          try {
-
-              if (
-
-                  webrtcService.hasPeerConnection(
-
-                      participant.socketId
-
-                  )
-
-              ) return;
-
-              webrtcService.createPeerConnection(
-
-                  participant.socketId
-
-              );
-
-              const offer = await webrtcService.createOffer(
-
-                  participant.socketId
-
-              );
-
-              socket.emit(
-
-                  "webrtc:offer",
-
-                  {
-
-                      roomId: conference._id,
-
-                      sender: socket.id,
-
-                      target: participant.socketId,
-
-                      offer
-
-                  }
-
-              );
-
-          }
-
-          catch (error) {
-
-              console.error(error);
-
-          }
-
-      }
-
-  );
-
-// ==========================================
-// PARTICIPANT PARTI
-// ==========================================
-socket.on(
-  "conference:userLeft",
-  ({ participant } = {}) => {
-
-    if (!participant?.socketId) {
+    if (!mounted) {
       return;
     }
 
+
+    setMessages(
+      Array.isArray(history)
+        ? history
+        : []
+    );
+
+  };
+
+
+  // =====================================================
+  // NOUVEAU MESSAGE
+  // =====================================================
+
+  const handleNewMessage = newMessage => {
+
+    if (!mounted) {
+      return;
+    }
+
+
+    setMessages(prev => [
+
+      ...prev,
+
+      newMessage
+
+    ]);
+
+  };
+
+
+  // =====================================================
+  // NOUVEAU PARTICIPANT
+  // =====================================================
+
+  const handleUserJoined = async ({
+    participant
+  } = {}) => {
+
+    if (
+      !participant?.socketId ||
+      participant.socketId === socket.id
+    ) {
+
+      return;
+
+    }
+
+
+    console.log(
+      "🟢 Participant rejoint :",
+      participant
+    );
+
+
+    // =================================================
+    // SEUL L'HOTE CREER L'OFFER
+    // =================================================
+
+    if (!isHost) {
+      return;
+    }
+
+
+    try {
+
+      if (
+        webrtcService.hasPeerConnection(
+          participant.socketId
+        )
+      ) {
+
+        console.log(
+          "ℹ️ Connexion WebRTC déjà existante :",
+          participant.socketId
+        );
+
+        return;
+
+      }
+
+
+      // =================================================
+      // CREER CONNEXION PEER
+      // =================================================
+
+      webrtcService.createPeerConnection(
+        participant.socketId
+      );
+
+
+      // =================================================
+      // CREER OFFER
+      // =================================================
+
+      const offer =
+        await webrtcService.createOffer(
+          participant.socketId
+        );
+
+
+      if (!mounted) {
+        return;
+      }
+
+
+      // =================================================
+      // ENVOYER OFFER
+      // =================================================
+
+      socket.emit(
+        "webrtc:offer",
+        {
+
+          roomId: conference._id,
+
+          sender: socket.id,
+
+          target:
+            participant.socketId,
+
+          offer
+
+        }
+      );
+
+
+      console.log(
+        "📤 Offer WebRTC envoyée à :",
+        participant.socketId
+      );
+
+    }
+
+    catch (error) {
+
+      console.error(
+        "❌ Erreur création WebRTC :",
+        error
+      );
+
+    }
+
+  };
+
+
+  // =====================================================
+  // PARTICIPANT PARTI
+  // =====================================================
+
+  const handleUserLeft = ({
+    participant
+  } = {}) => {
+
     const leftSocketId =
-      participant.socketId;
+      participant?.socketId;
+
+
+    if (!leftSocketId) {
+      return;
+    }
+
 
     console.log(
       "🔴 Participant parti :",
       leftSocketId
     );
 
-    // =====================================================
-    // FERMER SA CONNEXION WEBRTC
-    // =====================================================
+
+    // =================================================
+    // FERMER WEBRTC
+    // =================================================
 
     webrtcService.closePeerConnection(
       leftSocketId
     );
 
-    // =====================================================
-    // SUPPRIMER SES ETATS MEDIA
-    // =====================================================
+
+    // =================================================
+    // SUPPRIMER ETAT MEDIA
+    // =================================================
 
     setParticipantMediaStates(prev => {
 
@@ -883,28 +1242,36 @@ socket.on(
         ...prev
       };
 
-      delete updated[leftSocketId];
+
+      delete updated[
+        leftSocketId
+      ];
+
 
       return updated;
 
     });
 
-    // =====================================================
-    // SI C'ETAIT LE PARTAGE D'ECRAN
-    // =====================================================
+
+    // =================================================
+    // PARTAGE D'ECRAN
+    // =================================================
 
     if (
-      screenShareOwner ===
+      screenShareOwnerRef.current ===
       leftSocketId
     ) {
 
-      setScreenShareOwner(null);
+      setScreenShareOwner(
+        null
+      );
 
     }
 
-    // =====================================================
-    // VERIFIER S'IL RESTE UN AUTRE PARTICIPANT
-    // =====================================================
+
+    // =================================================
+    // TROUVER UN AUTRE PARTICIPANT
+    // =================================================
 
     const remainingParticipant =
       participantsRef.current.find(
@@ -913,12 +1280,10 @@ socket.on(
           item.socketId !== leftSocketId
       );
 
-    // =====================================================
-    // UN AUTRE PARTICIPANT EST ENCORE PRESENT
-    //
-    // → Il reste en grand
-    // → Moi je reste en miniature
-    // =====================================================
+
+    // =================================================
+    // UN AUTRE PARTICIPANT EXISTE
+    // =================================================
 
     if (remainingParticipant) {
 
@@ -927,6 +1292,7 @@ socket.on(
           remainingParticipant.socketId
         );
 
+
       if (remoteStream) {
 
         const mediaState =
@@ -934,9 +1300,11 @@ socket.on(
             remainingParticipant.socketId
           ] || {};
 
+
         setMainStream(
           remoteStream
         );
+
 
         setMainParticipant({
 
@@ -945,396 +1313,806 @@ socket.on(
           isLocal: false,
 
           cameraEnabled:
-            Boolean(mediaState.camera)
+            typeof mediaState.camera === "boolean"
+              ? mediaState.camera
+              : true
 
         });
 
       }
 
+
+      return;
+
     }
 
-    // =====================================================
-    // PLUS PERSONNE D'AUTRE
-    //
-    // → Moi redeviens le grand écran
-    // =====================================================
 
-    else {
+    // =================================================
+    // PLUS PERSONNE
+    // =================================================
 
-      const localStream =
-        webrtcService.getStream();
+    const currentLocalStream =
+      webrtcService.getStream();
+
+
+    if (currentLocalStream) {
 
       setMainStream(
-        localStream
+        currentLocalStream
       );
+
 
       setMainParticipant({
 
-        socketId: socket.id,
-
-        name:
-          `${user.firstName || ""} ${
-            user.lastName || ""
-          }`.trim() || "Vous",
-
-        role: user.role,
-
-        photo: user.photo,
-
-        isLocal: true,
+        ...getLocalParticipant(),
 
         cameraEnabled:
           webrtcService.cameraEnabled
 
       });
 
-      // Plus personne :
-      // ma miniature n'a plus besoin d'être affichée
+    }
 
-      setThumbnailStreams([]);
+
+    // =================================================
+    // PLUS BESOIN DE MINIATURE
+    // =================================================
+
+    setThumbnailStreams([]);
+
+  };
+
+
+  // =====================================================
+  // OFFER
+  // =====================================================
+
+  const handleOffer = async ({
+    sender,
+    offer
+  } = {}) => {
+
+    if (
+      !sender ||
+      sender === socket.id ||
+      !offer
+    ) {
+
+      return;
 
     }
 
-  }
-);
 
-  // ==========================================
-  // OFFER
-  // ==========================================
-  socket.on(
+    try {
 
-      "webrtc:offer",
+      console.log(
+        "📥 Offer reçue de :",
+        sender
+      );
 
-      async ({ sender, offer }) => {
 
-          if (sender === socket.id) return;
+      // =================================================
+      // REPONDRE A L'OFFER
+      // =================================================
 
-          try {
+      const answer =
+        await webrtcService.handleOffer(
+          sender,
+          offer
+        );
 
-              const answer =
 
-                  await webrtcService.handleOffer(
-
-                      sender,
-
-                      offer
-
-                  );
-
-              socket.emit(
-
-                  "webrtc:answer",
-
-                  {
-
-                      roomId: conference._id,
-
-                      sender: socket.id,
-
-                      target: sender,
-
-                      answer
-
-                  }
-
-              );
-
-          }
-
-          catch (error) {
-
-              console.error(error);
-
-          }
-
+      if (!mounted) {
+        return;
       }
 
-  );
 
-  // ==========================================
+      socket.emit(
+        "webrtc:answer",
+        {
+
+          roomId: conference._id,
+
+          sender: socket.id,
+
+          target: sender,
+
+          answer
+
+        }
+      );
+
+
+      console.log(
+        "📤 Answer envoyée à :",
+        sender
+      );
+
+    }
+
+    catch (error) {
+
+      console.error(
+        "❌ Erreur traitement offer :",
+        error
+      );
+
+    }
+
+  };
+
+
+  // =====================================================
   // ANSWER
-  // ==========================================
-  socket.on(
+  // =====================================================
 
-      "webrtc:answer",
+  const handleAnswer = async ({
+    sender,
+    answer
+  } = {}) => {
 
-      async ({ sender, answer }) => {
+    if (
+      !sender ||
+      sender === socket.id ||
+      !answer
+    ) {
 
-          if (sender === socket.id) return;
+      return;
 
-          await webrtcService.handleAnswer(
+    }
 
-              sender,
 
-              answer
+    try {
 
-          );
+      await webrtcService.handleAnswer(
+        sender,
+        answer
+      );
 
-      }
 
-  );
+      console.log(
+        "✅ Answer traitée :",
+        sender
+      );
 
-  // ==========================================
+    }
+
+    catch (error) {
+
+      console.error(
+        "❌ Erreur traitement answer :",
+        error
+      );
+
+    }
+
+  };
+
+
+  // =====================================================
   // ICE
-  // ==========================================
-  socket.on(
+  // =====================================================
 
-      "webrtc:iceCandidate",
+  const handleIceCandidate = async ({
+    sender,
+    candidate
+  } = {}) => {
 
-      async ({ sender, candidate }) => {
+    if (
+      !sender ||
+      sender === socket.id ||
+      !candidate
+    ) {
 
-          if (sender === socket.id) return;
+      return;
 
-          await webrtcService.addIceCandidate(
-
-              sender,
-
-              candidate
-
-          );
-
-      }
-
-  );
+    }
 
 
-// ==========================================
-// CONTROLE MICRO PAR L'ENSEIGNANT
-// ==========================================
-socket.on(
-  "participant:microphone",
-  ({ enabled }) => {
+    try {
 
-    console.log(
-      "🎤 Commande micro reçue :",
-      enabled ? "ACTIVER" : "COUPER"
-    );
+      await webrtcService.addIceCandidate(
+        sender,
+        candidate
+      );
+
+    }
+
+    catch (error) {
+
+      console.error(
+        "❌ Erreur ICE :",
+        error
+      );
+
+    }
+
+  };
+
+
+  // =====================================================
+  // CONTROLE MICRO INDIVIDUEL
+  // =====================================================
+
+  const handleRemoteMicrophone = ({
+    enabled
+  } = {}) => {
 
     const result =
       webrtcService.setMicrophoneEnabled(
         Boolean(enabled)
       );
 
-    const finalState = Boolean(result);
 
-    setMicOn(finalState);
+    const finalState =
+      Boolean(result);
 
-    console.log(
-      "🎤 Etat réel du micro :",
+
+    setMicOn(
       finalState
     );
 
-  }
-);
-
-// ==========================================
-// CONTROLE CAMERA PAR L'ENSEIGNANT
-// ==========================================
-socket.on(
-  "participant:camera",
-  ({ enabled }) => {
 
     console.log(
-      "📹 Commande caméra reçue :",
-      enabled ? "ACTIVER" : "COUPER"
+      "🎤 Micro contrôlé par l'hôte :",
+      finalState
     );
+
+  };
+
+
+  // =====================================================
+  // CONTROLE CAMERA INDIVIDUEL
+  // =====================================================
+
+  const handleRemoteCamera = ({
+    enabled
+  } = {}) => {
 
     const result =
       webrtcService.setCameraEnabled(
         Boolean(enabled)
       );
 
-    const finalState = Boolean(result);
 
-    setCamOn(finalState);
+    const finalState =
+      Boolean(result);
 
-    console.log(
-      "📹 Etat réel de la caméra :",
+
+    setCamOn(
       finalState
     );
 
-  }
-);
+
+    console.log(
+      "📹 Caméra contrôlée par l'hôte :",
+      finalState
+    );
+
+  };
 
 
-// =====================================================
-// CONTROLE GLOBAL MICRO PAR L'ENSEIGNANT
-// =====================================================
-socket.on(
-  "teacher:microphone:all",
-  ({ enabled }) => {
+  // =====================================================
+  // CONTROLE GLOBAL MICRO
+  // =====================================================
 
-    if (isTeacher) return;
+  const handleGlobalMicrophone = ({
+    enabled
+  } = {}) => {
+
+    // L'hôte ne doit pas appliquer sa propre commande
+    if (isHost) {
+      return;
+    }
+
 
     const result =
       webrtcService.setMicrophoneEnabled(
         Boolean(enabled)
       );
 
-    setMicOn(Boolean(result));
 
-  }
-);
+    setMicOn(
+      Boolean(result)
+    );
+
+  };
 
 
-// =====================================================
-// CONTROLE GLOBAL CAMERA PAR L'ENSEIGNANT
-// =====================================================
-socket.on(
-  "teacher:camera:all",
-  ({ enabled }) => {
+  // =====================================================
+  // CONTROLE GLOBAL CAMERA
+  // =====================================================
 
-    if (isTeacher) return;
+  const handleGlobalCamera = ({
+    enabled
+  } = {}) => {
+
+    // L'hôte ne doit pas appliquer sa propre commande
+    if (isHost) {
+      return;
+    }
+
 
     const result =
       webrtcService.setCameraEnabled(
         Boolean(enabled)
       );
 
-    setCamOn(Boolean(result));
 
-  }
-);
+    setCamOn(
+      Boolean(result)
+    );
+
+  };
 
 
-   // ==========================================
+  // =====================================================
+  // ETAT MEDIA PARTICIPANT
+  // =====================================================
+
+  const handleParticipantMediaState = ({
+    socketId,
+    microphone,
+    camera
+  } = {}) => {
+
+    if (!socketId) {
+      return;
+    }
+
+
+    setParticipantMediaStates(prev => {
+
+      const current =
+        prev[socketId] || {};
+
+
+      return {
+
+        ...prev,
+
+        [socketId]: {
+
+          ...current,
+
+          ...(typeof microphone === "boolean"
+            ? {
+                microphone
+              }
+            : {}),
+
+          ...(typeof camera === "boolean"
+            ? {
+                camera
+              }
+            : {})
+
+        }
+
+      };
+
+    });
+
+  };
+
+
+  // =====================================================
   // LEVER LA MAIN
-  // ==========================================
-  socket.on("hand:list", (hands) => {
-    setRaisedHands(hands);
-});
+  // =====================================================
+
+  const handleHandList = hands => {
+
+    setRaisedHands(
+      Array.isArray(hands)
+        ? hands
+        : []
+    );
+
+  };
 
 
-   // ==========================================
-  // Notification LEVER LA MAIN
-  // ==========================================
-  socket.on("hand:notification", ({ name, raised }) => {
+  // =====================================================
+  // NOTIFICATION LEVER LA MAIN
+  // =====================================================
 
-    // Seul l'hôte reçoit visuellement la notification
-    if (!isHost) return;
+  const handleHandNotification = ({
+    name,
+    raised
+  } = {}) => {
+
+    if (!isHost) {
+      return;
+    }
+
 
     setHandNotification({
+
       name,
+
       raised
+
     });
+
 
     setTimeout(() => {
 
-      setHandNotification(null);
+      if (mounted) {
+
+        setHandNotification(
+          null
+        );
+
+      }
 
     }, 4000);
 
-  });
+  };
 
 
-// =====================================================
-// CONFERENCE TERMINEE PAR LE CREATEUR
-// =====================================================
-socket.on(
-  "conference:ended",
-  ({ conference: endedConference } = {}) => {
+  // =====================================================
+  // CONFERENCE TERMINEE
+  // =====================================================
+
+  const handleConferenceEnded = ({
+    conference: endedConference
+  } = {}) => {
+
+    if (!mounted) {
+      return;
+    }
+
 
     console.log(
       "🔴 CONFERENCE TERMINEE"
     );
 
-    // =================================================
-    // TOUS LES UTILISATEURS RESTENT SUR LA PAGE
-    // ET AFFICHENT L'ECRAN DE FIN
-    // =================================================
 
-    setConferenceEnded(true);
+    setConferenceEnded(
+      true
+    );
 
-    // =================================================
-    // METTRE A JOUR LA CONFERENCE SI ELLE EST FOURNIE
-    // =================================================
 
     if (endedConference) {
 
-      setConference(endedConference);
+      setConference(
+        endedConference
+      );
 
     }
 
+
     // =================================================
-    // DESACTIVER LE MICRO
+    // COUPER MICRO
     // =================================================
 
-    webrtcService.setMicrophoneEnabled(false);
+    webrtcService.setMicrophoneEnabled(
+      false
+    );
 
     setMicOn(false);
 
+
     // =================================================
-    // DESACTIVER LA CAMERA
+    // COUPER CAMERA
     // =================================================
 
-    webrtcService.setCameraEnabled(false);
+    webrtcService.setCameraEnabled(
+      false
+    );
 
     setCamOn(false);
 
+
     // =================================================
-    // ARRETER LE PARTAGE D'ECRAN
+    // ARRETER PARTAGE ECRAN
     // =================================================
+
+    if (
+      webrtcService.isScreenSharing
+    ) {
+
+      webrtcService.stopScreenShare();
+
+    }
+
 
     setSharingScreen(false);
 
+    setScreenShareOwner(null);
+
+
     // =================================================
-    // BAISSER LA MAIN
+    // BAISSER MAIN
     // =================================================
 
     setHandRaised(false);
 
+
     // =================================================
-    // NETTOYER LES MINIATURES
+    // NETTOYER MINIATURES
     // =================================================
 
     setThumbnailStreams([]);
 
+
     console.log(
-      "✅ Ecran de fin affiché pour",
-      user.role === "admin"
-        ? "l'administrateur"
-        : user.role === "teacher"
-        ? "l'enseignant"
-        : "l'étudiant"
+      "✅ Ecran de fin affiché"
     );
 
-  }
-);
+  };
 
-  // ==========================================
+
+  // =====================================================
+  // ENREGISTRER LES LISTENERS
+  // =====================================================
+
+  socket.on(
+    "conference:participants",
+    handleParticipants
+  );
+
+  socket.on(
+    "participant:screenShare",
+    handleScreenSharePermission
+  );
+
+  socket.on(
+    "participant:screenShareState",
+    handleScreenShareState
+  );
+
+  socket.on(
+    "chat:history",
+    handleChatHistory
+  );
+
+  socket.on(
+    "chat:newMessage",
+    handleNewMessage
+  );
+
+  socket.on(
+    "conference:userJoined",
+    handleUserJoined
+  );
+
+  socket.on(
+    "conference:userLeft",
+    handleUserLeft
+  );
+
+  socket.on(
+    "webrtc:offer",
+    handleOffer
+  );
+
+  socket.on(
+    "webrtc:answer",
+    handleAnswer
+  );
+
+  socket.on(
+    "webrtc:iceCandidate",
+    handleIceCandidate
+  );
+
+  socket.on(
+    "participant:microphone",
+    handleRemoteMicrophone
+  );
+
+  socket.on(
+    "participant:camera",
+    handleRemoteCamera
+  );
+
+  socket.on(
+    "participant:mediaState",
+    handleParticipantMediaState
+  );
+
+  socket.on(
+    "teacher:microphone:all",
+    handleGlobalMicrophone
+  );
+
+  socket.on(
+    "teacher:camera:all",
+    handleGlobalCamera
+  );
+
+  socket.on(
+    "hand:list",
+    handleHandList
+  );
+
+  socket.on(
+    "hand:notification",
+    handleHandNotification
+  );
+
+  socket.on(
+    "conference:ended",
+    handleConferenceEnded
+  );
+
+
+  // =====================================================
+  // REJOINDRE LA SALLE
+  // =====================================================
+
+  socket.emit(
+    "conference:joinRoom",
+    {
+
+      roomId: conference._id,
+
+      user
+
+    }
+  );
+
+
+  // =====================================================
+  // RECUPERER HISTORIQUE CHAT
+  // =====================================================
+
+  socket.emit(
+    "chat:getHistory",
+    conference._id
+  );
+
+
+  // =====================================================
+  // INITIALISER WEBRTC
+  // =====================================================
+
+  initConference();
+
+
+  // =====================================================
   // CLEANUP
-  // ==========================================
+  // =====================================================
+
   return () => {
 
     mounted = false;
 
+
+    // =================================================
+    // RETIRER LES LISTENERS EXACTS
+    // =================================================
+
+    socket.off(
+      "conference:participants",
+      handleParticipants
+    );
+
+    socket.off(
+      "participant:screenShare",
+      handleScreenSharePermission
+    );
+
+    socket.off(
+      "participant:screenShareState",
+      handleScreenShareState
+    );
+
+    socket.off(
+      "chat:history",
+      handleChatHistory
+    );
+
+    socket.off(
+      "chat:newMessage",
+      handleNewMessage
+    );
+
+    socket.off(
+      "conference:userJoined",
+      handleUserJoined
+    );
+
+    socket.off(
+      "conference:userLeft",
+      handleUserLeft
+    );
+
+    socket.off(
+      "webrtc:offer",
+      handleOffer
+    );
+
+    socket.off(
+      "webrtc:answer",
+      handleAnswer
+    );
+
+    socket.off(
+      "webrtc:iceCandidate",
+      handleIceCandidate
+    );
+
+    socket.off(
+      "participant:microphone",
+      handleRemoteMicrophone
+    );
+
+    socket.off(
+      "participant:camera",
+      handleRemoteCamera
+    );
+
+    socket.off(
+      "participant:mediaState",
+      handleParticipantMediaState
+    );
+
+    socket.off(
+      "teacher:microphone:all",
+      handleGlobalMicrophone
+    );
+
+    socket.off(
+      "teacher:camera:all",
+      handleGlobalCamera
+    );
+
+    socket.off(
+      "hand:list",
+      handleHandList
+    );
+
+    socket.off(
+      "hand:notification",
+      handleHandNotification
+    );
+
+    socket.off(
+      "conference:ended",
+      handleConferenceEnded
+    );
+
+
+    // =================================================
+    // NETTOYER CALLBACKS WEBRTC
+    // =================================================
+
+    webrtcService.setRemoteStreamCallback(
+      null
+    );
+
+    webrtcService.setIceCandidateCallback(
+      null
+    );
+
+    webrtcService.setScreenShareEndedCallback(
+      null
+    );
+
+
+    // =================================================
+    // ARRETER LE FLUX LOCAL
+    // =================================================
+
+    if (localStream) {
+
+      localStream
+        .getTracks()
+        .forEach(track => {
+
+          track.stop();
+
+        });
+
+    }
+
+
     setThumbnailStreams([]);
 
-    socket.off("conference:participants");
-    socket.off("conference:userJoined");
-    socket.off("conference:userLeft");
-    socket.off("chat:history");
-    socket.off("chat:newMessage");
-    socket.off("webrtc:offer");
-    socket.off("webrtc:answer");
-    socket.off("webrtc:iceCandidate");
-    socket.off("participant:microphone");
-    socket.off("participant:camera");
-    socket.off("participant:mediaState");
-    socket.off("teacher:microphone:all");
-    socket.off("teacher:camera:all");
-    socket.off("participant:screenShare");
-    socket.off("participant:screenShareState");
-    socket.off("hand:list");
-    socket.off("hand:notification");
-    socket.off("conference:ended");
+  };
 
-    webrtcService.setRemoteStreamCallback(null);
-    webrtcService.setIceCandidateCallback(null);
-    webrtcService.setScreenShareEndedCallback(null);
-};
-
-}, [conference, isTeacher, isHost]);
+}, [conference]);
 
 // =====================================================
 // ENVOYER UN MESSAGE
@@ -1375,201 +2153,347 @@ const sendMessage = () => {
 
 };
 
-// =====================================================
-// MICRO
-// =====================================================
-const toggleMicrophone = async () => {
 
-  if (conferenceEnded) return;
+// =====================================================
+// MICRO UTILISATEUR
+// =====================================================
+const toggleMicrophone = () => {
+
+  if (
+    conferenceEnded ||
+    !conference
+  ) {
+    return;
+  }
+
+
+  // ===================================================
+  // INVERSER LE MICRO REEL
+  // ===================================================
 
   const enabled =
-    webrtcService.toggleMicrophone();
+    Boolean(
+      webrtcService.toggleMicrophone()
+    );
 
-  setMicOn(Boolean(enabled));
+
+  // ===================================================
+  // METTRE A JOUR MON INTERFACE
+  // ===================================================
+
+  setMicOn(
+    enabled
+  );
+
+
+  // ===================================================
+  // INFORMER LES AUTRES PARTICIPANTS
+  // ===================================================
 
   socket.emit(
     "participant:microphone:state",
     {
-      roomId: conference._id,
-      enabled: Boolean(enabled)
+
+      roomId:
+        conference._id,
+
+      enabled
+
     }
   );
+
+
+  console.log(
+    "🎤 Mon micro :",
+    enabled
+      ? "ACTIVÉ"
+      : "COUPÉ"
+  );
+
 };
 
 
 // =====================================================
-// CAMERA
+// CAMERA UTILISATEUR
 // =====================================================
+
 const toggleCamera = () => {
 
-  if (conferenceEnded) return;
+  if (
+    conferenceEnded ||
+    !conference
+  ) {
+    return;
+  }
+
+
+  // ===================================================
+  // ETUDIANT :
+  // LA CAMERA DOIT AVOIR ETE AUTORISEE
+  // ===================================================
 
   if (
     !isHost &&
     user.role === "student" &&
     !camOn
   ) {
+
+    console.warn(
+      "⚠️ La caméra doit être autorisée par l'hôte."
+    );
+
     return;
+
   }
 
-  const enabled =
-    webrtcService.toggleCamera();
 
-  setCamOn(Boolean(enabled));
+  // ===================================================
+  // INVERSER LA CAMERA REELLE
+  // ===================================================
+
+  const enabled =
+    Boolean(
+      webrtcService.toggleCamera()
+    );
+
+
+  // ===================================================
+  // METTRE A JOUR MON INTERFACE
+  // ===================================================
+
+  setCamOn(
+    enabled
+  );
+
+
+  // ===================================================
+  // INFORMER LES AUTRES
+  // ===================================================
 
   socket.emit(
     "participant:camera:state",
     {
-      roomId: conference._id,
-      enabled: Boolean(enabled)
+
+      roomId:
+        conference._id,
+
+      enabled
+
     }
   );
+
+
+  console.log(
+    "📹 Ma caméra :",
+    enabled
+      ? "ACTIVÉE"
+      : "COUPÉE"
+  );
+
 };
 
+
 // =====================================================
-// CONTROLE GLOBAL MICRO DES ETUDIANTS
+// CONTROLE GLOBAL MICRO ETUDIANTS
 // =====================================================
 const toggleAllStudentsMicrophone = () => {
 
-  if (!isHost || !conference) return;
+  if (
+    !isHost ||
+    !conference
+  ) {
+    return;
+  }
 
-  // Inverser l'état global
-  const enabled = !allStudentsMicOn;
+
+  // ===================================================
+  // NOUVEL ETAT
+  // ===================================================
+
+  const enabled =
+    !allStudentsMicOn;
+
 
   console.log(
     "🎤 CONTROLE GLOBAL MICRO :",
-    enabled ? "ACTIVER TOUS LES ETUDIANTS" : "COUPER TOUS LES ETUDIANTS"
+    enabled
+      ? "ACTIVER TOUS"
+      : "COUPER TOUS"
   );
 
 
-  // =====================================================
-  // ENVOYER LA COMMANDE AU SERVEUR
-  // =====================================================
+  // ===================================================
+  // ENVOYER AU SERVEUR
+  // ===================================================
 
   socket.emit(
     "teacher:microphone:all",
     {
-      roomId: conference._id,
+
+      roomId:
+        conference._id,
+
       enabled
+
     }
   );
 
 
-  // =====================================================
-  // METTRE À JOUR L'ÉTAT DU BOUTON
-  // =====================================================
+  // ===================================================
+  // ETAT DU BOUTON ENSEIGNANT
+  // ===================================================
 
-  setAllStudentsMicOn(enabled);
+  setAllStudentsMicOn(
+    enabled
+  );
 
 
-  // =====================================================
-  // METTRE À JOUR L'AFFICHAGE DES PARTICIPANTS
-  // =====================================================
+  // ===================================================
+  // MISE A JOUR LOCALE DE LA LISTE
+  // ===================================================
 
-  setParticipantMediaStates(prev => {
+  setParticipantMediaStates(
+    prev => {
 
-    const updated = { ...prev };
+      const updated = {
+        ...prev
+      };
 
-    participants.forEach(participant => {
 
-      // -----------------------------------------------
-      // UNIQUEMENT LES ÉTUDIANTS
-      // -----------------------------------------------
+      participants.forEach(
+        participant => {
 
-      if (
-        participant.socketId !== socket.id &&
-        participant.role === "student"
-      ) {
+          if (
+            participant.socketId !== socket.id &&
+            participant.role === "student"
+          ) {
 
-        updated[participant.socketId] = {
+            updated[
+              participant.socketId
+            ] = {
 
-          ...updated[participant.socketId],
+              ...updated[
+                participant.socketId
+              ],
 
-          microphone: enabled
+              microphone:
+                enabled
 
-        };
+            };
 
-      }
+          }
 
-    });
+        }
+      );
 
-    return updated;
 
-  });
+      return updated;
+
+    }
+  );
 
 };
 
 
 // =====================================================
-// CONTROLE GLOBAL CAMERA DES ETUDIANTS
+// CONTROLE GLOBAL CAMERA ETUDIANTS
 // =====================================================
+
 const toggleAllStudentsCamera = () => {
 
-  if (!isHost || !conference) return;
+  if (
+    !isHost ||
+    !conference
+  ) {
+    return;
+  }
 
-  // Inverser l'état global
-  const enabled = !allStudentsCamOn;
+
+  // ===================================================
+  // NOUVEL ETAT
+  // ===================================================
+
+  const enabled =
+    !allStudentsCamOn;
+
 
   console.log(
     "📹 CONTROLE GLOBAL CAMERA :",
-    enabled ? "ACTIVER TOUTES LES CAMERAS" : "COUPER TOUTES LES CAMERAS"
+    enabled
+      ? "ACTIVER TOUTES"
+      : "COUPER TOUTES"
   );
 
 
-  // =====================================================
-  // ENVOYER LA COMMANDE AU SERVEUR
-  // =====================================================
+  // ===================================================
+  // ENVOYER AU SERVEUR
+  // ===================================================
 
   socket.emit(
     "teacher:camera:all",
     {
-      roomId: conference._id,
+
+      roomId:
+        conference._id,
+
       enabled
+
     }
   );
 
 
-  // =====================================================
-  // METTRE À JOUR L'ÉTAT DU BOUTON
-  // =====================================================
+  // ===================================================
+  // ETAT DU BOUTON ENSEIGNANT
+  // ===================================================
 
-  setAllStudentsCamOn(enabled);
+  setAllStudentsCamOn(
+    enabled
+  );
 
 
-  // =====================================================
-  // METTRE À JOUR L'AFFICHAGE DES PARTICIPANTS
-  // =====================================================
+  // ===================================================
+  // MISE A JOUR DE LA LISTE
+  // ===================================================
 
-  setParticipantMediaStates(prev => {
+  setParticipantMediaStates(
+    prev => {
 
-    const updated = { ...prev };
+      const updated = {
+        ...prev
+      };
 
-    participants.forEach(participant => {
 
-      // -----------------------------------------------
-      // UNIQUEMENT LES ÉTUDIANTS
-      // -----------------------------------------------
+      participants.forEach(
+        participant => {
 
-      if (
-        participant.socketId !== socket.id &&
-        participant.role === "student"
-      ) {
+          if (
+            participant.socketId !== socket.id &&
+            participant.role === "student"
+          ) {
 
-        updated[participant.socketId] = {
+            updated[
+              participant.socketId
+            ] = {
 
-          ...updated[participant.socketId],
+              ...updated[
+                participant.socketId
+              ],
 
-          camera: enabled
+              camera:
+                enabled
 
-        };
+            };
 
-      }
+          }
 
-    });
+        }
+      );
 
-    return updated;
 
-  });
+      return updated;
+
+    }
+  );
 
 };
 
@@ -1581,32 +2505,74 @@ const controlParticipantMicrophone = (
   enabled
 ) => {
 
-  if (!isHost) return;
+  if (
+    !isHost ||
+    !conference ||
+    !targetSocketId
+  ) {
+    return;
+  }
+
+
+  const finalState =
+    Boolean(enabled);
+
 
   console.log(
-    "🎤 Contrôle micro participant :",
+    "🎤 CONTROLE MICRO PARTICIPANT :",
     targetSocketId,
-    enabled ? "ACTIVER" : "COUPER"
+    finalState
+      ? "ACTIVER"
+      : "COUPER"
   );
+
+
+  // ===================================================
+  // ENVOYER LA COMMANDE A L'ETUDIANT
+  // ===================================================
 
   socket.emit(
     "participant:microphone",
     {
-      roomId: conference._id,
+
+      roomId:
+        conference._id,
+
       targetSocketId,
-      enabled
+
+      enabled:
+        finalState
+
     }
   );
 
-  setParticipantMediaStates(prev => ({
-    ...prev,
-    [targetSocketId]: {
-      ...prev[targetSocketId],
-      microphone: enabled
-    }
-  }));
+
+  // ===================================================
+  // MISE A JOUR IMMEDIATE DE L'INTERFACE
+  // ===================================================
+
+  setParticipantMediaStates(
+    prev => ({
+
+      ...prev,
+
+      [targetSocketId]: {
+
+        ...prev[
+          targetSocketId
+        ],
+
+        microphone:
+          finalState
+
+      }
+
+    })
+  );
 
 };
+
+
 // =====================================================
 // CONTROLE CAMERA D'UN PARTICIPANT PAR L'ENSEIGNANT
 // =====================================================
@@ -1615,30 +2581,70 @@ const controlParticipantCamera = (
   enabled
 ) => {
 
-  if (!isHost) return;
+  if (
+    !isHost ||
+    !conference ||
+    !targetSocketId
+  ) {
+    return;
+  }
+
+
+  const finalState =
+    Boolean(enabled);
+
 
   console.log(
-    "📹 Contrôle caméra participant :",
+    "📹 CONTROLE CAMERA PARTICIPANT :",
     targetSocketId,
-    enabled ? "ACTIVER" : "COUPER"
+    finalState
+      ? "ACTIVER"
+      : "COUPER"
   );
+
+
+  // ===================================================
+  // ENVOYER LA COMMANDE A L'ETUDIANT
+  // ===================================================
 
   socket.emit(
     "participant:camera",
     {
-      roomId: conference._id,
+
+      roomId:
+        conference._id,
+
       targetSocketId,
-      enabled
+
+      enabled:
+        finalState
+
     }
   );
 
-  setParticipantMediaStates(prev => ({
-    ...prev,
-    [targetSocketId]: {
-      ...prev[targetSocketId],
-      camera: enabled
-    }
-  }));
+
+  // ===================================================
+  // MISE A JOUR IMMEDIATE DE L'INTERFACE
+  // ===================================================
+
+  setParticipantMediaStates(
+    prev => ({
+
+      ...prev,
+
+      [targetSocketId]: {
+
+        ...prev[
+          targetSocketId
+        ],
+
+        camera:
+          finalState
+
+      }
+
+    })
+  );
 
 };
 

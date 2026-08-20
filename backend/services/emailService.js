@@ -1,33 +1,30 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
 class EmailService {
 
     constructor() {
 
-        console.log("MAIL_HOST =", process.env.MAIL_HOST);
-        console.log("MAIL_PORT =", process.env.MAIL_PORT);
-        console.log("MAIL_USER =", process.env.MAIL_USER);
-    
-        this.transporter = nodemailer.createTransport({
-    
-            host: process.env.MAIL_HOST,
-    
-            port: Number(process.env.MAIL_PORT),
-    
-            secure: false,
-    
-            auth: {
-    
-                user: process.env.MAIL_USER,
-    
-                pass: process.env.MAIL_PASS
-    
-            }
-    
-        });
-    
+        console.log(
+            "📧 Initialisation EmailService avec Resend"
+        );
+
+        console.log(
+            "RESEND_API_KEY présente :",
+            Boolean(process.env.RESEND_API_KEY)
+        );
+
+        console.log(
+            "MAIL_FROM =",
+            process.env.MAIL_FROM
+        );
+
+        this.resend = new Resend(
+            process.env.RESEND_API_KEY
+        );
+
     }
-    
+
+
 // =====================================================
 // TEMPLATE HTML COMMUN
 // =====================================================
@@ -38,11 +35,16 @@ getTemplate(title, content) {
 
     <!DOCTYPE html>
 
-    <html>
+    <html lang="fr">
 
     <head>
 
         <meta charset="UTF-8"/>
+
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0"
+        />
 
         <style>
 
@@ -180,33 +182,81 @@ getTemplate(title, content) {
 
 }
 
-    // =====================================================
-    // ENVOI D'UN EMAIL
-    // =====================================================
 
-    async sendMail({
+// =====================================================
+// ENVOI D'UN EMAIL AVEC RESEND
+// =====================================================
 
-        to,
+async sendMail({
 
-        subject,
+    to,
 
-        html
+    subject,
 
-    }) {
+    html
 
-        return await this.transporter.sendMail({
+}) {
 
-            from: process.env.MAIL_FROM,
+    try {
 
-            to,
+        console.log(
+            "📧 Envoi email Resend vers :",
+            to
+        );
 
-            subject,
+        const { data, error } =
+            await this.resend.emails.send({
 
-            html
+                from:
+                    process.env.MAIL_FROM ||
+                    "onboarding@resend.dev",
 
-        });
+                to,
+
+                subject,
+
+                html
+
+            });
+
+
+        if (error) {
+
+            console.error(
+                "❌ Erreur Resend :",
+                error
+            );
+
+            throw new Error(
+                error.message ||
+                "Erreur lors de l'envoi de l'email."
+            );
+
+        }
+
+
+        console.log(
+            "✅ Email Resend envoyé :",
+            data
+        );
+
+        return data;
 
     }
+
+    catch (error) {
+
+        console.error(
+            "❌ Erreur sendMail :",
+            error.message
+        );
+
+        throw error;
+
+    }
+
+}
+
 
 // =====================================================
 // DEMANDE DE CONFERENCE ENVOYEE
@@ -227,6 +277,7 @@ async sendConferenceRequestToAdmin(
         "Nouvelle demande de conférence",
 
         `
+
         <h2>Bonjour ${admin.name},</h2>
 
         <p>
@@ -280,6 +331,7 @@ async sendConferenceRequestToAdmin(
     });
 
 }
+
 
 // =====================================================
 // CONFERENCE APPROUVEE
@@ -361,6 +413,7 @@ async sendConferenceApproved(
 
 }
 
+
 // =====================================================
 // CONFERENCE REFUSEE
 // =====================================================
@@ -417,6 +470,7 @@ async sendConferenceRejected(
 
 }
 
+
 // =====================================================
 // INVITATION ETUDIANT
 // =====================================================
@@ -434,6 +488,7 @@ async sendConferenceInvitation(
         "Invitation à une conférence",
 
         `
+
         <h2>Bonjour ${student.name},</h2>
 
         <p>
@@ -492,6 +547,7 @@ async sendConferenceInvitation(
 
 }
 
+
 // =====================================================
 // RAPPEL
 // =====================================================
@@ -509,6 +565,7 @@ async sendConferenceReminder(
         "Rappel de conférence",
 
         `
+
         <h2>Bonjour ${student.name},</h2>
 
         <p>
@@ -556,6 +613,7 @@ async sendConferenceReminder(
     });
 
 }
+
 
 // =====================================================
 // CONFERENCE DEMARREE
@@ -611,6 +669,7 @@ async sendConferenceStarted(
 
 }
 
+
 // =====================================================
 // CONFERENCE ANNULEE
 // =====================================================
@@ -628,6 +687,7 @@ async sendConferenceCancelled(
         "Conférence annulée",
 
         `
+
         <h2>Bonjour ${student.name},</h2>
 
         <p>

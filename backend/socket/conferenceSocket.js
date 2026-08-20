@@ -196,6 +196,297 @@ socket.on(
     }
 );
 
+// =====================================================
+// WEBRTC : OFFER
+// =====================================================
+socket.on(
+    "webrtc:offer",
+    ({
+        roomId,
+        sender,
+        target,
+        offer
+    } = {}) => {
+
+        if (
+            !roomId ||
+            !target ||
+            !offer
+        ) {
+            return;
+        }
+
+        console.log(
+            "📤 Relais OFFER :",
+            sender,
+            "→",
+            target
+        );
+
+        io.to(target).emit(
+            "webrtc:offer",
+            {
+                sender: socket.id,
+                offer
+            }
+        );
+
+    }
+);
+
+// =====================================================
+// WEBRTC : ANSWER
+// =====================================================
+socket.on(
+    "webrtc:answer",
+    ({
+        roomId,
+        sender,
+        target,
+        answer
+    } = {}) => {
+
+        if (
+            !roomId ||
+            !target ||
+            !answer
+        ) {
+            return;
+        }
+
+        console.log(
+            "📥 Relais ANSWER :",
+            sender,
+            "→",
+            target
+        );
+
+        io.to(target).emit(
+            "webrtc:answer",
+            {
+                sender: socket.id,
+                answer
+            }
+        );
+
+    }
+);
+
+// =====================================================
+// WEBRTC : ICE CANDIDATE
+// =====================================================
+socket.on(
+    "webrtc:iceCandidate",
+    ({
+        roomId,
+        sender,
+        target,
+        candidate
+    } = {}) => {
+
+        if (
+            !roomId ||
+            !target ||
+            !candidate
+        ) {
+            return;
+        }
+
+        io.to(target).emit(
+            "webrtc:iceCandidate",
+            {
+                sender: socket.id,
+                candidate
+            }
+        );
+
+    }
+);
+
+// =====================================================
+// CONTROLE MICRO D'UN PARTICIPANT
+// =====================================================
+socket.on(
+    "participant:microphone",
+    ({
+        roomId,
+        targetSocketId,
+        enabled
+    } = {}) => {
+
+        if (
+            !roomId ||
+            !targetSocketId
+        ) {
+            return;
+        }
+
+        console.log(
+            "🎤 Contrôle micro :",
+            socket.id,
+            "→",
+            targetSocketId,
+            enabled
+        );
+
+        io.to(targetSocketId).emit(
+            "participant:microphone",
+            {
+                enabled: Boolean(enabled)
+            }
+        );
+
+        socket.to(roomId).emit(
+            "participant:mediaState",
+            {
+                socketId: targetSocketId,
+                microphone: Boolean(enabled)
+            }
+        );
+
+    }
+);
+
+// =====================================================
+// CONTROLE CAMERA D'UN PARTICIPANT
+// =====================================================
+socket.on(
+    "participant:camera",
+    ({
+        roomId,
+        targetSocketId,
+        enabled
+    } = {}) => {
+
+        if (
+            !roomId ||
+            !targetSocketId
+        ) {
+            return;
+        }
+
+        console.log(
+            "📹 Contrôle caméra :",
+            socket.id,
+            "→",
+            targetSocketId,
+            enabled
+        );
+
+        io.to(targetSocketId).emit(
+            "participant:camera",
+            {
+                enabled: Boolean(enabled)
+            }
+        );
+
+        socket.to(roomId).emit(
+            "participant:mediaState",
+            {
+                socketId: targetSocketId,
+                camera: Boolean(enabled)
+            }
+        );
+
+    }
+);
+
+// =====================================================
+// CONTROLE GLOBAL MICRO DES ETUDIANTS
+// =====================================================
+socket.on(
+    "teacher:microphone:all",
+    ({
+        roomId,
+        enabled
+    } = {}) => {
+
+        if (!roomId) return;
+
+        console.log(
+            "🎤 MICRO GLOBAL :",
+            enabled
+        );
+
+        socket.to(roomId).emit(
+            "teacher:microphone:all",
+            {
+                enabled: Boolean(enabled)
+            }
+        );
+
+    }
+);
+
+// =====================================================
+// CONTROLE GLOBAL CAMERA DES ETUDIANTS
+// =====================================================
+socket.on(
+    "teacher:camera:all",
+    ({
+        roomId,
+        enabled
+    } = {}) => {
+
+        if (!roomId) return;
+
+        console.log(
+            "📹 CAMERA GLOBALE :",
+            enabled
+        );
+
+        socket.to(roomId).emit(
+            "teacher:camera:all",
+            {
+                enabled: Boolean(enabled)
+            }
+        );
+
+    }
+);
+
+// =====================================================
+// AUTORISATION PARTAGE ECRAN
+// =====================================================
+socket.on(
+    "participant:screenShare",
+    ({
+        roomId,
+        targetSocketId,
+        enabled
+    } = {}) => {
+
+        if (
+            !roomId ||
+            !targetSocketId
+        ) {
+            return;
+        }
+
+        console.log(
+            "🖥️ Autorisation partage écran :",
+            targetSocketId,
+            enabled
+        );
+
+        io.to(targetSocketId).emit(
+            "participant:screenShare",
+            {
+                enabled: Boolean(enabled)
+            }
+        );
+
+        socket.to(roomId).emit(
+            "participant:mediaState",
+            {
+                socketId: targetSocketId,
+                screenShare: Boolean(enabled)
+            }
+        );
+
+    }
+);
+
     // =====================================================
     // QUITTER UNE SALLE
     // =====================================================

@@ -1345,11 +1345,13 @@ async startConference(user, conferenceId) {
 
     }
 
-    // =====================================================
-    // NOTIFICATIONS + EMAILS
-    // =====================================================
+// =====================================================
+// NOTIFICATIONS + EMAILS
+// IMPORTANT : NE PAS BLOQUER LE DEMARRAGE
+// =====================================================
+Promise.allSettled(
 
-    for (const student of students) {
+    students.map(async (student) => {
 
         // -----------------------------------------
         // NOTIFICATION
@@ -1410,7 +1412,16 @@ async startConference(user, conferenceId) {
 
         }
 
-    }
+    })
+
+).catch(error => {
+
+    console.error(
+        "⚠️ Erreur notifications/emails :",
+        error
+    );
+
+});
 
     // =====================================================
     // REPONSE
