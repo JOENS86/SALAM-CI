@@ -21,6 +21,9 @@ import courseRoutes from "./routes/courseRoutes.js"
 import conferenceRoutes from "./routes/conferenceRoutes.js"
 import conferenceRequestRoutes from "./routes/conferenceRequestRoutes.js";
 import categoryRoutes from "./routes/categoryRoutes.js"
+//fichiers (admin)
+import fileRoutes from "./routes/fileRoutes.js";
+
 //Côté enseignant
 import chapterRoutes from "./routes/chapterRoutes.js";
 import videoRoutes from "./routes/videoRoutes.js";
@@ -92,6 +95,9 @@ app.use("/api/conference-requests", conferenceRequestRoutes);
 
 // Catégories
 app.use("/api/categories", categoryRoutes)
+
+// FICHIERS
+app.use("/api/files", fileRoutes);
 
 //Chapitres
 app.use("/api/chapters", chapterRoutes);
