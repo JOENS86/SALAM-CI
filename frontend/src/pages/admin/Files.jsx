@@ -19,6 +19,8 @@ const API_URL =
   import.meta.env.VITE_API_URL ||
   "https://salam-ci-backend.onrender.com";
 
+const API_ROOT = API_URL.replace(/\/api\/?$/, "");
+
 function Files() {
   const [files, setFiles] = useState([]);
   const [search, setSearch] = useState("");
@@ -40,7 +42,7 @@ function Files() {
       setLoading(true);
       setError("");
 
-      const response = await fetch(`${API_URL}/files`);
+      const response = await fetch(`${API_ROOT}/api/files`);
       const data = await response.json();
 
       if (!response.ok || !data.success) {
