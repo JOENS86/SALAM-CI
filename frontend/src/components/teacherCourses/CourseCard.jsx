@@ -20,10 +20,6 @@ function CourseCard({ course }) {
 
     console.log("Course :", course);
     console.log("Thumbnail :", course.thumbnail);
-    console.log(
-        "URL finale :",
-        `https://salam-ci-backend.onrender.com/${course.thumbnail}`
-    );
 
     return (
 
@@ -53,10 +49,12 @@ function CourseCard({ course }) {
                   object-cover
                 "
                 src={
-                   course.thumbnail
-                   ? `https://salam-ci-backend.onrender.com/${course.thumbnail}`
-                   : "/images/course-placeholder.jpg"
-                }
+                    course.thumbnail
+                    ? course.thumbnail.startsWith("http")
+                       ? course.thumbnail
+                       : `https://salam-ci-backend.onrender.com/${course.thumbnail}`
+                    : "/images/course-placeholder.jpg"
+                 }
               />
 
                 {/* Badge statut */}
