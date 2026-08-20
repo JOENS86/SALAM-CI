@@ -13,12 +13,13 @@ import {
 } from "../../utils/toast"
 
 import {
-  FaSearch,
-  FaEye,
-  FaCheckCircle,
-  FaBan,
-  FaTrash
-} from "react-icons/fa"
+    FaSearch,
+    FaEye,
+    FaCheckCircle,
+    FaBan,
+    FaTrash,
+    FaBookOpen
+  } from "react-icons/fa"
 
 function Courses() {
 
@@ -519,14 +520,25 @@ filteredCourses.map((course) => (
     <td className="p-5">
         <div className="flex items-center gap-4">
 
-            <img
-                src={
-                    course.thumbnail ||
-                    "/images/course.png"
-                }
-                alt="thumbnail"
-                className="w-16 h-16 rounded-xl object-cover"
-            />
+        {course.thumbnail ? (
+          <img
+            src={course.thumbnail}
+            alt={course.title}
+            onError={(e) => {
+              e.currentTarget.style.display = "none"
+              e.currentTarget.nextElementSibling?.classList.remove("hidden")
+            }}
+            className="w-16 h-16 rounded-xl object-cover"
+          />
+        ) : null}
+          
+          <div
+            className={`w-16 h-16 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center ${
+              course.thumbnail ? "hidden" : ""
+            }`}
+          >
+            <FaBookOpen className="text-2xl" />
+          </div>
 
             <div>
 
@@ -756,15 +768,25 @@ Aucun cours ne correspond à votre recherche.
         
                 </div>
         
-                <img
-                  src={
-                    selectedCourse.thumbnail
-                  ? selectedCourse.thumbnail
-                  : "/images/course-default.jpg"
-                  }
-                  alt={selectedCourse.title}
-                  className="w-full h-72 object-cover rounded-2xl"
-                />
+                {selectedCourse.thumbnail ? (
+                  <img
+                    src={selectedCourse.thumbnail}
+                    alt={selectedCourse.title}
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none"
+                      e.currentTarget.nextElementSibling?.classList.remove("hidden")
+                    }}
+                    className="w-full h-72 object-cover rounded-2xl"
+                  />
+                ) : null}
+
+                <div
+                    className={`w-full h-72 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center ${
+                      selectedCourse.thumbnail ? "hidden" : ""
+                    }`}
+                >
+                    <FaBookOpen className="text-7xl" />
+                </div>
         
                 <div className="mt-8 space-y-4">
                     <div>
