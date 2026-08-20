@@ -193,7 +193,6 @@ function Files() {
   // ==========================================
   // TÉLÉCHARGEMENT
   // ==========================================
-
   const downloadFile = (file) => {
     if (!file.url) return;
 
@@ -210,6 +209,61 @@ function Files() {
 
     document.body.removeChild(link);
   };
+
+  // ==========================================
+// SUPPRESSION D'UN FICHIER
+// ==========================================
+const confirmDeleteFile = async () => {
+
+  if (!fileToDelete) return;
+
+  try {
+
+    setLoading(true);
+
+    const response = await fetch(
+      `${API_ROOT}/api/files/${fileToDelete.source}/${fileToDelete.sourceId}`,
+      {
+        method: "DELETE",
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+
+      throw new Error(
+        data.message || "Erreur lors de la suppression"
+      );
+
+    }
+
+    console.log(
+      "✅ Fichier supprimé :",
+      fileToDelete.name
+    );
+
+    // Fermer le popup
+    setFileToDelete(null);
+
+    // Recharger la liste
+    await fetchFiles();
+
+  } catch (err) {
+
+    console.error(
+      "❌ Erreur suppression :",
+      err
+    );
+
+    setError(
+      err.message ||
+      "Impossible de supprimer le fichier."
+    );
+
+    setLoading(false);
+  }
+};
 
   // ==========================================
   // AFFICHAGE
@@ -1109,10 +1163,7 @@ function Files() {
           </button>
 
           <button
-            onClick={() => {
-              console.log("Suppression demandée :", fileToDelete);
-              setFileToDelete(null);
-            }}
+            onClick={confirmDeleteFile}
             className="
               px-5
               py-3

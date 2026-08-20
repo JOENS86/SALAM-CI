@@ -1,12 +1,12 @@
 import Course from "../models/Course.js";
 import Pdf from "../models/Pdf.js";
 import Video from "../models/Video.js";
+import cloudinary from "../config/cloudinary.js";
 
 // =====================================================
 // RÉCUPÉRER TOUS LES FICHIERS DE LA PLATEFORME
 // GET /api/files
 // =====================================================
-
 export const getAllFiles = async (req, res) => {
 
     try {
@@ -47,7 +47,7 @@ export const getAllFiles = async (req, res) => {
 
                     url: course.thumbnail,
 
-                    source: "course",
+                    source: "course-thumbnail",
 
                     sourceId: course._id,
 
@@ -80,8 +80,8 @@ export const getAllFiles = async (req, res) => {
 
                     url: course.pdf,
 
-                    source: "course",
-
+                    source: "course-thumbnail",
+                    
                     sourceId: course._id,
 
                     createdAt: course.createdAt
@@ -113,7 +113,7 @@ export const getAllFiles = async (req, res) => {
 
                     url: course.video,
 
-                    source: "course",
+                    source: "course-thumbnail",
 
                     sourceId: course._id,
 
@@ -166,7 +166,7 @@ export const getAllFiles = async (req, res) => {
 
                 url: pdf.file,
 
-                source: "chapter-pdf",
+                source: "course-pdf",
 
                 sourceId: pdf._id,
 
@@ -217,7 +217,7 @@ export const getAllFiles = async (req, res) => {
 
                 url: video.video,
 
-                source: "chapter-video",
+                source: "course-video",
 
                 sourceId: video._id,
 
@@ -268,6 +268,247 @@ export const getAllFiles = async (req, res) => {
             success: false,
 
             message: "Erreur lors de la récupération des fichiers",
+
+            error: error.message
+
+        });
+
+    }
+
+};
+
+
+// =====================================================
+// SUPPRIMER UN FICHIER
+// DELETE /api/files/:source/:sourceId
+// =====================================================
+export const deleteFile = async (req, res) => {
+
+    try {
+
+        const { source, sourceId } = req.params;
+
+        console.log("🗑️ Suppression fichier :", {
+            source,
+            sourceId
+        });
+
+        // =================================================
+        // FICHIER DU COURS
+        // =================================================
+
+        if (
+            source === "course-thumbnail" ||
+            source === "course-pdf" ||
+            source === "course-video"
+        ) {
+
+            const course = await Course.findById(sourceId);
+
+            if (!course) {
+
+                return res.status(404).json({
+                    success: false,
+                    message: "Cours introuvable"
+                });
+
+            }
+
+            let field = null;
+
+            if (source === "course-thumbnail") {
+                field = "thumbnail";
+            }
+
+            if (source === "course-pdf") {
+                field = "pdf";
+            }
+
+            if (source === "course-video") {
+                field = "video";
+            }
+
+            const fileUrl = course[field];
+
+            if (!fileUrl) {
+
+                return res.status(404).json({
+                    success: false,
+                    message: "Fichier introuvable"
+                });
+
+            }
+
+            // =================================================
+            // SUPPRESSION CLOUDINARY
+            // =================================================
+
+            if (fileUrl.includes("res.cloudinary.com")) {
+
+                try {
+
+                    const uploadIndex =
+                        fileUrl.indexOf("/upload/");
+
+                    if (uploadIndex !== -1) {
+
+                        let publicId =
+                            fileUrl.substring(
+                                uploadIndex + "/upload/".length
+                            );
+
+                        // Retirer la version v123456...
+                        publicId =
+                            publicId.replace(
+                                /^v\d+\//,
+                                ""
+                            );
+
+                        // Retirer l'extension
+                        const extensionIndex =
+                            publicId.lastIndexOf(".");
+
+                        if (extensionIndex !== -1) {
+
+                            publicId =
+                                publicId.substring(
+                                    0,
+                                    extensionIndex
+                                );
+
+                        }
+
+                        let resourceType = "image";
+
+                        if (source === "course-video") {
+                            resourceType = "video";
+                        }
+
+                        console.log(
+                            "☁️ Suppression Cloudinary :",
+                            publicId
+                        );
+
+                        await cloudinary.uploader.destroy(
+                            publicId,
+                            {
+                                resource_type: resourceType
+                            }
+                        );
+
+                    }
+
+                } catch (cloudinaryError) {
+
+                    console.error(
+                        "⚠️ Erreur Cloudinary :",
+                        cloudinaryError.message
+                    );
+
+                }
+
+            }
+
+            // =================================================
+            // SUPPRESSION DE L'URL DANS MONGODB
+            // =================================================
+
+            course[field] = "";
+
+            await course.save();
+
+            return res.status(200).json({
+
+                success: true,
+
+                message: "Fichier supprimé avec succès"
+
+            });
+
+        }
+
+        // =================================================
+        // PDF DE CHAPITRE
+        // =================================================
+
+        if (source === "chapter-pdf") {
+
+            const pdf = await Pdf.findById(sourceId);
+
+            if (!pdf) {
+
+                return res.status(404).json({
+                    success: false,
+                    message: "PDF introuvable"
+                });
+
+            }
+
+            await Pdf.findByIdAndDelete(sourceId);
+
+            return res.status(200).json({
+
+                success: true,
+
+                message: "PDF supprimé avec succès"
+
+            });
+
+        }
+
+        // =================================================
+        // VIDEO DE CHAPITRE
+        // =================================================
+
+        if (source === "chapter-video") {
+
+            const video = await Video.findById(sourceId);
+
+            if (!video) {
+
+                return res.status(404).json({
+                    success: false,
+                    message: "Vidéo introuvable"
+                });
+
+            }
+
+            await Video.findByIdAndDelete(sourceId);
+
+            return res.status(200).json({
+
+                success: true,
+
+                message: "Vidéo supprimée avec succès"
+
+            });
+
+        }
+
+        // =================================================
+        // SOURCE INCONNUE
+        // =================================================
+
+        return res.status(400).json({
+
+            success: false,
+
+            message: "Type de fichier non pris en charge"
+
+        });
+
+    } catch (error) {
+
+        console.error(
+            "❌ Erreur suppression fichier :",
+            error
+        );
+
+        return res.status(500).json({
+
+            success: false,
+
+            message: "Erreur lors de la suppression du fichier",
 
             error: error.message
 
