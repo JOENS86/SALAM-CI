@@ -758,33 +758,24 @@ function Files() {
                         <div className="flex justify-end gap-2">
 
                           {/* VOIR */}
-
                           <button
-                            onClick={() =>
-                              openPreview(file)
-                            }
+                            onClick={() => {
+                              if (file.url) {
+                                window.open(file.url, "_blank", "noopener,noreferrer");
+                              }
+                            }}
                             disabled={!file.url}
-                            title="Voir"
-                            className="
-                              w-10
-                              h-10
-                              rounded-xl
-                              bg-blue-50
-                              text-blue-600
-                              hover:bg-blue-100
-                              disabled:opacity-40
-                              disabled:cursor-not-allowed
-                              flex
-                              items-center
-                              justify-center
-                              transition
-                            "
+                            title="Voir le fichier"
+                            className={`p-2.5 rounded-xl transition ${
+                              file.url
+                              ? "text-blue-600 bg-blue-50 hover:bg-blue-100"
+                              : "text-gray-300 bg-gray-50 cursor-not-allowed"
+                            }`}
                           >
-                            <FaEye />
+                           <FaEye />
                           </button>
 
                           {/* TELECHARGER */}
-
                           <button
                             onClick={() =>
                               downloadFile(file)
