@@ -13,7 +13,10 @@ const userSchema = new mongoose.Schema(
     name: {
 
       type: String,
-      required: true
+
+      required: true,
+
+      trim: true
 
     },
 
@@ -23,8 +26,14 @@ const userSchema = new mongoose.Schema(
     email: {
 
       type: String,
+
       required: true,
-      unique: true
+
+      unique: true,
+
+      trim: true,
+
+      lowercase: true
 
     },
 
@@ -34,6 +43,7 @@ const userSchema = new mongoose.Schema(
     password: {
 
       type: String,
+
       required: true
 
     },
@@ -48,7 +58,9 @@ const userSchema = new mongoose.Schema(
       enum: [
 
         "student",
+
         "teacher",
+
         "admin"
 
       ],
@@ -61,16 +73,22 @@ const userSchema = new mongoose.Schema(
     // STATUT DE CONNEXION
     // =========================
     isOnline: {
+
       type: Boolean,
+
       default: false
+
     },
 
     // =========================
     // COMPTE ACTIF
     // =========================
     isActive: {
+
       type: Boolean,
+
       default: true
+
     },
 
     // =========================
@@ -85,17 +103,58 @@ const userSchema = new mongoose.Schema(
 
       default: 0
 
+    },
+
+    // =========================
+    // AUTHENTIFICATION 2 FACTEURS
+    // =========================
+    twoFactorEnabled: {
+
+      type: Boolean,
+
+      default: false
+
+    },
+
+    // =========================
+    // SECRET 2FA
+    // =========================
+    // Secret utilisé par :
+    // - Google Authenticator
+    // - Microsoft Authenticator
+    // - Authy
+    //
+    // select: false permet de ne pas
+    // retourner automatiquement le
+    // secret dans les requêtes MongoDB.
+    // Il faudra utiliser :
+    // .select("+twoFactorSecret")
+    // lorsque le backend en a besoin.
+    // =========================
+    twoFactorSecret: {
+
+      type: String,
+
+      default: null,
+
+      select: false
+
     }
 
   },
 
   {
 
+    // =========================
+    // CREATED AT
+    // UPDATED AT
+    // =========================
     timestamps: true
 
   }
 
 )
+
 
 // =========================
 // MODEL
@@ -108,4 +167,8 @@ const User = mongoose.model(
 
 )
 
+
+// =========================
+// EXPORT
+// =========================
 export default User

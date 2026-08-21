@@ -8,7 +8,10 @@ import {
   FaTools,
   FaSave,
   FaCheckCircle,
-  FaExclamationCircle
+  FaExclamationCircle,
+  FaQrcode,
+  FaTimes,
+  FaShieldAlt
 } from "react-icons/fa"
 
 import { useEffect, useState } from "react"
@@ -86,11 +89,47 @@ function Settings() {
 
     newPassword: "",
 
-    confirmPassword: "",
-
-    twoFactor: false
+    confirmPassword: ""
 
   })
+
+
+  // =====================================================
+  // AUTHENTIFICATION À DEUX FACTEURS
+  // =====================================================
+
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(() => {
+
+    try {
+
+      const storedUser =
+        JSON.parse(localStorage.getItem("user") || "null")
+
+      return storedUser?.twoFactorEnabled === true
+
+    }
+
+    catch {
+
+      return false
+
+    }
+
+  })
+
+  const [twoFactorModal, setTwoFactorModal] = useState(null)
+
+  const [twoFactorLoading, setTwoFactorLoading] = useState(false)
+
+  const [twoFactorError, setTwoFactorError] = useState("")
+
+  const [twoFactorQrCode, setTwoFactorQrCode] = useState("")
+
+  const [twoFactorSecret, setTwoFactorSecret] = useState("")
+
+  const [twoFactorCode, setTwoFactorCode] = useState("")
+
+  const [disablePassword, setDisablePassword] = useState("")
 
 
   // =====================================================
@@ -278,6 +317,347 @@ function Settings() {
 
 
   // =====================================================
+  // METTRE À JOUR L'UTILISATEUR LOCAL
+  // =====================================================
+
+  const updateStoredUserTwoFactor = (enabled) => {
+
+    try {
+
+      const storedUser =
+        JSON.parse(localStorage.getItem("user") || "null")
+
+      if (storedUser) {
+
+        storedUser.twoFactorEnabled = enabled
+
+        localStorage.setItem(
+          "user",
+          JSON.stringify(storedUser)
+        )
+
+      }
+
+    }
+
+    catch (error) {
+
+      console.warn(
+        "Impossible de mettre à jour l'utilisateur local :",
+        error
+      )
+
+    }
+
+  }
+
+
+  // =====================================================
+  // PRÉPARER L'ACTIVATION 2FA
+  // =====================================================
+
+  const startTwoFactorSetup = async () => {
+
+    try {
+
+      const token = getToken()
+
+      if (!token) {
+
+        throw new Error(
+          "Votre session a expiré. Veuillez vous reconnecter."
+        )
+
+      }
+
+      setTwoFactorLoading(true)
+
+      setTwoFactorError("")
+
+      const response = await API.get(
+        "/auth/2fa/setup",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      )
+
+      const data = response.data
+
+      if (!data?.success || !data?.qrCode) {
+
+        throw new Error(
+          "Impossible de générer le QR Code 2FA."
+        )
+
+      }
+
+      setTwoFactorQrCode(data.qrCode)
+
+      setTwoFactorSecret(data.secret || "")
+
+      setTwoFactorCode("")
+
+      setTwoFactorModal("setup")
+
+    }
+
+    catch (err) {
+
+      console.error(
+        "❌ Erreur préparation 2FA :",
+        err
+      )
+
+      setTwoFactorError(
+        err.response?.data?.message ||
+        err.message ||
+        "Impossible de préparer l'authentification à deux facteurs."
+      )
+
+    }
+
+    finally {
+
+      setTwoFactorLoading(false)
+
+    }
+
+  }
+
+
+  // =====================================================
+  // CONFIRMER L'ACTIVATION 2FA
+  // =====================================================
+
+  const verifyTwoFactorSetup = async () => {
+
+    const code = twoFactorCode.trim()
+
+    if (!/^\d{6}$/.test(code)) {
+
+      setTwoFactorError(
+        "Veuillez saisir un code à 6 chiffres."
+      )
+
+      return
+
+    }
+
+    try {
+
+      const token = getToken()
+
+      if (!token) {
+
+        throw new Error(
+          "Votre session a expiré. Veuillez vous reconnecter."
+        )
+
+      }
+
+      setTwoFactorLoading(true)
+
+      setTwoFactorError("")
+
+      const response = await API.post(
+        "/auth/2fa/verify-setup",
+        {
+          token: code
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      )
+
+      if (!response.data?.success) {
+
+        throw new Error(
+          "Impossible d'activer le 2FA."
+        )
+
+      }
+
+      setTwoFactorEnabled(true)
+
+      updateStoredUserTwoFactor(true)
+
+      setTwoFactorModal(null)
+
+      setTwoFactorCode("")
+
+      setTwoFactorQrCode("")
+
+      setTwoFactorSecret("")
+
+      showSavedMessage()
+
+    }
+
+    catch (err) {
+
+      console.error(
+        "❌ Erreur activation 2FA :",
+        err
+      )
+
+      setTwoFactorError(
+        err.response?.data?.message ||
+        err.message ||
+        "Code 2FA incorrect."
+      )
+
+    }
+
+    finally {
+
+      setTwoFactorLoading(false)
+
+    }
+
+  }
+
+
+  // =====================================================
+  // DÉSACTIVER LE 2FA
+  // =====================================================
+
+  const disableTwoFactor = async () => {
+
+    if (!disablePassword) {
+
+      setTwoFactorError(
+        "Veuillez saisir votre mot de passe actuel."
+      )
+
+      return
+
+    }
+
+    try {
+
+      const token = getToken()
+
+      if (!token) {
+
+        throw new Error(
+          "Votre session a expiré. Veuillez vous reconnecter."
+        )
+
+      }
+
+      setTwoFactorLoading(true)
+
+      setTwoFactorError("")
+
+      const response = await API.post(
+        "/auth/2fa/disable",
+        {
+          password: disablePassword
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      )
+
+      if (!response.data?.success) {
+
+        throw new Error(
+          "Impossible de désactiver le 2FA."
+        )
+
+      }
+
+      setTwoFactorEnabled(false)
+
+      updateStoredUserTwoFactor(false)
+
+      setDisablePassword("")
+
+      setTwoFactorModal(null)
+
+      showSavedMessage()
+
+    }
+
+    catch (err) {
+
+      console.error(
+        "❌ Erreur désactivation 2FA :",
+        err
+      )
+
+      setTwoFactorError(
+        err.response?.data?.message ||
+        err.message ||
+        "Impossible de désactiver le 2FA."
+      )
+
+    }
+
+    finally {
+
+      setTwoFactorLoading(false)
+
+    }
+
+  }
+
+
+  // =====================================================
+  // BASCULER LE 2FA
+  // =====================================================
+
+  const handleTwoFactorToggle = () => {
+
+    setTwoFactorError("")
+
+    if (twoFactorEnabled) {
+
+      setDisablePassword("")
+
+      setTwoFactorModal("disable")
+
+      return
+
+    }
+
+    startTwoFactorSetup()
+
+  }
+
+
+  // =====================================================
+  // FERMER MODALE 2FA
+  // =====================================================
+
+  const closeTwoFactorModal = () => {
+
+    if (twoFactorLoading) {
+      return
+    }
+
+    setTwoFactorModal(null)
+
+    setTwoFactorError("")
+
+    setTwoFactorCode("")
+
+    setDisablePassword("")
+
+    setTwoFactorQrCode("")
+
+    setTwoFactorSecret("")
+
+  }
+
+
+  // =====================================================
   // ENREGISTRER PARAMÈTRES GÉNÉRAUX
   // =====================================================
 
@@ -420,9 +800,7 @@ function Settings() {
 
       newPassword: "",
 
-      confirmPassword: "",
-
-      twoFactor: false
+      confirmPassword: ""
 
     })
 
@@ -1200,20 +1578,68 @@ function Settings() {
                   bg-gray-50
                 ">
 
-                  <div>
+                  <div className="flex items-start gap-4">
 
-                    <p className="font-semibold text-gray-800">
+                    <div className="
+                      w-11
+                      h-11
+                      rounded-xl
+                      bg-purple-100
+                      text-purple-600
+                      flex
+                      items-center
+                      justify-center
+                      flex-shrink-0
+                    ">
 
-                      Authentification à deux facteurs
+                      <FaShieldAlt />
 
-                    </p>
+                    </div>
 
-                    <p className="text-sm text-gray-500 mt-1">
+                    <div>
 
-                      Cette fonctionnalité sera disponible
-                      prochainement.
+                      <div className="flex items-center gap-2">
 
-                    </p>
+                        <p className="font-semibold text-gray-800">
+
+                          Authentification à deux facteurs
+
+                        </p>
+
+                        <span className={`
+                          text-xs
+                          font-semibold
+                          px-2
+                          py-1
+                          rounded-full
+                          ${
+                            twoFactorEnabled
+                              ? "bg-green-100 text-green-700"
+                              : "bg-gray-200 text-gray-600"
+                          }
+                        `}>
+
+                          {twoFactorEnabled
+                            ? "Activée"
+                            : "Désactivée"
+                          }
+
+                        </span>
+
+                      </div>
+
+                      <p className="text-sm text-gray-500 mt-1">
+
+                        {twoFactorEnabled
+
+                          ? "Votre compte demande un code de sécurité lors de la connexion."
+
+                          : "Protégez votre compte avec un code à 6 chiffres généré par une application d'authentification."
+                        }
+
+                      </p>
+
+                    </div>
 
                   </div>
 
@@ -1222,30 +1648,48 @@ function Settings() {
 
                     type="button"
 
-                    disabled
+                    onClick={handleTwoFactorToggle}
 
-                    className="
+                    disabled={twoFactorLoading}
+
+                    aria-pressed={twoFactorEnabled}
+
+                    className={`
                       relative
                       flex-shrink-0
                       w-12
                       h-6
                       rounded-full
-                      bg-gray-300
-                      cursor-not-allowed
-                    "
+                      transition
+                      ${
+                        twoFactorEnabled
+                          ? "bg-purple-600"
+                          : "bg-gray-300"
+                      }
+                      ${
+                        twoFactorLoading
+                          ? "opacity-60 cursor-not-allowed"
+                          : ""
+                      }
+                    `}
 
                   >
 
-                    <span className="
+                    <span className={`
                       absolute
                       top-1
-                      left-1
                       w-4
                       h-4
                       bg-white
                       rounded-full
                       shadow
-                    " />
+                      transition
+                      ${
+                        twoFactorEnabled
+                          ? "left-7"
+                          : "left-1"
+                      }
+                    `} />
 
                   </button>
 
@@ -1557,6 +2001,396 @@ function Settings() {
         </div>
 
       </div>
+
+
+      {/* =================================================
+          MODALE 2FA
+      ================================================= */}
+
+      {twoFactorModal && (
+
+        <div className="
+          fixed
+          inset-0
+          z-50
+          bg-black/50
+          backdrop-blur-sm
+          flex
+          items-center
+          justify-center
+          p-4
+        ">
+
+          <div className="
+            w-full
+            max-w-lg
+            bg-white
+            rounded-3xl
+            shadow-2xl
+            overflow-hidden
+          ">
+
+            <div className="
+              flex
+              items-center
+              justify-between
+              px-6
+              py-5
+              border-b
+              border-gray-100
+            ">
+
+              <div className="flex items-center gap-3">
+
+                <div className="
+                  w-10
+                  h-10
+                  rounded-xl
+                  bg-purple-100
+                  text-purple-600
+                  flex
+                  items-center
+                  justify-center
+                ">
+
+                  {twoFactorModal === "setup"
+                    ? <FaQrcode />
+                    : <FaLock />
+                  }
+
+                </div>
+
+                <div>
+
+                  <h3 className="text-xl font-bold">
+
+                    {twoFactorModal === "setup"
+                      ? "Activer le 2FA"
+                      : "Désactiver le 2FA"
+                    }
+
+                  </h3>
+
+                  <p className="text-sm text-gray-500">
+
+                    {twoFactorModal === "setup"
+                      ? "Sécurisez votre compte administrateur."
+                      : "Confirmez votre identité pour continuer."
+                    }
+
+                  </p>
+
+                </div>
+
+              </div>
+
+
+              <button
+
+                type="button"
+
+                onClick={closeTwoFactorModal}
+
+                disabled={twoFactorLoading}
+
+                className="
+                  w-9
+                  h-9
+                  rounded-xl
+                  text-gray-500
+                  hover:bg-gray-100
+                  flex
+                  items-center
+                  justify-center
+                  disabled:opacity-50
+                "
+
+              >
+
+                <FaTimes />
+
+              </button>
+
+            </div>
+
+
+            <div className="p-6">
+
+
+              {twoFactorError && (
+
+                <div className="
+                  mb-5
+                  bg-red-50
+                  border
+                  border-red-200
+                  text-red-700
+                  rounded-2xl
+                  p-4
+                  text-sm
+                ">
+
+                  {twoFactorError}
+
+                </div>
+
+              )}
+
+
+              {twoFactorModal === "setup" && (
+
+                <div>
+
+                  <div className="
+                    bg-purple-50
+                    rounded-2xl
+                    p-4
+                    text-sm
+                    text-purple-800
+                    mb-5
+                  ">
+
+                    Scannez le QR Code avec Google Authenticator,
+                    Microsoft Authenticator ou une application
+                    compatible TOTP.
+
+                  </div>
+
+
+                  {twoFactorQrCode && (
+
+                    <div className="
+                      flex
+                      justify-center
+                      mb-5
+                    ">
+
+                      <div className="
+                        bg-white
+                        p-4
+                        rounded-2xl
+                        border
+                        border-gray-200
+                        shadow-sm
+                      ">
+
+                        <img
+                          src={twoFactorQrCode}
+                          alt="QR Code pour activer le 2FA"
+                          className="w-56 h-56"
+                        />
+
+                      </div>
+
+                    </div>
+
+                  )}
+
+
+                  {twoFactorSecret && (
+
+                    <div className="mb-5">
+
+                      <p className="
+                        text-xs
+                        font-semibold
+                        text-gray-500
+                        mb-2
+                      ">
+
+                        Clé de configuration manuelle
+
+                      </p>
+
+                      <div className="
+                        bg-gray-100
+                        rounded-xl
+                        p-3
+                        text-xs
+                        font-mono
+                        break-all
+                        select-all
+                      ">
+
+                        {twoFactorSecret}
+
+                      </div>
+
+                    </div>
+
+                  )}
+
+
+                  <Field label="Code de vérification à 6 chiffres">
+
+                    <input
+
+                      type="text"
+
+                      inputMode="numeric"
+
+                      autoComplete="one-time-code"
+
+                      maxLength={6}
+
+                      value={twoFactorCode}
+
+                      onChange={(e) =>
+
+                        setTwoFactorCode(
+                          e.target.value
+                            .replace(/\D/g, "")
+                            .slice(0, 6)
+                        )
+
+                      }
+
+                      placeholder="000000"
+
+                      className={`
+                        ${inputClass}
+                        text-center
+                        text-2xl
+                        tracking-[0.4em]
+                        font-semibold
+                      `}
+
+                    />
+
+                  </Field>
+
+
+                  <button
+
+                    type="button"
+
+                    onClick={verifyTwoFactorSetup}
+
+                    disabled={
+                      twoFactorLoading ||
+                      twoFactorCode.length !== 6
+                    }
+
+                    className="
+                      w-full
+                      mt-5
+                      bg-gradient-to-r
+                      from-purple-600
+                      to-indigo-600
+                      hover:from-purple-700
+                      hover:to-indigo-700
+                      disabled:opacity-60
+                      disabled:cursor-not-allowed
+                      text-white
+                      py-3.5
+                      rounded-2xl
+                      font-semibold
+                      transition
+                    "
+
+                  >
+
+                    {twoFactorLoading
+                      ? "Vérification..."
+                      : "Activer le 2FA"
+                    }
+
+                  </button>
+
+                </div>
+
+              )}
+
+
+              {twoFactorModal === "disable" && (
+
+                <div>
+
+                  <div className="
+                    bg-orange-50
+                    border
+                    border-orange-100
+                    rounded-2xl
+                    p-4
+                    text-sm
+                    text-orange-800
+                    mb-5
+                  ">
+
+                    La désactivation du 2FA nécessite votre
+                    mot de passe actuel.
+
+                  </div>
+
+
+                  <Field label="Mot de passe actuel">
+
+                    <input
+
+                      type="password"
+
+                      value={disablePassword}
+
+                      onChange={(e) =>
+                        setDisablePassword(e.target.value)
+                      }
+
+                      placeholder="Votre mot de passe"
+
+                      className={inputClass}
+
+                      autoFocus
+
+                    />
+
+                  </Field>
+
+
+                  <button
+
+                    type="button"
+
+                    onClick={disableTwoFactor}
+
+                    disabled={
+                      twoFactorLoading ||
+                      !disablePassword
+                    }
+
+                    className="
+                      w-full
+                      mt-5
+                      bg-red-600
+                      hover:bg-red-700
+                      disabled:opacity-60
+                      disabled:cursor-not-allowed
+                      text-white
+                      py-3.5
+                      rounded-2xl
+                      font-semibold
+                      transition
+                    "
+
+                  >
+
+                    {twoFactorLoading
+                      ? "Désactivation..."
+                      : "Désactiver le 2FA"
+                    }
+
+                  </button>
+
+                </div>
+
+              )}
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
 
     </AdminLayout>
 
