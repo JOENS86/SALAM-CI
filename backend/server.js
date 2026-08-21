@@ -35,6 +35,8 @@ import enrollmentRoutes from "./routes/enrollmentRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 //Communauté
 import communityRoutes from "./routes/communityRoutes.js";
+//statistic admin
+import statisticsRoutes from "./routes/statisticsRoutes.js";
 
 // =========================
 // CONFIGURATION .ENV
@@ -85,6 +87,9 @@ app.use( "/api/notifications", notificationRoutes);
 
 // COMMUNAUTE
 app.use("/api/community", communityRoutes );
+
+//statistiques admin
+app.use("/api/statistics", statisticsRoutes);
 
 // COURSES
 app.use("/api/courses", courseRoutes)
