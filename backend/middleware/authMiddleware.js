@@ -13,26 +13,33 @@ const authMiddleware = async (req, res, next) => {
     // =========================
     const authHeader = req.headers.authorization
 
-    // Vérifie si le token existe
-    if (!authHeader) {
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
 
       return res.status(401).json({
 
-        message: "Accès refusé"
+        message: "Accès refusé. Token manquant."
 
       })
 
     }
 
     // =========================
-    // EXTRACTION DU TOKEN
-    // Format :
-    // Bearer TOKEN
+    // EXTRACTION TOKEN
     // =========================
     const token = authHeader.split(" ")[1]
 
+    if (!token) {
+
+      return res.status(401).json({
+
+        message: "Token manquant."
+
+      })
+
+    }
+
     // =========================
-    // DÉCODAGE JWT
+    // VÉRIFICATION JWT
     // =========================
     const decoded = jwt.verify(
 
@@ -47,19 +54,31 @@ const authMiddleware = async (req, res, next) => {
     // =========================
     const user = await User.findById(decoded.id)
 
-    // Vérifie si l'utilisateur existe
     if (!user) {
 
       return res.status(401).json({
 
-        message: "Utilisateur introuvable"
+        message: "Utilisateur introuvable."
 
       })
 
     }
 
     // =========================
-    // VÉRIFICATION VERSION SESSION
+    // COMPTE ACTIF
+    // =========================
+    if (user.isActive === false) {
+
+      return res.status(403).json({
+
+        message: "Votre compte est désactivé."
+
+      })
+
+    }
+
+    // =========================
+    // VERSION SESSION
     // =========================
     if (
 
@@ -69,18 +88,17 @@ const authMiddleware = async (req, res, next) => {
 
       return res.status(401).json({
 
-        code: "ROLE_CHANGED",
+        code: "SESSION_INVALIDATED",
 
         message:
-          "Votre rôle a été modifié. Veuillez vous reconnecter."
+          "Votre session a expiré. Veuillez vous reconnecter."
 
       })
 
     }
 
     // =========================
-    // UTILISATEUR DISPONIBLE
-    // POUR LES AUTRES ROUTES
+    // UTILISATEUR CONNECTÉ
     // =========================
     req.user = user
 
@@ -90,9 +108,14 @@ const authMiddleware = async (req, res, next) => {
 
   catch (error) {
 
+    console.error(
+      "❌ Erreur authentification :",
+      error.message
+    )
+
     return res.status(401).json({
 
-      message: "Token invalide"
+      message: "Token invalide ou expiré."
 
     })
 

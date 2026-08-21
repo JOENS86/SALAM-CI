@@ -1,10 +1,11 @@
 import Settings from "../models/Settings.js";
+import bcrypt from "bcryptjs"
+import User from "../models/User.js"
 
 // =====================================================
 // RÉCUPÉRER LES PARAMÈTRES
 // GET /api/settings
 // =====================================================
-
 export const getSettings = async (req, res) => {
 
   try {
@@ -58,7 +59,6 @@ export const getSettings = async (req, res) => {
 // MODIFIER LES PARAMÈTRES
 // PUT /api/settings
 // =====================================================
-
 export const updateSettings = async (req, res) => {
 
   try {
@@ -268,3 +268,241 @@ export const updateSettings = async (req, res) => {
   }
 
 };
+
+// =====================================================
+// CHANGER LE MOT DE PASSE ADMINISTRATEUR
+// PUT /api/settings/change-password
+// =====================================================
+export const changeAdminPassword = async (req, res) => {
+
+  try {
+
+    // =====================================================
+    // VÉRIFIER QUE L'UTILISATEUR EST ADMIN
+    // =====================================================
+
+    if (req.user.role !== "admin") {
+
+      return res.status(403).json({
+
+        success: false,
+
+        message:
+          "Accès réservé à l'administrateur."
+
+      })
+
+    }
+
+
+    // =====================================================
+    // RÉCUPÉRATION DES DONNÉES
+    // =====================================================
+
+    const {
+
+      currentPassword,
+      newPassword,
+      confirmPassword
+
+    } = req.body
+
+
+    // =====================================================
+    // CHAMPS OBLIGATOIRES
+    // =====================================================
+
+    if (
+
+      !currentPassword ||
+      !newPassword ||
+      !confirmPassword
+
+    ) {
+
+      return res.status(400).json({
+
+        success: false,
+
+        message:
+          "Tous les champs de mot de passe sont obligatoires."
+
+      })
+
+    }
+
+
+    // =====================================================
+    // VÉRIFICATION CONFIRMATION
+    // =====================================================
+
+    if (newPassword !== confirmPassword) {
+
+      return res.status(400).json({
+
+        success: false,
+
+        message:
+          "Les nouveaux mots de passe ne correspondent pas."
+
+      })
+
+    }
+
+
+    // =====================================================
+    // LONGUEUR MINIMALE
+    // =====================================================
+
+    if (newPassword.length < 8) {
+
+      return res.status(400).json({
+
+        success: false,
+
+        message:
+          "Le nouveau mot de passe doit contenir au moins 8 caractères."
+
+      })
+
+    }
+
+
+    // =====================================================
+    // RÉCUPÉRER L'ADMIN
+    // =====================================================
+
+    const admin = await User.findById(req.user._id)
+
+    if (!admin) {
+
+      return res.status(404).json({
+
+        success: false,
+
+        message:
+          "Administrateur introuvable."
+
+      })
+
+    }
+
+
+    // =====================================================
+    // VÉRIFICATION ANCIEN MOT DE PASSE
+    // =====================================================
+
+    const passwordIsCorrect = await bcrypt.compare(
+
+      currentPassword,
+
+      admin.password
+
+    )
+
+
+    if (!passwordIsCorrect) {
+
+      return res.status(400).json({
+
+        success: false,
+
+        message:
+          "Le mot de passe actuel est incorrect."
+
+      })
+
+    }
+
+
+    // =====================================================
+    // EMPÊCHER LE MÊME MOT DE PASSE
+    // =====================================================
+
+    const samePassword = await bcrypt.compare(
+
+      newPassword,
+
+      admin.password
+
+    )
+
+
+    if (samePassword) {
+
+      return res.status(400).json({
+
+        success: false,
+
+        message:
+          "Le nouveau mot de passe doit être différent de l'ancien."
+
+      })
+
+    }
+
+
+    // =====================================================
+    // HASH DU NOUVEAU MOT DE PASSE
+    // =====================================================
+
+    const hashedPassword = await bcrypt.hash(
+
+      newPassword,
+
+      10
+
+    )
+
+
+    // =====================================================
+    // MISE À JOUR
+    // =====================================================
+
+    admin.password = hashedPassword
+
+    // Invalide les anciennes sessions
+    admin.sessionVersion += 1
+
+    await admin.save()
+
+
+    // =====================================================
+    // RÉPONSE
+    // =====================================================
+
+    return res.status(200).json({
+
+      success: true,
+
+      requiresLogin: true,
+
+      message:
+        "Mot de passe modifié avec succès. Veuillez vous reconnecter."
+
+    })
+
+  }
+
+  catch (error) {
+
+    console.error(
+
+      "❌ Erreur changement mot de passe :",
+
+      error
+
+    )
+
+    return res.status(500).json({
+
+      success: false,
+
+      message:
+        "Impossible de modifier le mot de passe."
+
+    })
+
+  }
+
+}
