@@ -1,4 +1,197 @@
 import User from "../models/User.js"
+import bcrypt from "bcryptjs"
+
+// ======================================
+// CRÉER UN UTILISATEUR
+// POST /api/users
+// RÉSERVÉ AUX ADMINISTRATEURS
+// ======================================
+export const createUser = async (req, res) => {
+
+  try {
+
+    // =========================
+    // DONNÉES REÇUES
+    // =========================
+
+    const {
+      name,
+      email,
+      password,
+      role
+    } = req.body
+
+
+    // =========================
+    // VÉRIFICATION DES CHAMPS
+    // =========================
+
+    if (
+      !name ||
+      !email ||
+      !password ||
+      !role
+    ) {
+
+      return res.status(400).json({
+
+        message:
+          "Tous les champs sont obligatoires."
+
+      })
+
+    }
+
+
+    // =========================
+    // VÉRIFICATION DU RÔLE
+    // =========================
+
+    const allowedRoles = [
+
+      "student",
+      "teacher",
+      "admin"
+
+    ]
+
+    if (!allowedRoles.includes(role)) {
+
+      return res.status(400).json({
+
+        message:
+          "Rôle utilisateur invalide."
+
+      })
+
+    }
+
+
+    // =========================
+    // VÉRIFICATION EMAIL
+    // =========================
+
+    const normalizedEmail =
+      email.trim().toLowerCase()
+
+
+    const existingUser =
+      await User.findOne({
+
+        email: normalizedEmail
+
+      })
+
+
+    if (existingUser) {
+
+      return res.status(400).json({
+
+        message:
+          "Cet email est déjà utilisé."
+
+      })
+
+    }
+
+
+    // =========================
+    // VÉRIFICATION MOT DE PASSE
+    // =========================
+
+    if (password.length < 6) {
+
+      return res.status(400).json({
+
+        message:
+          "Le mot de passe doit contenir au moins 6 caractères."
+
+      })
+
+    }
+
+
+    // =========================
+    // HASH MOT DE PASSE
+    // =========================
+
+    const hashedPassword =
+      await bcrypt.hash(password, 10)
+
+
+    // =========================
+    // CRÉATION UTILISATEUR
+    // =========================
+
+    const user = await User.create({
+
+      name: name.trim(),
+
+      email: normalizedEmail,
+
+      password: hashedPassword,
+
+      role,
+
+      isOnline: false,
+
+      isActive: true,
+
+      sessionVersion: 0,
+
+      twoFactorEnabled: false,
+
+      twoFactorSecret: null
+
+    })
+
+
+    // =========================
+    // UTILISATEUR SÉCURISÉ
+    // =========================
+
+    const safeUser =
+      user.toObject()
+
+    delete safeUser.password
+    delete safeUser.twoFactorSecret
+
+
+    // =========================
+    // RÉPONSE
+    // =========================
+
+    return res.status(201).json({
+
+      success: true,
+
+      message:
+        "Utilisateur créé avec succès.",
+
+      user: safeUser
+
+    })
+
+  }
+
+  catch (error) {
+
+    console.error(
+      "ERREUR CRÉATION UTILISATEUR :",
+      error
+    )
+
+    return res.status(500).json({
+
+      message:
+        "Impossible de créer l'utilisateur."
+
+    })
+
+  }
+
+}
+
 
 // ======================================
 // RÉCUPÉRER LES UTILISATEURS
@@ -231,11 +424,9 @@ export const updateUser = async (req, res) => {
     // DONNÉES REÇUES
     // =========================
     const {
-
       name,
       email,
       role
-
     } = req.body
 
     // =========================
@@ -247,18 +438,24 @@ export const updateUser = async (req, res) => {
 
       return res.status(404).json({
 
-        message: "Utilisateur introuvable"
+        message: "Utilisateur introuvable."
 
       })
 
     }
 
     // =========================
+    // NORMALISATION EMAIL
+    // =========================
+    const normalizedEmail =
+      email.trim().toLowerCase()
+
+    // =========================
     // VÉRIFICATION EMAIL
     // =========================
     const emailExists = await User.findOne({
 
-      email,
+      email: normalizedEmail,
 
       _id: { $ne: id }
 
@@ -275,16 +472,64 @@ export const updateUser = async (req, res) => {
     }
 
     // =========================
+    // VÉRIFICATION DU RÔLE
+    // =========================
+    const allowedRoles = [
+
+      "student",
+      "teacher",
+      "admin"
+
+    ]
+
+    if (!allowedRoles.includes(role)) {
+
+      return res.status(400).json({
+
+        message: "Rôle utilisateur invalide."
+
+      })
+
+    }
+
+    // =========================
     // ANCIEN RÔLE
     // =========================
     const oldRole = user.role
 
+    // =====================================================
+    // PROTECTION DU DERNIER ADMIN
+    // =====================================================
+
+    if (
+      oldRole === "admin" &&
+      role !== "admin"
+    ) {
+
+      const adminCount =
+        await User.countDocuments({
+          role: "admin"
+        })
+
+      if (adminCount <= 1) {
+
+        return res.status(400).json({
+
+          message:
+            "Impossible de retirer le rôle administrateur du dernier administrateur."
+
+        })
+
+      }
+
+    }
+
     // =========================
     // MISE À JOUR
     // =========================
-    user.name = name
+    user.name = name.trim()
 
-    user.email = email
+    user.email = normalizedEmail
 
     user.role = role
 
@@ -296,7 +541,7 @@ export const updateUser = async (req, res) => {
       // Déconnexion immédiate
       user.isOnline = false
 
-      // Tous les anciens JWT deviennent invalides
+      // Invalidation anciens JWT
       user.sessionVersion += 1
 
     }
@@ -307,13 +552,25 @@ export const updateUser = async (req, res) => {
     await user.save()
 
     // =========================
+    // UTILISATEUR SÉCURISÉ
+    // =========================
+    const safeUser =
+      user.toObject()
+
+    delete safeUser.password
+    delete safeUser.twoFactorSecret
+
+    // =========================
     // RÉPONSE
     // =========================
-    res.status(200).json({
+    return res.status(200).json({
 
-      message: "Utilisateur modifié avec succès.",
+      success: true,
 
-      user
+      message:
+        "Utilisateur modifié avec succès.",
+
+      user: safeUser
 
     })
 
@@ -321,15 +578,22 @@ export const updateUser = async (req, res) => {
 
   catch (error) {
 
-    res.status(500).json({
+    console.error(
+      "ERREUR MODIFICATION UTILISATEUR :",
+      error
+    )
 
-      message: error.message
+    return res.status(500).json({
+
+      message:
+        "Impossible de modifier l'utilisateur."
 
     })
 
   }
 
 }
+
 
 // ======================================
 // SUPPRIMER UN UTILISATEUR
@@ -340,7 +604,7 @@ export const deleteUser = async (req, res) => {
   try {
 
     // =========================
-    // ID DE L'UTILISATEUR
+    // ID UTILISATEUR
     // =========================
     const { id } = req.params
 
@@ -349,9 +613,6 @@ export const deleteUser = async (req, res) => {
     // =========================
     const user = await User.findById(id)
 
-    // =========================
-    // UTILISATEUR INTROUVABLE
-    // =========================
     if (!user) {
 
       return res.status(404).json({
@@ -363,10 +624,11 @@ export const deleteUser = async (req, res) => {
     }
 
     // =========================
-    // EMPÊCHER LA SUPPRESSION
-    // DE SON PROPRE COMPTE
+    // EMPÊCHER AUTO-SUPPRESSION
     // =========================
-    if (req.user._id.toString() === id) {
+    if (
+      req.user._id.toString() === id
+    ) {
 
       return res.status(400).json({
 
@@ -374,6 +636,29 @@ export const deleteUser = async (req, res) => {
           "Vous ne pouvez pas supprimer votre propre compte."
 
       })
+
+    }
+
+    // =====================================================
+    // PROTECTION DU DERNIER ADMIN
+    // =====================================================
+    if (user.role === "admin") {
+
+      const adminCount =
+        await User.countDocuments({
+          role: "admin"
+        })
+
+      if (adminCount <= 1) {
+
+        return res.status(400).json({
+
+          message:
+            "Impossible de supprimer le dernier administrateur."
+
+        })
+
+      }
 
     }
 
@@ -385,9 +670,12 @@ export const deleteUser = async (req, res) => {
     // =========================
     // RÉPONSE
     // =========================
-    res.status(200).json({
+    return res.status(200).json({
 
-      message: "Utilisateur supprimé avec succès."
+      success: true,
+
+      message:
+        "Utilisateur supprimé avec succès."
 
     })
 
@@ -395,9 +683,15 @@ export const deleteUser = async (req, res) => {
 
   catch (error) {
 
-    res.status(500).json({
+    console.error(
+      "ERREUR SUPPRESSION UTILISATEUR :",
+      error
+    )
 
-      message: error.message
+    return res.status(500).json({
+
+      message:
+        "Impossible de supprimer cet utilisateur."
 
     })
 
@@ -424,49 +718,75 @@ export const toggleUserStatus = async (req, res) => {
     // =========================
     const user = await User.findById(id)
 
-    // =========================
-    // UTILISATEUR INTROUVABLE
-    // =========================
     if (!user) {
 
       return res.status(404).json({
 
-        message: "Utilisateur introuvable."
+        message:
+          "Utilisateur introuvable."
 
       })
 
     }
 
     // =========================
-    // EMPÊCHER L'ADMIN
-    // DE SE DÉSACTIVER
+    // EMPÊCHER AUTO-DÉSACTIVATION
     // =========================
-    if (req.user._id.toString() === id) {
+    if (
+      req.user._id.toString() === id
+    ) {
 
       return res.status(400).json({
 
         message:
-          "Vous ne pouvez pas désactiver votre propre compte."
+          "Vous ne pouvez pas modifier le statut de votre propre compte."
 
       })
 
     }
 
+    // =====================================================
+    // PROTECTION DU DERNIER ADMIN
+    // =====================================================
+    if (
+      user.role === "admin" &&
+      user.isActive === true
+    ) {
+
+      const activeAdminCount =
+        await User.countDocuments({
+
+          role: "admin",
+
+          isActive: true
+
+        })
+
+      if (activeAdminCount <= 1) {
+
+        return res.status(400).json({
+
+          message:
+            "Impossible de désactiver le dernier administrateur actif."
+
+        })
+
+      }
+
+    }
+
     // =========================
-    // CHANGEMENT DU STATUT
+    // CHANGEMENT STATUT
     // =========================
     user.isActive = !user.isActive
 
     // =========================
-    // SI LE COMPTE EST
-    // DÉSACTIVÉ
+    // SI DÉSACTIVATION
     // =========================
     if (!user.isActive) {
 
-      // Déconnexion immédiate
       user.isOnline = false
 
-      // Tous les anciens tokens deviennent invalides
       user.sessionVersion += 1
 
     }
@@ -488,13 +808,24 @@ export const toggleUserStatus = async (req, res) => {
         : "Utilisateur désactivé avec succès."
 
     // =========================
+    // UTILISATEUR SÉCURISÉ
+    // =========================
+    const safeUser =
+      user.toObject()
+
+    delete safeUser.password
+    delete safeUser.twoFactorSecret
+
+    // =========================
     // RÉPONSE
     // =========================
-    res.status(200).json({
+    return res.status(200).json({
+
+      success: true,
 
       message,
 
-      user
+      user: safeUser
 
     })
 
@@ -502,9 +833,15 @@ export const toggleUserStatus = async (req, res) => {
 
   catch (error) {
 
-    res.status(500).json({
+    console.error(
+      "ERREUR CHANGEMENT STATUT :",
+      error
+    )
 
-      message: error.message
+    return res.status(500).json({
+
+      message:
+        "Impossible de modifier le statut."
 
     })
 

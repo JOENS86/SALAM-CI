@@ -1,6 +1,7 @@
 import express from "express"
 
 import authMiddleware from "../middleware/authMiddleware.js"
+import adminMiddleware from "../middleware/adminMiddleware.js"
 
 import {
 
@@ -8,6 +9,7 @@ import {
   getTeachers,
   getUserStats,
   getUserById,
+  createUser,
   updateUser,
   deleteUser,
   toggleUserStatus
@@ -16,9 +18,11 @@ import {
 
 const router = express.Router()
 
+
 // ======================================
 // STATISTIQUES
 // GET /api/users/stats
+// ADMIN UNIQUEMENT
 // ======================================
 router.get(
 
@@ -26,13 +30,17 @@ router.get(
 
   authMiddleware,
 
+  adminMiddleware,
+
   getUserStats
 
 )
 
+
 // ======================================
 // PROFIL CONNECTÉ
 // GET /api/users/profile
+// UTILISATEUR AUTHENTIFIÉ
 // ======================================
 router.get(
 
@@ -54,19 +62,27 @@ router.get(
 
 )
 
+
 // ======================================
 // ENSEIGNANTS
 // GET /api/users/teachers
+// UTILISATEUR AUTHENTIFIÉ
 // ======================================
 router.get(
+
   "/teachers",
+
   authMiddleware,
+
   getTeachers
+
 )
+
 
 // ======================================
 // TOUS LES UTILISATEURS
 // GET /api/users
+// ADMIN UNIQUEMENT
 // ======================================
 router.get(
 
@@ -74,12 +90,35 @@ router.get(
 
   authMiddleware,
 
+  adminMiddleware,
+
   getUsers
+
 )
+
+
+// ======================================
+// CRÉER UN UTILISATEUR
+// POST /api/users
+// ADMIN UNIQUEMENT
+// ======================================
+router.post(
+
+  "/",
+
+  authMiddleware,
+
+  adminMiddleware,
+
+  createUser
+
+)
+
 
 // ======================================
 // RÉCUPÉRER UN UTILISATEUR
 // GET /api/users/:id
+// ADMIN UNIQUEMENT
 // ======================================
 router.get(
 
@@ -87,13 +126,17 @@ router.get(
 
   authMiddleware,
 
+  adminMiddleware,
+
   getUserById
 
 )
 
+
 // ======================================
 // MODIFIER UN UTILISATEUR
 // PUT /api/users/:id
+// ADMIN UNIQUEMENT
 // ======================================
 router.put(
 
@@ -101,13 +144,17 @@ router.put(
 
   authMiddleware,
 
+  adminMiddleware,
+
   updateUser
 
 )
 
+
 // ======================================
 // SUPPRIMER UN UTILISATEUR
 // DELETE /api/users/:id
+// ADMIN UNIQUEMENT
 // ======================================
 router.delete(
 
@@ -115,13 +162,17 @@ router.delete(
 
   authMiddleware,
 
+  adminMiddleware,
+
   deleteUser
 
 )
 
+
 // ======================================
 // ACTIVER / DÉSACTIVER
 // PATCH /api/users/:id/status
+// ADMIN UNIQUEMENT
 // ======================================
 router.patch(
 
@@ -129,9 +180,11 @@ router.patch(
 
   authMiddleware,
 
+  adminMiddleware,
+
   toggleUserStatus
 
 )
 
-export default router
 
+export default router
