@@ -6,7 +6,9 @@ import {
   setupTwoFactor,
   verifyTwoFactorSetup,
   disableTwoFactor,
-  verifyTwoFactorLogin
+  verifyTwoFactorLogin,
+  forgotPassword,
+  resetPassword
 } from "../controllers/authController.js"
 
 import authMiddleware from "../middleware/authMiddleware.js"
@@ -31,6 +33,22 @@ router.post(
   login
 )
 
+// =====================================================
+// MOT DE PASSE OUBLIÉ
+// =====================================================
+router.post(
+  "/forgot-password",
+  forgotPassword
+)
+
+
+// =====================================================
+// RÉINITIALISATION DU MOT DE PASSE
+// =====================================================
+router.post(
+  "/reset-password/:token",
+  resetPassword
+)
 
 // =====================================================
 // AUTHENTIFICATION 2 FACTEURS
@@ -75,6 +93,5 @@ router.post(
   authMiddleware,
   disableTwoFactor
 )
-
 
 export default router

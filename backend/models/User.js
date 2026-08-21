@@ -38,6 +38,19 @@ const userSchema = new mongoose.Schema(
     },
 
     // =========================
+    // NUMÉRO DE TÉLÉPHONE
+    // =========================
+    phone: {
+
+      type: String,
+
+      default: null,
+
+      trim: true
+
+    },
+
+    // =========================
     // MOT DE PASSE
     // =========================
     password: {
@@ -93,15 +106,73 @@ const userSchema = new mongoose.Schema(
 
     // =========================
     // VERSION DE SESSION
+    // =========================
     // Permet d'invalider tous les
-    // anciens tokens lorsque
-    // le rôle est modifié.
+    // anciens tokens JWT.
     // =========================
     sessionVersion: {
 
       type: Number,
 
       default: 0
+
+    },
+
+    // =====================================================
+    // RÉCUPÉRATION DU MOT DE PASSE PAR EMAIL
+    // =====================================================
+
+    resetPasswordToken: {
+
+      type: String,
+
+      default: null,
+
+      select: false
+
+    },
+
+    resetPasswordExpires: {
+
+      type: Date,
+
+      default: null,
+
+      select: false
+
+    },
+
+    // =====================================================
+    // RÉCUPÉRATION DU MOT DE PASSE PAR TÉLÉPHONE
+    // =====================================================
+
+    resetPasswordCode: {
+
+      type: String,
+
+      default: null,
+
+      select: false
+
+    },
+
+    resetPasswordCodeExpires: {
+
+      type: Date,
+
+      default: null,
+
+      select: false
+
+    },
+
+    resetPasswordCodeAttempts: {
+
+      type: Number,
+
+      default: 0,
+
+      select: false
 
     },
 
@@ -126,10 +197,7 @@ const userSchema = new mongoose.Schema(
     //
     // select: false permet de ne pas
     // retourner automatiquement le
-    // secret dans les requêtes MongoDB.
-    // Il faudra utiliser :
-    // .select("+twoFactorSecret")
-    // lorsque le backend en a besoin.
+    // secret dans les requêtes.
     // =========================
     twoFactorSecret: {
 

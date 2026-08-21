@@ -66,6 +66,10 @@ import StatisticsAdmin from "./pages/admin/Statistics"
 import SettingsAdmin from "./pages/admin/Settings"
 import ProfileAdmin from "./pages/admin/Profile"
 
+//MDP
+import ForgotPassword from "./pages/public/ForgotPassword"
+import ResetPassword from "./pages/public/ResetPassword"
+
 function App() {
 
   return (
@@ -451,6 +455,17 @@ function App() {
 <Route
   path="/certificate-details/:id"
   element={<CertificateDetails />}
+/>
+
+{/* MDP */}
+<Route
+  path="/forgot-password"
+  element={<ForgotPassword />}
+/>
+
+<Route
+  path="/reset-password/:token"
+  element={<ResetPassword />}
 />
 
     </Routes>

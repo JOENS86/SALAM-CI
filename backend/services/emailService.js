@@ -726,6 +726,89 @@ async sendConferenceCancelled(
 
 }
 
+
+// =====================================================
+// EMAIL RÉINITIALISATION MOT DE PASSE
+// =====================================================
+async sendPasswordResetEmail(
+
+    user,
+
+    resetUrl
+
+) {
+
+    const html = this.getTemplate(
+
+        "Réinitialisation de votre mot de passe",
+
+        `
+
+        <h2>
+            Bonjour ${user.name},
+        </h2>
+
+        <p>
+
+            Une demande de réinitialisation
+            de votre mot de passe a été effectuée
+            pour votre compte SALAM CI.
+
+        </p>
+
+        <p>
+
+            Cliquez sur le bouton ci-dessous
+            pour définir un nouveau mot de passe.
+
+        </p>
+
+        <div style="text-align:center;">
+
+            <a
+                class="btn"
+                href="${resetUrl}"
+            >
+
+                Réinitialiser mon mot de passe
+
+            </a>
+
+        </div>
+
+        <p>
+
+            <strong>
+                Ce lien expire dans 15 minutes.
+            </strong>
+
+        </p>
+
+        <p>
+
+            Si vous n'êtes pas à l'origine
+            de cette demande, vous pouvez
+            simplement ignorer cet email.
+
+        </p>
+
+        `
+
+    )
+
+    return this.sendMail({
+
+        to: user.email,
+
+        subject:
+            "Réinitialisation de votre mot de passe - SALAM CI",
+
+        html
+
+    })
+
+}
+
 }
 
 export default new EmailService();

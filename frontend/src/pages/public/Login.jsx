@@ -1143,37 +1143,40 @@ function Login() {
           {/* =================================================
               INSCRIPTION
           ================================================= */}
+{!hideRegister && (
 
-          {!hideRegister && (
+<div className="text-center mt-6">
 
-            <p className="
-              text-center
-              mt-6
-              text-gray-500
-            ">
+  <p className="text-gray-500">
 
-              Pas encore de compte ?
+    Pas encore de compte ?
 
+    <Link
+      to="/register"
+      className="text-purple-600 font-semibold ml-2"
+    >
+      S'inscrire
+    </Link>
 
-              <Link
+  </p>
 
-                to="/register"
+  <Link
+    to="/forgot-password"
+    className="
+      inline-block
+      mt-4
+      text-purple-600
+      font-semibold
+      hover:text-purple-800
+      transition
+    "
+  >
+    Mot de passe oublié ?
+  </Link>
 
-                className="
-                  text-purple-600
-                  font-semibold
-                  ml-2
-                "
+</div>
 
-              >
-
-                S'inscrire
-
-              </Link>
-
-            </p>
-
-          )}
+)}
 
         </div>
 

@@ -3,6 +3,8 @@ import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import speakeasy from "speakeasy"
 import QRCode from "qrcode"
+import crypto from "crypto"
+import emailService from "../services/emailService.js"
 
 // =====================================================
 // REGISTER
@@ -771,6 +773,334 @@ export const verifyTwoFactorLogin = async (req, res) => {
     res.status(500).json({
 
       message: "Vérification 2FA impossible."
+
+    })
+
+  }
+
+}
+
+// =====================================================
+// MOT DE PASSE OUBLIÉ
+// =====================================================
+export const forgotPassword = async (req, res) => {
+
+  try {
+
+    const {
+      email
+    } = req.body
+
+    // =========================
+    // NETTOYAGE EMAIL
+    // =========================
+
+    const cleanEmail =
+      email?.trim().toLowerCase()
+
+    if (!cleanEmail) {
+
+      return res.status(400).json({
+
+        message:
+          "L'adresse email est obligatoire."
+
+      })
+
+    }
+
+    // =========================
+    // RECHERCHE UTILISATEUR
+    // =========================
+
+    const user = await User
+      .findOne({
+        email: cleanEmail
+      })
+      .select(
+        "+resetPasswordToken +resetPasswordExpires"
+      )
+
+    // =========================
+    // MESSAGE GÉNÉRIQUE
+    // =========================
+    // On ne révèle pas si l'adresse
+    // existe ou non.
+
+    if (!user) {
+
+      return res.status(200).json({
+
+        success: true,
+
+        message:
+          "Si cette adresse email correspond à un compte, un lien de récupération a été envoyé."
+
+      })
+
+    }
+
+    // =========================
+    // GÉNÉRATION TOKEN
+    // =========================
+
+    const resetToken =
+      crypto.randomBytes(32).toString("hex")
+
+    // =========================
+    // HASH DU TOKEN
+    // =========================
+
+    const resetTokenHash =
+      crypto
+        .createHash("sha256")
+        .update(resetToken)
+        .digest("hex")
+
+    // =========================
+    // EXPIRATION
+    // 15 MINUTES
+    // =========================
+
+    const resetExpires =
+      new Date(
+        Date.now() + 15 * 60 * 1000
+      )
+
+    // =========================
+    // SAUVEGARDE
+    // =========================
+
+    user.resetPasswordToken =
+      resetTokenHash
+
+    user.resetPasswordExpires =
+      resetExpires
+
+    await user.save()
+
+    // =========================
+    // LIEN FRONTEND
+    // =========================
+
+    const frontendUrl =
+      process.env.FRONTEND_URL ||
+      "https://salam-ci-1.vercel.app"
+
+    const resetUrl =
+      `${frontendUrl}/reset-password/${resetToken}`
+
+    // =========================
+    // ENVOI EMAIL
+    // =========================
+
+    await emailService.sendPasswordResetEmail(
+
+      user,
+
+      resetUrl
+
+    )
+
+    // =========================
+    // RÉPONSE
+    // =========================
+
+    return res.status(200).json({
+
+      success: true,
+
+      message:
+        "Si cette adresse email correspond à un compte, un lien de récupération a été envoyé."
+
+    })
+
+  }
+
+  catch (error) {
+
+    console.error(
+      "ERREUR MOT DE PASSE OUBLIÉ :",
+      error
+    )
+
+    return res.status(500).json({
+
+      message:
+        "Impossible de traiter la demande."
+
+    })
+
+  }
+
+}
+
+
+// =====================================================
+// RÉINITIALISER LE MOT DE PASSE
+// =====================================================
+export const resetPassword = async (req, res) => {
+
+  try {
+
+    const {
+      token
+    } = req.params
+
+    const {
+      password
+    } = req.body
+
+    // =========================
+    // VALIDATION
+    // =========================
+
+    if (!token) {
+
+      return res.status(400).json({
+
+        message:
+          "Lien de récupération invalide."
+
+      })
+
+    }
+
+    if (!password) {
+
+      return res.status(400).json({
+
+        message:
+          "Le nouveau mot de passe est obligatoire."
+
+      })
+
+    }
+
+    if (password.length < 6) {
+
+      return res.status(400).json({
+
+        message:
+          "Le mot de passe doit contenir au moins 6 caractères."
+
+      })
+
+    }
+
+    // =========================
+    // HASH TOKEN REÇU
+    // =========================
+
+    const tokenHash =
+      crypto
+        .createHash("sha256")
+        .update(token)
+        .digest("hex")
+
+    // =========================
+    // RECHERCHE TOKEN
+    // =========================
+
+    const user = await User
+      .findOne({
+
+        resetPasswordToken:
+          tokenHash,
+
+        resetPasswordExpires: {
+          $gt: new Date()
+        }
+
+      })
+      .select(
+        "+resetPasswordToken +resetPasswordExpires"
+      )
+
+    // =========================
+    // TOKEN INVALIDE / EXPIRÉ
+    // =========================
+
+    if (!user) {
+
+      return res.status(400).json({
+
+        message:
+          "Le lien de récupération est invalide ou expiré."
+
+      })
+
+    }
+
+    // =========================
+    // HASH NOUVEAU MOT DE PASSE
+    // =========================
+
+    const hashedPassword =
+      await bcrypt.hash(
+        password,
+        10
+      )
+
+    // =========================
+    // NOUVEAU MOT DE PASSE
+    // =========================
+
+    user.password =
+      hashedPassword
+
+    // =========================
+    // SUPPRESSION TOKEN
+    // =========================
+
+    user.resetPasswordToken =
+      null
+
+    user.resetPasswordExpires =
+      null
+
+    // =========================
+    // INVALIDATION DES SESSIONS
+    // =========================
+    // Toutes les anciennes sessions
+    // deviennent invalides.
+
+    user.sessionVersion += 1
+
+    // =========================
+    // DÉCONNEXION
+    // =========================
+
+    user.isOnline = false
+
+    await user.save()
+
+    // =========================
+    // RÉPONSE
+    // =========================
+
+    return res.status(200).json({
+
+      success: true,
+
+      message:
+        "Mot de passe réinitialisé avec succès. Vous pouvez maintenant vous connecter."
+
+    })
+
+  }
+
+  catch (error) {
+
+    console.error(
+      "ERREUR RÉINITIALISATION MOT DE PASSE :",
+      error
+    )
+
+    return res.status(500).json({
+
+      message:
+        "Impossible de réinitialiser le mot de passe."
 
     })
 
