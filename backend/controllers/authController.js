@@ -4,16 +4,18 @@ import jwt from "jsonwebtoken"
 import speakeasy from "speakeasy"
 import QRCode from "qrcode"
 
-// =========================
+// =====================================================
 // REGISTER
-// =========================
+// =====================================================
+
 export const register = async (req, res) => {
 
   try {
 
-    // =========================
+    // =================================================
     // RÉCUPÉRATION DES DONNÉES
-    // =========================
+    // =================================================
+
     const {
       name,
       email,
@@ -21,79 +23,234 @@ export const register = async (req, res) => {
       role
     } = req.body
 
-    // =========================
-    // VÉRIFICATION EMAIL
-    // =========================
-    const existingUser = await User.findOne({ email })
 
-    if (existingUser) {
+    // =================================================
+    // NETTOYAGE
+    // =================================================
+
+    const cleanName =
+      name?.trim()
+
+    const cleanEmail =
+      email?.trim().toLowerCase()
+
+
+    // =================================================
+    // VALIDATION NOM
+    // =================================================
+
+    if (!cleanName) {
 
       return res.status(400).json({
-        message: "Utilisateur existe déjà"
+
+        message:
+          "Le nom complet est obligatoire."
+
       })
 
     }
 
-    // =========================
-    // HASH DU MOT DE PASSE
-    // =========================
-    const hashedPassword = await bcrypt.hash(password, 10)
 
-    // =========================
+    // =================================================
+    // VALIDATION EMAIL
+    // =================================================
+
+    if (!cleanEmail) {
+
+      return res.status(400).json({
+
+        message:
+          "L'adresse email est obligatoire."
+
+      })
+
+    }
+
+
+    // =================================================
+    // VALIDATION MOT DE PASSE
+    // =================================================
+
+    if (!password) {
+
+      return res.status(400).json({
+
+        message:
+          "Le mot de passe est obligatoire."
+
+      })
+
+    }
+
+
+    if (password.length < 6) {
+
+      return res.status(400).json({
+
+        message:
+          "Le mot de passe doit contenir au moins 6 caractères."
+
+      })
+
+    }
+
+
+    // =================================================
+    // VALIDATION DU RÔLE
+    // =================================================
+    //
+    // IMPORTANT :
+    // Un utilisateur public ne peut PAS
+    // créer un compte administrateur.
+    // =================================================
+
+    if (
+      role !== "student" &&
+      role !== "teacher"
+    ) {
+
+      return res.status(400).json({
+
+        message:
+          "Type de compte invalide."
+
+      })
+
+    }
+
+
+    // =================================================
+    // VÉRIFICATION EMAIL EXISTANT
+    // =================================================
+
+    const existingUser =
+      await User.findOne({
+        email: cleanEmail
+      })
+
+
+    if (existingUser) {
+
+      return res.status(400).json({
+
+        message:
+          "Un utilisateur avec cette adresse email existe déjà."
+
+      })
+
+    }
+
+
+    // =================================================
+    // HASH MOT DE PASSE
+    // =================================================
+
+    const hashedPassword =
+      await bcrypt.hash(
+        password,
+        10
+      )
+
+
+    // =================================================
     // CRÉATION UTILISATEUR
-    // =========================
-    const user = await User.create({
+    // =================================================
 
-      name,
-      email,
-      password: hashedPassword,
-      role
+    const user =
+      await User.create({
 
-    })
+        name:
+          cleanName,
 
-// =========================
-// CRÉATION TOKEN JWT
-// =========================
-const token = jwt.sign(
+        email:
+          cleanEmail,
 
-  {
-    id: user._id,
-    role: user.role,
-    // Version actuelle de la session
-    sessionVersion: user.sessionVersion
-  },
-  process.env.JWT_SECRET,
-  {
-    expiresIn: "7d"
-  }
-)
+        password:
+          hashedPassword,
+
+        role:
+          role
+
+      })
 
 
-    // =========================
+    // =================================================
+    // UTILISATEUR SÉCURISÉ
+    // =================================================
+    //
+    // Ne jamais renvoyer le mot de passe
+    // ni le secret 2FA.
+    // =================================================
+
+    const safeUser =
+      user.toObject()
+
+
+    delete safeUser.password
+
+    delete safeUser.twoFactorSecret
+
+
+    // =================================================
     // RÉPONSE
-    // =========================
-    res.status(201).json({
+    // =================================================
 
-      token,
-      user
+    return res.status(201).json({
+
+      success: true,
+
+      message:
+        "Compte créé avec succès.",
+
+      user:
+        safeUser
 
     })
 
   }
+
 
   catch (error) {
 
-    console.log(error)
+    console.error(
+      "ERREUR INSCRIPTION :",
+      error
+    )
 
-    res.status(500).json({
 
-      message: error.message
+    // =================================================
+    // EMAIL DUPLIQUÉ
+    // =================================================
+
+    if (
+      error.code === 11000
+    ) {
+
+      return res.status(400).json({
+
+        message:
+          "Cette adresse email est déjà utilisée."
+
+      })
+
+    }
+
+
+    // =================================================
+    // ERREUR GÉNÉRALE
+    // =================================================
+
+    return res.status(500).json({
+
+      message:
+        "Impossible de créer le compte."
 
     })
 
   }
 
 }
+
 
 // =========================
 // LOGIN
