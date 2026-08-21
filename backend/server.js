@@ -37,6 +37,8 @@ import notificationRoutes from "./routes/notificationRoutes.js";
 import communityRoutes from "./routes/communityRoutes.js";
 //statistic admin
 import statisticsRoutes from "./routes/statisticsRoutes.js";
+// Paramètres administrateur
+import settingsRoutes from "./routes/settingsRoutes.js";
 
 // =========================
 // CONFIGURATION .ENV
@@ -88,8 +90,11 @@ app.use( "/api/notifications", notificationRoutes);
 // COMMUNAUTE
 app.use("/api/community", communityRoutes );
 
-//statistiques admin
+// statistiques admin
 app.use("/api/statistics", statisticsRoutes);
+
+// paramètres admin
+app.use("/api/settings", settingsRoutes);
 
 // COURSES
 app.use("/api/courses", courseRoutes)
