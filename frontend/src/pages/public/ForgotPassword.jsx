@@ -1,6 +1,12 @@
 import { useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
-import { FaArrowLeft, FaEnvelope } from "react-icons/fa"
+
+import {
+  FaArrowLeft,
+  FaEnvelope,
+  FaPhone,
+  FaShieldAlt
+} from "react-icons/fa"
 
 import API from "../../services/api"
 
@@ -14,11 +20,32 @@ function ForgotPassword() {
 
   const navigate = useNavigate()
 
+  // =========================
+  // MÉTHODE DE RÉCUPÉRATION
+  // =========================
+  const [method, setMethod] = useState(null)
+
+  // =========================
+  // EMAIL
+  // =========================
   const [email, setEmail] = useState("")
 
+  // =========================
+  // TÉLÉPHONE
+  // =========================
+  const [phone, setPhone] = useState("")
+
+  // =========================
+  // CHARGEMENT
+  // =========================
   const [loading, setLoading] = useState(false)
 
-  const handleSubmit = async (e) => {
+
+  // =====================================================
+  // RÉCUPÉRATION PAR EMAIL
+  // =====================================================
+
+  const handleEmailSubmit = async (e) => {
 
     e.preventDefault()
 
@@ -70,6 +97,63 @@ function ForgotPassword() {
       setLoading(false)
 
     }
+
+  }
+
+
+  // =====================================================
+  // RÉCUPÉRATION PAR TÉLÉPHONE
+  // =====================================================
+
+  const handlePhoneSubmit = async (e) => {
+
+    e.preventDefault()
+
+    if (!phone.trim()) {
+
+      errorToast(
+        "Téléphone requis",
+        "Veuillez saisir votre numéro de téléphone."
+      )
+
+      return
+
+    }
+
+    /*
+      =====================================================
+      IMPORTANT
+
+      Le système SMS n'est pas encore branché.
+
+      On ne fait donc PAS encore de requête API ici.
+
+      Cette partie sera connectée plus tard à notre
+      système OTP SMS.
+
+      Pour l'instant, on prépare uniquement l'interface.
+      =====================================================
+    */
+
+    errorToast(
+      "Service SMS",
+      "La récupération par téléphone sera bientôt disponible."
+    )
+
+  }
+
+
+  // =====================================================
+  // RETOUR AU CHOIX
+  // =====================================================
+
+  const resetMethod = () => {
+
+    setMethod(null)
+
+    setEmail("")
+
+    setPhone("")
 
   }
 
@@ -158,7 +242,7 @@ function ForgotPassword() {
           "
         >
 
-          <FaEnvelope />
+          <FaShieldAlt />
 
         </div>
 
@@ -181,112 +265,444 @@ function ForgotPassword() {
         </h1>
 
 
-        <p
-          className="
-          text-center
-          text-gray-500
-          mt-4
-          leading-7
-          "
-        >
+        {/* =====================================================
+            ÉTAPE 1 : CHOIX DE LA MÉTHODE
+        ===================================================== */}
 
-          Entrez votre adresse email.
-          Nous vous enverrons un lien sécurisé
-          pour réinitialiser votre mot de passe.
+        {!method && (
 
-        </p>
+          <>
 
-
-        {/* =========================
-            FORMULAIRE
-        ========================== */}
-
-        <form
-          onSubmit={handleSubmit}
-          className="mt-8 space-y-6"
-        >
-
-          <div>
-
-            <label
+            <p
               className="
-              block
-              mb-2
-              font-medium
+              text-center
+              text-gray-500
+              mt-4
+              leading-7
               "
             >
 
-              Adresse email
+              Comment souhaitez-vous récupérer
+              votre compte ?
 
-            </label>
+            </p>
 
 
-            <input
+            <div className="grid grid-cols-2 gap-4 mt-8">
 
-              type="email"
+              {/* =========================
+                  EMAIL
+              ========================== */}
 
-              value={email}
+              <button
 
-              onChange={(e) =>
-                setEmail(e.target.value)
-              }
+                type="button"
 
-              placeholder="votre@email.com"
+                onClick={() => setMethod("email")}
 
-              autoComplete="email"
+                className="
+                border-2
+                border-gray-200
+                hover:border-purple-500
+                hover:bg-purple-50
+                rounded-2xl
+                p-6
+                transition-all
+                group
+                "
 
-              required
+              >
+
+                <div
+                  className="
+                  w-14
+                  h-14
+                  mx-auto
+                  rounded-full
+                  bg-purple-100
+                  text-purple-600
+                  flex
+                  items-center
+                  justify-center
+                  text-xl
+                  group-hover:scale-110
+                  transition
+                  "
+                >
+
+                  <FaEnvelope />
+
+                </div>
+
+
+                <h2
+                  className="
+                  font-bold
+                  text-lg
+                  mt-4
+                  "
+                >
+
+                  Par e-mail
+
+                </h2>
+
+
+                <p
+                  className="
+                  text-gray-500
+                  text-sm
+                  mt-2
+                  "
+                >
+
+                  Recevoir un lien sécurisé
+
+                </p>
+
+              </button>
+
+
+              {/* =========================
+                  TÉLÉPHONE
+              ========================== */}
+
+              <button
+
+                type="button"
+
+                onClick={() => setMethod("phone")}
+
+                className="
+                border-2
+                border-gray-200
+                hover:border-purple-500
+                hover:bg-purple-50
+                rounded-2xl
+                p-6
+                transition-all
+                group
+                "
+
+              >
+
+                <div
+                  className="
+                  w-14
+                  h-14
+                  mx-auto
+                  rounded-full
+                  bg-purple-100
+                  text-purple-600
+                  flex
+                  items-center
+                  justify-center
+                  text-xl
+                  group-hover:scale-110
+                  transition
+                  "
+                >
+
+                  <FaPhone />
+
+                </div>
+
+
+                <h2
+                  className="
+                  font-bold
+                  text-lg
+                  mt-4
+                  "
+                >
+
+                  Par téléphone
+
+                </h2>
+
+
+                <p
+                  className="
+                  text-gray-500
+                  text-sm
+                  mt-2
+                  "
+                >
+
+                  Recevoir un code SMS
+
+                </p>
+
+              </button>
+
+            </div>
+
+          </>
+
+        )}
+
+
+        {/* =====================================================
+            ÉTAPE 2 : EMAIL
+        ===================================================== */}
+
+        {method === "email" && (
+
+          <>
+
+            <p
+              className="
+              text-center
+              text-gray-500
+              mt-4
+              leading-7
+              "
+            >
+
+              Entrez votre adresse email.
+              Nous vous enverrons un lien sécurisé
+              pour réinitialiser votre mot de passe.
+
+            </p>
+
+
+            <form
+              onSubmit={handleEmailSubmit}
+              className="mt-8 space-y-6"
+            >
+
+              <div>
+
+                <label
+                  className="
+                  block
+                  mb-2
+                  font-medium
+                  "
+                >
+
+                  Adresse email
+
+                </label>
+
+
+                <input
+
+                  type="email"
+
+                  value={email}
+
+                  onChange={(e) =>
+                    setEmail(e.target.value)
+                  }
+
+                  placeholder="votre@email.com"
+
+                  autoComplete="email"
+
+                  required
+
+                  className="
+                  w-full
+                  border
+                  border-gray-300
+                  rounded-xl
+                  px-4
+                  py-3
+                  outline-none
+                  focus:border-purple-500
+                  focus:ring-2
+                  focus:ring-purple-100
+                  "
+
+                />
+
+              </div>
+
+
+              <button
+
+                type="submit"
+
+                disabled={loading}
+
+                className="
+                w-full
+                bg-purple-600
+                hover:bg-purple-700
+                disabled:bg-purple-300
+                transition
+                text-white
+                py-3
+                rounded-xl
+                font-semibold
+                "
+
+              >
+
+                {loading
+                  ? "Envoi en cours..."
+                  : "Envoyer le lien de récupération"
+                }
+
+              </button>
+
+            </form>
+
+
+            <button
+
+              type="button"
+
+              onClick={resetMethod}
 
               className="
               w-full
-              border
-              border-gray-300
-              rounded-xl
-              px-4
-              py-3
-              outline-none
-              focus:border-purple-500
-              focus:ring-2
-              focus:ring-purple-100
+              mt-4
+              text-purple-600
+              font-semibold
+              hover:underline
               "
 
-            />
+            >
 
-          </div>
+              ← Choisir une autre méthode
+
+            </button>
+
+          </>
+
+        )}
 
 
-          {/* =========================
-              BOUTON
-          ========================== */}
+        {/* =====================================================
+            ÉTAPE 2 : TÉLÉPHONE
+        ===================================================== */}
 
-          <button
+        {method === "phone" && (
 
-            type="submit"
+          <>
 
-            disabled={loading}
+            <p
+              className="
+              text-center
+              text-gray-500
+              mt-4
+              leading-7
+              "
+            >
 
-            className="
-            w-full
-            bg-purple-600
-            hover:bg-purple-700
-            disabled:bg-purple-300
-            transition
-            text-white
-            py-3
-            rounded-xl
-            font-semibold
-            "
+              Entrez le numéro de téléphone associé
+              à votre compte. Un code de vérification
+              vous sera envoyé par SMS.
 
-          >
+            </p>
 
-            {loading
-              ? "Envoi en cours..."
-              : "Envoyer le lien de récupération"
-            }
 
-          </button>
+            <form
+              onSubmit={handlePhoneSubmit}
+              className="mt-8 space-y-6"
+            >
 
-        </form>
+              <div>
+
+                <label
+                  className="
+                  block
+                  mb-2
+                  font-medium
+                  "
+                >
+
+                  Numéro de téléphone
+
+                </label>
+
+
+                <input
+
+                  type="tel"
+
+                  value={phone}
+
+                  onChange={(e) =>
+                    setPhone(e.target.value)
+                  }
+
+                  placeholder="+225 07 00 00 00 00"
+
+                  autoComplete="tel"
+
+                  required
+
+                  className="
+                  w-full
+                  border
+                  border-gray-300
+                  rounded-xl
+                  px-4
+                  py-3
+                  outline-none
+                  focus:border-purple-500
+                  focus:ring-2
+                  focus:ring-purple-100
+                  "
+
+                />
+
+              </div>
+
+
+              <button
+
+                type="submit"
+
+                disabled={loading}
+
+                className="
+                w-full
+                bg-purple-600
+                hover:bg-purple-700
+                disabled:bg-purple-300
+                transition
+                text-white
+                py-3
+                rounded-xl
+                font-semibold
+                "
+
+              >
+
+                Envoyer le code par SMS
+
+              </button>
+
+            </form>
+
+
+            <button
+
+              type="button"
+
+              onClick={resetMethod}
+
+              className="
+              w-full
+              mt-4
+              text-purple-600
+              font-semibold
+              hover:underline
+              "
+
+            >
+
+              ← Choisir une autre méthode
+
+            </button>
+
+          </>
+
+        )}
 
 
         {/* =========================
