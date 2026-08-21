@@ -12,7 +12,7 @@ import {
 } from "react-icons/fa"
 
 import { useEffect, useState } from "react"
-import axios from "axios"
+import API from "../../services/api"
 
 
 function Settings() {
@@ -121,25 +121,14 @@ function Settings() {
 
 
   // =====================================================
-  // URL API
-  // =====================================================
-
-  const API_URL =
-    import.meta.env.VITE_API_URL ||
-    "http://localhost:10000"
-
-
-  // =====================================================
   // TOKEN
   // =====================================================
 
   const getToken = () => {
-
     return (
       localStorage.getItem("token") ||
       localStorage.getItem("authToken")
     )
-
   }
 
 
@@ -154,108 +143,51 @@ function Settings() {
       try {
 
         setLoading(true)
-
         setError("")
 
-        const response = await axios.get(
-          `${API_URL}/api/settings`
-        )
-
+        // IMPORTANT :
+        // API contient déjà /api dans son baseURL.
+        // Il faut donc appeler uniquement /settings.
+        const response = await API.get("/settings")
 
         console.log(
           "⚙️ Paramètres reçus :",
           response.data
         )
 
-
-        const settings = response.data.settings
-
+        const settings = response.data?.settings
 
         if (!settings) {
-
-          throw new Error(
-            "Paramètres introuvables."
-          )
-
+          throw new Error("Paramètres introuvables.")
         }
 
-
-        // =================================================
-        // GÉNÉRAL
-        // =================================================
-
         setGeneral({
-
-          platformName:
-            settings.platformName || "SALAM CI",
-
-          email:
-            settings.email || "",
-
-          phone:
-            settings.phone || "",
-
-          address:
-            settings.address || "",
-
-          description:
-            settings.description || ""
-
+          platformName: settings.platformName || "",
+          email: settings.email || "",
+          phone: settings.phone || "",
+          address: settings.address || "",
+          description: settings.description || ""
         })
-
-
-        // =================================================
-        // NOTIFICATIONS
-        // =================================================
 
         setNotifications({
-
-          newUser:
-            settings.notifications?.newUser ?? true,
-
-          newTeacher:
-            settings.notifications?.newTeacher ?? true,
-
-          newCourse:
-            settings.notifications?.newCourse ?? true,
-
+          newUser: settings.notifications?.newUser ?? true,
+          newTeacher: settings.notifications?.newTeacher ?? true,
+          newCourse: settings.notifications?.newCourse ?? true,
           conferenceRequest:
             settings.notifications?.conferenceRequest ?? true,
-
-          email:
-            settings.notifications?.email ?? true
-
+          email: settings.notifications?.email ?? true
         })
-
-
-        // =================================================
-        // APPARENCE
-        // =================================================
 
         setAppearance({
-
-          theme:
-            settings.appearance?.theme || "light",
-
-          animations:
-            settings.appearance?.animations ?? true
-
+          theme: settings.appearance?.theme || "light",
+          animations: settings.appearance?.animations ?? true
         })
 
-
-        // =================================================
-        // MAINTENANCE
-        // =================================================
-
         setMaintenance({
-
-          enabled:
-            settings.maintenance?.enabled ?? false,
-
+          enabled: settings.maintenance?.enabled ?? false,
           message:
             settings.maintenance?.message ||
             "La plateforme est actuellement en maintenance. Merci de revenir plus tard."
-
         })
 
       }
@@ -267,15 +199,10 @@ function Settings() {
           err
         )
 
-
         setError(
-
           err.response?.data?.message ||
-
           err.message ||
-
           "Impossible de charger les paramètres."
-
         )
 
       }
@@ -288,10 +215,10 @@ function Settings() {
 
     }
 
-
     fetchSettings()
 
-  }, [API_URL])
+  }, [])
+
 
 
   // =====================================================
@@ -368,24 +295,15 @@ function Settings() {
       : {}
 
 
-    const response = await axios.put(
-
-      `${API_URL}/api/settings`,
-
+    const response = await API.put(
+      "/settings",
       {
-
         ...general,
-
         notifications,
-
         appearance,
-
         maintenance
-
       },
-
       config
-
     )
 
 
@@ -471,34 +389,18 @@ function Settings() {
     // REQUÊTE BACKEND
     // ===================================================
 
-    const response = await axios.put(
-
-      `${API_URL}/api/settings/change-password`,
-
+    const response = await API.put(
+      "/settings/change-password",
       {
-
-        currentPassword:
-          security.currentPassword,
-
-        newPassword:
-          security.newPassword,
-
-        confirmPassword:
-          security.confirmPassword
-
+        currentPassword: security.currentPassword,
+        newPassword: security.newPassword,
+        confirmPassword: security.confirmPassword
       },
-
       {
-
         headers: {
-
-          Authorization:
-            `Bearer ${token}`
-
+          Authorization: `Bearer ${token}`
         }
-
       }
-
     )
 
 
