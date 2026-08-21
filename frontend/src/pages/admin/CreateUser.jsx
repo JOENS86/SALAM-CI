@@ -197,11 +197,11 @@ function CreateUser() {
 
       // =========================
       // CRÉATION
+      // ADMIN UNIQUEMENT
       // =========================
       const res = await API.post(
 
-        "/auth/register",
-
+        "/users",
         formData
 
       )
