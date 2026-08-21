@@ -492,46 +492,44 @@ export const updateUser = async (req, res) => {
 
     }
 
-    // =========================
-    // ANCIEN RÔLE
-    // =========================
-    const oldRole = user.role
+  // =========================
+// ANCIEN RÔLE
+// =========================
+const oldRole = user.role
 
-    // =====================================================
-    // PROTECTION DU DERNIER ADMIN
-    // =====================================================
+// =========================
+// EMPÊCHER LA MODIFICATION
+// DU DERNIER ADMIN
+// =========================
+if (
+  oldRole === "admin" &&
+  role !== "admin"
+) {
 
-    if (
-      oldRole === "admin" &&
-      role !== "admin"
-    ) {
+  const adminCount = await User.countDocuments({
+    role: "admin"
+  })
 
-      const adminCount =
-        await User.countDocuments({
-          role: "admin"
-        })
+  if (adminCount <= 1) {
 
-      if (adminCount <= 1) {
+    return res.status(400).json({
 
-        return res.status(400).json({
+      message:
+        "Impossible de retirer le rôle du dernier administrateur."
 
-          message:
-            "Impossible de retirer le rôle administrateur du dernier administrateur."
+    })
 
-        })
+  }
 
-      }
+}
 
-    }
+// =========================
+// MISE À JOUR
+// =========================
+user.name = name.trim()
+user.email = normalizedEmail
 
-    // =========================
-    // MISE À JOUR
-    // =========================
-    user.name = name.trim()
-
-    user.email = normalizedEmail
-
-    user.role = role
+user.role = role
 
     // =========================
     // SI LE RÔLE CHANGE
@@ -639,9 +637,9 @@ export const deleteUser = async (req, res) => {
 
     }
 
-    // =====================================================
+    // =========================
     // PROTECTION DU DERNIER ADMIN
-    // =====================================================
+    // =========================
     if (user.role === "admin") {
 
       const adminCount =
