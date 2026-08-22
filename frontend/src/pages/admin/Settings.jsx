@@ -17,6 +17,11 @@ import {
 import { useEffect, useState } from "react"
 import API from "../../services/api"
 
+import {
+  getSavedTheme,
+  saveTheme
+} from "../../utils/theme"
+
 
 function Settings() {
 
@@ -138,10 +143,10 @@ function Settings() {
 
   const [appearance, setAppearance] = useState({
 
-    theme: "light",
-
+    theme: getSavedTheme(),
+  
     animations: true
-
+  
   })
 
 
@@ -1755,17 +1760,19 @@ function Settings() {
 
                         type="button"
 
-                        onClick={() =>
+                        onClick={() => {
 
                           setAppearance({
-
+                        
                             ...appearance,
-
+                        
                             theme: value
-
+                        
                           })
-
-                        }
+                        
+                          saveTheme(value)
+                        
+                        }}
 
                         className={`
                           p-4
