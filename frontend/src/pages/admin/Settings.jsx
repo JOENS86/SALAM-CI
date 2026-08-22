@@ -307,6 +307,15 @@ function Settings() {
 
     setSaved(true)
 
+    window.dispatchEvent(
+      new CustomEvent(
+        "appearanceChanged",
+        {
+          detail: appearance
+        }
+      )
+    )
+
     setTimeout(() => {
 
       setSaved(false)
