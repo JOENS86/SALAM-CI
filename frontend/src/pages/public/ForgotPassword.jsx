@@ -5,7 +5,8 @@ import {
   FaArrowLeft,
   FaEnvelope,
   FaPhone,
-  FaShieldAlt
+  FaShieldAlt,
+  FaLock
 } from "react-icons/fa"
 
 import API from "../../services/api"
@@ -34,6 +35,28 @@ function ForgotPassword() {
   // TÉLÉPHONE
   // =========================
   const [phone, setPhone] = useState("")
+
+  // =========================
+  // ÉTAPES RÉCUPÉRATION TÉLÉPHONE
+  // =========================
+  const [phoneStep, setPhoneStep] = useState("phone")
+
+  // =========================
+  // CODE SMS
+  // =========================
+  const [phoneCode, setPhoneCode] = useState("")
+
+  // =========================
+  // TOKEN DE RÉINITIALISATION
+  // =========================
+  const [resetToken, setResetToken] = useState("")
+
+  // =========================
+  // NOUVEAU MOT DE PASSE
+  // =========================
+  const [newPassword, setNewPassword] = useState("")
+
+  const [confirmPassword, setConfirmPassword] = useState("")
 
   // =========================
   // CHARGEMENT
@@ -102,7 +125,7 @@ function ForgotPassword() {
 
 
   // =====================================================
-  // RÉCUPÉRATION PAR TÉLÉPHONE
+  // ENVOYER LE CODE SMS
   // =====================================================
 
   const handlePhoneSubmit = async (e) => {
@@ -120,25 +143,196 @@ function ForgotPassword() {
 
     }
 
-    /*
-      =====================================================
-      IMPORTANT
+    try {
 
-      Le système SMS n'est pas encore branché.
+      setLoading(true)
 
-      On ne fait donc PAS encore de requête API ici.
+      const res = await API.post(
+        "/auth/forgot-password-phone",
+        {
+          phone: phone.trim()
+        }
+      )
 
-      Cette partie sera connectée plus tard à notre
-      système OTP SMS.
+      successToast(
+        "Code envoyé",
+        res.data.message
+      )
 
-      Pour l'instant, on prépare uniquement l'interface.
-      =====================================================
-    */
+      // Passage à l'étape du code
+      setPhoneStep("code")
 
-    errorToast(
-      "Service SMS",
-      "La récupération par téléphone sera bientôt disponible."
-    )
+    }
+
+    catch (error) {
+
+      console.log(error)
+
+      errorToast(
+        "Erreur",
+        error.response?.data?.message ||
+        "Impossible d'envoyer le code SMS."
+      )
+
+    }
+
+    finally {
+
+      setLoading(false)
+
+    }
+
+  }
+
+
+  // =====================================================
+  // VÉRIFIER LE CODE SMS
+  // =====================================================
+
+  const handleVerifyPhoneCode = async (e) => {
+
+    e.preventDefault()
+
+    if (!phoneCode.trim()) {
+
+      errorToast(
+        "Code requis",
+        "Veuillez saisir le code reçu par SMS."
+      )
+
+      return
+
+    }
+
+    try {
+
+      setLoading(true)
+
+      const res = await API.post(
+        "/auth/verify-phone-reset",
+        {
+          phone: phone.trim(),
+          code: phoneCode.trim()
+        }
+      )
+
+      successToast(
+        "Téléphone vérifié",
+        res.data.message
+      )
+
+      // Récupération du token temporaire
+      setResetToken(res.data.resetToken)
+
+      // Passage au nouveau mot de passe
+      setPhoneStep("password")
+
+    }
+
+    catch (error) {
+
+      console.log(error)
+
+      errorToast(
+        "Code incorrect",
+        error.response?.data?.message ||
+        "Le code est incorrect ou expiré."
+      )
+
+    }
+
+    finally {
+
+      setLoading(false)
+
+    }
+
+  }
+
+
+  // =====================================================
+  // RÉINITIALISER LE MOT DE PASSE PAR TÉLÉPHONE
+  // =====================================================
+
+  const handlePhonePasswordReset = async (e) => {
+
+    e.preventDefault()
+
+    if (!newPassword || !confirmPassword) {
+
+      errorToast(
+        "Champs requis",
+        "Veuillez remplir les deux champs."
+      )
+
+      return
+
+    }
+
+    if (newPassword.length < 6) {
+
+      errorToast(
+        "Mot de passe trop court",
+        "Le mot de passe doit contenir au moins 6 caractères."
+      )
+
+      return
+
+    }
+
+    if (newPassword !== confirmPassword) {
+
+      errorToast(
+        "Mots de passe différents",
+        "Les deux mots de passe ne correspondent pas."
+      )
+
+      return
+
+    }
+
+    try {
+
+      setLoading(true)
+
+      const res = await API.post(
+        `/auth/reset-password-phone/${resetToken}`,
+        {
+          password: newPassword
+        }
+      )
+
+      successToast(
+        "Mot de passe modifié",
+        res.data.message
+      )
+
+      // Retour à la connexion
+      setTimeout(() => {
+
+        navigate("/login")
+
+      }, 1500)
+
+    }
+
+    catch (error) {
+
+      console.log(error)
+
+      errorToast(
+        "Erreur",
+        error.response?.data?.message ||
+        "Impossible de modifier le mot de passe."
+      )
+
+    }
+
+    finally {
+
+      setLoading(false)
+
+    }
 
   }
 
@@ -154,6 +348,47 @@ function ForgotPassword() {
     setEmail("")
 
     setPhone("")
+
+    setPhoneStep("phone")
+
+    setPhoneCode("")
+
+    setResetToken("")
+
+    setNewPassword("")
+
+    setConfirmPassword("")
+
+  }
+
+
+  // =====================================================
+  // RETOUR À L'ÉTAPE PRÉCÉDENTE
+  // =====================================================
+
+  const backToPhone = () => {
+
+    if (phoneStep === "code") {
+
+      setPhoneStep("phone")
+
+      setPhoneCode("")
+
+      return
+
+    }
+
+    if (phoneStep === "password") {
+
+      setPhoneStep("code")
+
+      setResetToken("")
+
+      setNewPassword("")
+
+      setConfirmPassword("")
+
+    }
 
   }
 
@@ -371,7 +606,12 @@ function ForgotPassword() {
 
                 type="button"
 
-                onClick={() => setMethod("phone")}
+                onClick={() => {
+
+                  setMethod("phone")
+                  setPhoneStep("phone")
+
+                }}
 
                 className="
                 border-2
@@ -576,109 +816,483 @@ function ForgotPassword() {
 
 
         {/* =====================================================
-            ÉTAPE 2 : TÉLÉPHONE
+            TÉLÉPHONE
         ===================================================== */}
 
         {method === "phone" && (
 
           <>
 
-            <p
-              className="
-              text-center
-              text-gray-500
-              mt-4
-              leading-7
-              "
-            >
+            {/* =================================================
+                ÉTAPE 1 : NUMÉRO
+            ================================================= */}
 
-              Entrez le numéro de téléphone associé
-              à votre compte. Un code de vérification
-              vous sera envoyé par SMS.
+            {phoneStep === "phone" && (
 
-            </p>
+              <>
 
-
-            <form
-              onSubmit={handlePhoneSubmit}
-              className="mt-8 space-y-6"
-            >
-
-              <div>
-
-                <label
+                <p
                   className="
-                  block
-                  mb-2
-                  font-medium
+                  text-center
+                  text-gray-500
+                  mt-4
+                  leading-7
                   "
                 >
 
-                  Numéro de téléphone
+                  Entrez le numéro de téléphone associé
+                  à votre compte. Un code de vérification
+                  vous sera envoyé par SMS.
 
-                </label>
+                </p>
 
 
-                <input
+                <form
+                  onSubmit={handlePhoneSubmit}
+                  className="mt-8 space-y-6"
+                >
 
-                  type="tel"
+                  <div>
 
-                  value={phone}
+                    <label
+                      className="
+                      block
+                      mb-2
+                      font-medium
+                      "
+                    >
 
-                  onChange={(e) =>
-                    setPhone(e.target.value)
-                  }
+                      Numéro de téléphone
 
-                  placeholder="+225 07 00 00 00 00"
+                    </label>
 
-                  autoComplete="tel"
 
-                  required
+                    <input
+
+                      type="tel"
+
+                      value={phone}
+
+                      onChange={(e) =>
+                        setPhone(e.target.value)
+                      }
+
+                      placeholder="+225 07 00 00 00 00"
+
+                      autoComplete="tel"
+
+                      required
+
+                      className="
+                      w-full
+                      border
+                      border-gray-300
+                      rounded-xl
+                      px-4
+                      py-3
+                      outline-none
+                      focus:border-purple-500
+                      focus:ring-2
+                      focus:ring-purple-100
+                      "
+
+                    />
+
+                  </div>
+
+
+                  <button
+
+                    type="submit"
+
+                    disabled={loading}
+
+                    className="
+                    w-full
+                    bg-purple-600
+                    hover:bg-purple-700
+                    disabled:bg-purple-300
+                    transition
+                    text-white
+                    py-3
+                    rounded-xl
+                    font-semibold
+                    "
+
+                  >
+
+                    {loading
+                      ? "Envoi du code..."
+                      : "Envoyer le code par SMS"
+                    }
+
+                  </button>
+
+                </form>
+
+              </>
+
+            )}
+
+
+            {/* =================================================
+                ÉTAPE 2 : CODE SMS
+            ================================================= */}
+
+            {phoneStep === "code" && (
+
+              <>
+
+                <div
+                  className="
+                  mt-6
+                  text-center
+                  bg-purple-50
+                  rounded-2xl
+                  p-5
+                  "
+                >
+
+                  <FaPhone
+                    className="
+                    mx-auto
+                    text-purple-600
+                    text-2xl
+                    "
+                  />
+
+                  <p className="mt-3 text-gray-600">
+
+                    Un code de vérification a été envoyé
+                    au numéro :
+
+                  </p>
+
+                  <p className="font-bold text-purple-600 mt-2">
+
+                    {phone}
+
+                  </p>
+
+                </div>
+
+
+                <form
+                  onSubmit={handleVerifyPhoneCode}
+                  className="mt-8 space-y-6"
+                >
+
+                  <div>
+
+                    <label
+                      className="
+                      block
+                      mb-2
+                      font-medium
+                      "
+                    >
+
+                      Code de vérification
+
+                    </label>
+
+
+                    <input
+
+                      type="text"
+
+                      inputMode="numeric"
+
+                      maxLength={6}
+
+                      value={phoneCode}
+
+                      onChange={(e) =>
+                        setPhoneCode(
+                          e.target.value.replace(/\D/g, "")
+                        )
+                      }
+
+                      placeholder="123456"
+
+                      autoComplete="one-time-code"
+
+                      required
+
+                      className="
+                      w-full
+                      border
+                      border-gray-300
+                      rounded-xl
+                      px-4
+                      py-3
+                      text-center
+                      text-2xl
+                      tracking-[0.5em]
+                      outline-none
+                      focus:border-purple-500
+                      focus:ring-2
+                      focus:ring-purple-100
+                      "
+
+                    />
+
+                  </div>
+
+
+                  <button
+
+                    type="submit"
+
+                    disabled={loading}
+
+                    className="
+                    w-full
+                    bg-purple-600
+                    hover:bg-purple-700
+                    disabled:bg-purple-300
+                    transition
+                    text-white
+                    py-3
+                    rounded-xl
+                    font-semibold
+                    "
+
+                  >
+
+                    {loading
+                      ? "Vérification..."
+                      : "Vérifier le code"
+                    }
+
+                  </button>
+
+                </form>
+
+
+                <button
+
+                  type="button"
+
+                  onClick={backToPhone}
 
                   className="
                   w-full
-                  border
-                  border-gray-300
-                  rounded-xl
-                  px-4
-                  py-3
-                  outline-none
-                  focus:border-purple-500
-                  focus:ring-2
-                  focus:ring-purple-100
+                  mt-4
+                  text-purple-600
+                  font-semibold
+                  hover:underline
                   "
 
-                />
+                >
 
-              </div>
+                  ← Modifier le numéro
+
+                </button>
+
+              </>
+
+            )}
 
 
-              <button
+            {/* =================================================
+                ÉTAPE 3 : NOUVEAU MOT DE PASSE
+            ================================================= */}
 
-                type="submit"
+            {phoneStep === "password" && (
 
-                disabled={loading}
+              <>
 
-                className="
-                w-full
-                bg-purple-600
-                hover:bg-purple-700
-                disabled:bg-purple-300
-                transition
-                text-white
-                py-3
-                rounded-xl
-                font-semibold
-                "
+                <div
+                  className="
+                  mt-6
+                  text-center
+                  bg-green-50
+                  rounded-2xl
+                  p-5
+                  "
+                >
 
-              >
+                  <FaLock
+                    className="
+                    mx-auto
+                    text-green-600
+                    text-2xl
+                    "
+                  />
 
-                Envoyer le code par SMS
+                  <p className="mt-3 text-gray-600">
 
-              </button>
+                    Votre numéro a été vérifié.
+                    Vous pouvez maintenant choisir
+                    un nouveau mot de passe.
 
-            </form>
+                  </p>
 
+                </div>
+
+
+                <form
+                  onSubmit={handlePhonePasswordReset}
+                  className="mt-8 space-y-6"
+                >
+
+                  <div>
+
+                    <label
+                      className="
+                      block
+                      mb-2
+                      font-medium
+                      "
+                    >
+
+                      Nouveau mot de passe
+
+                    </label>
+
+
+                    <input
+
+                      type="password"
+
+                      value={newPassword}
+
+                      onChange={(e) =>
+                        setNewPassword(e.target.value)
+                      }
+
+                      placeholder="********"
+
+                      autoComplete="new-password"
+
+                      required
+
+                      className="
+                      w-full
+                      border
+                      border-gray-300
+                      rounded-xl
+                      px-4
+                      py-3
+                      outline-none
+                      focus:border-purple-500
+                      focus:ring-2
+                      focus:ring-purple-100
+                      "
+
+                    />
+
+                  </div>
+
+
+                  <div>
+
+                    <label
+                      className="
+                      block
+                      mb-2
+                      font-medium
+                      "
+                    >
+
+                      Confirmer le mot de passe
+
+                    </label>
+
+
+                    <input
+
+                      type="password"
+
+                      value={confirmPassword}
+
+                      onChange={(e) =>
+                        setConfirmPassword(e.target.value)
+                      }
+
+                      placeholder="********"
+
+                      autoComplete="new-password"
+
+                      required
+
+                      className="
+                      w-full
+                      border
+                      border-gray-300
+                      rounded-xl
+                      px-4
+                      py-3
+                      outline-none
+                      focus:border-purple-500
+                      focus:ring-2
+                      focus:ring-purple-100
+                      "
+
+                    />
+
+                  </div>
+
+
+                  <button
+
+                    type="submit"
+
+                    disabled={loading}
+
+                    className="
+                    w-full
+                    bg-purple-600
+                    hover:bg-purple-700
+                    disabled:bg-purple-300
+                    transition
+                    text-white
+                    py-3
+                    rounded-xl
+                    font-semibold
+                    "
+
+                  >
+
+                    {loading
+                      ? "Modification..."
+                      : "Modifier le mot de passe"
+                    }
+
+                  </button>
+
+                </form>
+
+
+                <button
+
+                  type="button"
+
+                  onClick={backToPhone}
+
+                  className="
+                  w-full
+                  mt-4
+                  text-purple-600
+                  font-semibold
+                  hover:underline
+                  "
+
+                >
+
+                  ← Retour au code
+
+                </button>
+
+              </>
+
+            )}
+
+
+            {/* =========================
+                CHANGER DE MÉTHODE
+            ========================== */}
 
             <button
 

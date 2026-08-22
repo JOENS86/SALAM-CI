@@ -8,7 +8,10 @@ import {
   disableTwoFactor,
   verifyTwoFactorLogin,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  forgotPasswordPhone,
+  verifyPhoneResetCode,
+  resetPasswordPhone
 } from "../controllers/authController.js"
 
 import authMiddleware from "../middleware/authMiddleware.js"
@@ -48,6 +51,44 @@ router.post(
 router.post(
   "/reset-password/:token",
   resetPassword
+)
+
+// =====================================================
+// MOT DE PASSE OUBLIÉ PAR TÉLÉPHONE
+// =====================================================
+
+router.post(
+
+  "/forgot-password-phone",
+
+  forgotPasswordPhone
+
+)
+
+
+// =====================================================
+// VÉRIFIER LE CODE SMS
+// =====================================================
+
+router.post(
+
+  "/verify-phone-reset",
+
+  verifyPhoneResetCode
+
+)
+
+
+// =====================================================
+// RÉINITIALISER LE MOT DE PASSE PAR TÉLÉPHONE
+// =====================================================
+
+router.post(
+
+  "/reset-password-phone/:token",
+
+  resetPasswordPhone
+
 )
 
 // =====================================================

@@ -6,6 +6,8 @@ import QRCode from "qrcode"
 import crypto from "crypto"
 import emailService from "../services/emailService.js"
 
+import {sendVerificationCode, verifyVerificationCode} from "../services/twilioService.js"
+
 // =====================================================
 // REGISTER
 // =====================================================
@@ -1094,6 +1096,445 @@ export const resetPassword = async (req, res) => {
 
     console.error(
       "ERREUR RÉINITIALISATION MOT DE PASSE :",
+      error
+    )
+
+    return res.status(500).json({
+
+      message:
+        "Impossible de réinitialiser le mot de passe."
+
+    })
+
+  }
+
+}
+
+
+// =====================================================
+// MOT DE PASSE OUBLIÉ PAR TÉLÉPHONE
+// ENVOYER LE CODE SMS
+// =====================================================
+
+export const forgotPasswordPhone = async (req, res) => {
+
+  try {
+
+    const {
+      phone
+    } = req.body
+
+    // =========================
+    // VALIDATION
+    // =========================
+
+    const cleanPhone =
+      phone?.trim()
+
+    if (!cleanPhone) {
+
+      return res.status(400).json({
+
+        message:
+          "Le numéro de téléphone est obligatoire."
+
+      })
+
+    }
+
+    // =========================
+    // RECHERCHE UTILISATEUR
+    // =========================
+    //
+    // IMPORTANT :
+    // Cette fonction nécessite que
+    // le modèle User possède un champ
+    // phone.
+    // =========================
+
+    const user = await User.findOne({
+
+      phone: cleanPhone
+
+    })
+
+    // =========================
+    // MESSAGE GÉNÉRIQUE
+    // =========================
+
+    if (!user) {
+
+      return res.status(200).json({
+
+        success: true,
+
+        message:
+          "Si ce numéro correspond à un compte, un code de vérification a été envoyé."
+
+      })
+
+    }
+
+    // =========================
+    // COMPTE DÉSACTIVÉ
+    // =========================
+
+    if (user.isActive === false) {
+
+      return res.status(403).json({
+
+        message:
+          "Ce compte est désactivé."
+
+      })
+
+    }
+
+    // =========================
+    // ENVOI DU CODE TWILIO
+    // =========================
+
+    await sendVerificationCode(
+      cleanPhone
+    )
+
+    // =========================
+    // RÉPONSE
+    // =========================
+
+    return res.status(200).json({
+
+      success: true,
+
+      message:
+        "Un code de vérification a été envoyé par SMS."
+
+    })
+
+  }
+
+  catch (error) {
+
+    console.error(
+      "ERREUR MOT DE PASSE OUBLIÉ PAR TÉLÉPHONE :",
+      error
+    )
+
+    return res.status(500).json({
+
+      message:
+        "Impossible d'envoyer le code de vérification."
+
+    })
+
+  }
+
+}
+
+
+// =====================================================
+// VÉRIFIER LE CODE SMS
+// =====================================================
+
+export const verifyPhoneResetCode = async (req, res) => {
+
+  try {
+
+    const {
+      phone,
+      code
+    } = req.body
+
+    // =========================
+    // VALIDATION
+    // =========================
+
+    const cleanPhone =
+      phone?.trim()
+
+    const cleanCode =
+      code?.trim()
+
+    if (!cleanPhone || !cleanCode) {
+
+      return res.status(400).json({
+
+        message:
+          "Le numéro et le code sont obligatoires."
+
+      })
+
+    }
+
+    // =========================
+    // RECHERCHE UTILISATEUR
+    // =========================
+
+    const user = await User.findOne({
+
+      phone: cleanPhone
+
+    })
+
+    if (!user) {
+
+      return res.status(400).json({
+
+        message:
+          "Code de vérification invalide."
+
+      })
+
+    }
+
+    // =========================
+    // VÉRIFICATION TWILIO
+    // =========================
+
+    const verification =
+      await verifyVerificationCode(
+
+        cleanPhone,
+
+        cleanCode
+
+      )
+
+    if (
+      verification.status !==
+      "approved"
+    ) {
+
+      return res.status(400).json({
+
+        message:
+          "Code de vérification incorrect ou expiré."
+
+      })
+
+    }
+
+    // =========================
+    // AUTORISATION TEMPORAIRE
+    // =========================
+
+    const resetToken =
+      crypto
+        .randomBytes(32)
+        .toString("hex")
+
+    const resetTokenHash =
+      crypto
+        .createHash("sha256")
+        .update(resetToken)
+        .digest("hex")
+
+    // =========================
+    // EXPIRATION
+    // 10 MINUTES
+    // =========================
+
+    user.phoneResetToken =
+      resetTokenHash
+
+    user.phoneResetExpires =
+      new Date(
+        Date.now() + 10 * 60 * 1000
+      )
+
+    await user.save()
+
+    // =========================
+    // RÉPONSE
+    // =========================
+
+    return res.status(200).json({
+
+      success: true,
+
+      resetToken,
+
+      message:
+        "Numéro vérifié avec succès. Vous pouvez maintenant définir un nouveau mot de passe."
+
+    })
+
+  }
+
+  catch (error) {
+
+    console.error(
+      "ERREUR VÉRIFICATION CODE TÉLÉPHONE :",
+      error
+    )
+
+    return res.status(500).json({
+
+      message:
+        "Impossible de vérifier le code."
+
+    })
+
+  }
+
+}
+
+
+// =====================================================
+// RÉINITIALISER MOT DE PASSE PAR TÉLÉPHONE
+// =====================================================
+export const resetPasswordPhone = async (req, res) => {
+
+  try {
+
+    const {
+      token
+    } = req.params
+
+    const {
+      password
+    } = req.body
+
+    // =========================
+    // VALIDATION
+    // =========================
+
+    if (!token) {
+
+      return res.status(400).json({
+
+        message:
+          "Autorisation de réinitialisation invalide."
+
+      })
+
+    }
+
+    if (!password) {
+
+      return res.status(400).json({
+
+        message:
+          "Le nouveau mot de passe est obligatoire."
+
+      })
+
+    }
+
+    if (password.length < 6) {
+
+      return res.status(400).json({
+
+        message:
+          "Le mot de passe doit contenir au moins 6 caractères."
+
+      })
+
+    }
+
+    // =========================
+    // HASH TOKEN
+    // =========================
+
+    const tokenHash =
+      crypto
+        .createHash("sha256")
+        .update(token)
+        .digest("hex")
+
+    // =========================
+    // RECHERCHE UTILISATEUR
+    // =========================
+
+    const user = await User
+      .findOne({
+
+        phoneResetToken:
+          tokenHash,
+
+        phoneResetExpires: {
+          $gt: new Date()
+        }
+
+      })
+      .select(
+        "+phoneResetToken +phoneResetExpires"
+      )
+
+    // =========================
+    // TOKEN INVALIDE
+    // =========================
+
+    if (!user) {
+
+      return res.status(400).json({
+
+        message:
+          "L'autorisation est invalide ou expirée."
+
+      })
+
+    }
+
+    // =========================
+    // HASH MOT DE PASSE
+    // =========================
+
+    const hashedPassword =
+      await bcrypt.hash(
+
+        password,
+
+        10
+
+      )
+
+    // =========================
+    // NOUVEAU MOT DE PASSE
+    // =========================
+
+    user.password =
+      hashedPassword
+
+    // =========================
+    // SUPPRESSION AUTORISATION
+    // =========================
+
+    user.phoneResetToken =
+      null
+
+    user.phoneResetExpires =
+      null
+
+    // =========================
+    // INVALIDATION SESSIONS
+    // =========================
+
+    user.sessionVersion += 1
+
+    user.isOnline = false
+
+    await user.save()
+
+    // =========================
+    // RÉPONSE
+    // =========================
+
+    return res.status(200).json({
+
+      success: true,
+
+      message:
+        "Mot de passe réinitialisé avec succès. Vous pouvez maintenant vous connecter."
+
+    })
+
+  }
+
+  catch (error) {
+
+    console.error(
+      "ERREUR RÉINITIALISATION TÉLÉPHONE :",
       error
     )
 

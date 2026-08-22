@@ -142,39 +142,28 @@ const userSchema = new mongoose.Schema(
 
     },
 
-    // =====================================================
-    // RÉCUPÉRATION DU MOT DE PASSE PAR TÉLÉPHONE
-    // =====================================================
+// =====================================================
+// RÉCUPÉRATION DU MOT DE PASSE PAR TÉLÉPHONE
+// =====================================================
+phoneResetToken: {
 
-    resetPasswordCode: {
+  type: String,
 
-      type: String,
+  default: null,
 
-      default: null,
+  select: false
 
-      select: false
+},
 
-    },
+phoneResetExpires: {
 
-    resetPasswordCodeExpires: {
+  type: Date,
 
-      type: Date,
+  default: null,
 
-      default: null,
+  select: false
 
-      select: false
-
-    },
-
-    resetPasswordCodeAttempts: {
-
-      type: Number,
-
-      default: 0,
-
-      select: false
-
-    },
+},
 
     // =========================
     // AUTHENTIFICATION 2 FACTEURS
